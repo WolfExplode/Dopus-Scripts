@@ -1,0 +1,22 @@
+<resources>
+  <resource name="GalleryDlPinterestDlg" type="dialog">
+    <dialog fontsize="9" height="228" lang="english" title="gallery-dl — Pinterest" width="400">
+
+      <control halign="left" height="10" name="profile_label" title="Profile:" type="static" width="200" x="12" y="10"/>
+      <control group="yes" height="12" name="pin_radio1" title="allyfire1281" type="radio" width="376" x="12" y="26"/>
+      <control height="12" name="pin_radio2" title="FedTheBeast" type="radio" width="376" x="12" y="44"/>
+      <control height="12" name="pin_radio3" title="fireally31" type="radio" width="376" x="12" y="62"/>
+
+      <control halign="left" height="10" name="board_label" title="Board (cached list; use Refresh to update):" type="static" width="340" x="12" y="78"/>
+      <control height="120" name="board_combo" type="combo" width="376" x="12" y="90"/>
+
+      <control height="12" name="cookies_check" title="Use Firefox cookies (--cookies-from-browser firefox)" type="check" width="380" x="12" y="110"/>
+      <control height="12" name="keepps_check" title="Keep PowerShell window open when finished (-NoExit)" type="check" width="380" x="12" y="128"/>
+
+      <control height="18" name="refresh_btn" title="Refresh board list" type="button" width="124" x="12" y="150"/>
+      <control close="1" default="yes" height="18" name="ok_btn" title="Scrape" type="button" width="80" x="220" y="150"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="314" y="150"/>
+
+    </dialog>
+  </resource>
+</resources>

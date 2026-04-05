@@ -1,0 +1,42 @@
+<resources>
+  <resource name="YtDlpDlg" type="dialog">
+    <dialog fontsize="9" height="246" lang="english" title="yt-dlp Downloader" width="430">
+
+      <!-- URL -->
+      <control halign="left" height="10" name="url_label" title="URL:" type="static" width="30" x="12" y="12"/>
+      <control height="14" name="url_edit" type="edit" width="406" x="12" y="24"/>
+
+      <!-- Custom file prefix -->
+      <control halign="left" height="10" name="prefix_label" title="File prefix (optional, prepended to filename):" type="static" width="280" x="12" y="42"/>
+      <control height="14" name="prefix_edit" type="edit" width="406" x="12" y="54"/>
+
+      <!-- Mode -->
+      <control halign="left" height="10" name="mode_label" title="Mode:" type="static" width="32" x="12" y="76"/>
+      <control group="yes" height="12" name="audio_radio" title="Audio" type="radio" width="55" x="50" y="75"/>
+      <control height="12" name="video_radio" title="Video" type="radio" width="55" x="110" y="75"/>
+
+      <!-- Metadata -->
+      <control height="12" name="metadata_check" title="Include metadata (embed thumbnail, subs, tags, chapters)" type="check" width="406" x="12" y="98"/>
+
+      <!-- Date prefix -->
+      <control height="12" name="dateprefix_check" title="Prefix filename with upload date [mm-dd-yyyy] before title" type="check" width="406" x="12" y="118"/>
+
+      <!-- Cookies -->
+      <control height="12" name="cookies_check" title="Use Firefox cookies (--cookies-from-browser firefox)" type="check" width="390" x="12" y="138"/>
+
+      <!-- Overwrite -->
+      <control height="12" name="overwrite_check" title="Overwrite if file already exists (--force-overwrites)" type="check" width="406" x="12" y="156"/>
+
+      <!-- Update -->
+      <control height="12" name="update_check" title="Update yt-dlp if not latest (pip install --upgrade yt-dlp)" type="check" width="406" x="12" y="174"/>
+
+      <!-- PowerShell -->
+      <control height="12" name="keepps_check" title="Keep PowerShell window open when finished (-NoExit)" type="check" width="406" x="12" y="192"/>
+
+      <!-- Buttons -->
+      <control close="1" default="yes" height="18" name="ok_btn" title="Download" type="button" width="80" x="258" y="212"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="352" y="212"/>
+
+    </dialog>
+  </resource>
+</resources>
