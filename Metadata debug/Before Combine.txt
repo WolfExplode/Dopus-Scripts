@@ -1,0 +1,58 @@
+[ExifTool]      ExifToolVersion                 : 13.55
+[System]        FileName                        : target.mp3
+[System]        Directory                       : G:/HBContent/HBSNS/New Folder
+[System]        FileSize                        : 135 kB
+[System]        FileModifyDate                  : 2026:04:12 23:30:26-04:00
+[System]        FileAccessDate                  : 2026:04:12 23:41:02-04:00
+[System]        FileCreateDate                  : 2026:04:12 23:30:26-04:00
+[System]        FilePermissions                 : -rw-rw-rw-
+[File]          FileType                        : MP3
+[File]          FileTypeExtension               : mp3
+[File]          MIMEType                        : audio/mpeg
+[File]          ID3Size                         : 1852
+[MPEG]          MPEGAudioVersion                : 1
+[MPEG]          AudioLayer                      : 3
+[MPEG]          AudioBitrate                    : 112 kbps
+[MPEG]          SampleRate                      : 44100
+[MPEG]          ChannelMode                     : Stereo
+[MPEG]          MSStereo                        : Off
+[MPEG]          IntensityStereo                 : Off
+[MPEG]          CopyrightFlag                   : False
+[MPEG]          OriginalMedia                   : False
+[MPEG]          Emphasis                        : None
+[MPEG]          VBRFrames                       : 368
+[MPEG]          VBRBytes                        : 133094
+[MPEG]          VBRScale                        : 0
+[ID3v2_4]       MajorBrand                      : isom
+[ID3v2_4]       MinorVersion                    : 512
+[ID3v2_4]       CompatibleBrands                : isomiso2avc1mp41
+[ID3v2_4]       Title                           : τÄëΘ¥Ñσº¼ - Bounce and bounce.
+[ID3v2_4]       Artist                          : τÄëΘ¥Ñσº¼
+[ID3v2_4]       RecordingTime                   : 20260227
+[ID3v2_4]       Comment                         : https://x.com/Lilithyyj/status/2027373779748605995/video/1
+[ID3v2_4]       Description                     : Bounce and bounce. https://t.co/PaGvJpTjh5
+[ID3v2_4]       Synopsis                        : Bounce and bounce. https://t.co/PaGvJpTjh5
+[ID3v2_4]       Subtitle                        : some metadata
+[ID3v2_4]       Album                           : some metadata
+[ID3v2_4]       Genre                           : some metadata
+[ID3v2_4]       Track                           : 1/2
+[ID3v2_4]       Band                            : some metadata
+[ID3v2_4]       Composer                        : some metadata
+[ID3v2_4]       Conductor                       : some metadata
+[ID3v2_4]       Grouping                        : some metadata
+[ID3v2_4]       Copyright                       : some metadata
+[ID3v2_4]       PartOfSet                       : 1/2
+[ID3v2_4]       EncodedBy                       : some metadata
+[ID3v2_4]       InitialKey                      : som
+[ID3v2_4]       Mood                            : some metadata
+[ID3v2_4]       OriginalArtist                  : some metadata
+[ID3v2_4]       Publisher                       : some metadata
+[ID3v2_4]       EncoderSettings                 : Lavf62.3.100
+[ID3v2_4]       ArtistURL                       : some metadata
+[ID3v2_4]       BeatsPerMinute                  : 111
+[ID3v2_4]       Comment-xxx                     : some metadata
+[ID3v2_4]       Popularimeter                   :  Rating=128 Count=0
+[Composite]     DateTimeOriginal                : 20260227
+[Composite]     AudioBitrate                    : 111 kbps
+[Composite]     Duration                        : 9.61 s (approx)
+-- press ENTER --

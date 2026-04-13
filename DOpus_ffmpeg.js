@@ -82,146 +82,188 @@ function thumbErr(shell, text, title) {
     DOpus.Output("[" + title + " ERROR] " + text);
 }
 
-/** Extract embedded cover/thumbnail from a single selected video and save it as a .jpg next to the video. */
-function runExtractThumbnail(clickData, fso, shell) {
-    var sel = clickData.func.sourcetab.selected_files;
-    if (sel.count != 1) {
-        thumbErr(shell, "Select exactly one video file to extract its thumbnail.", "Extract thumbnail");
-        return;
-    }
-    var en = new Enumerator(sel);
-    var vidItem = en.item();
-    if (!isThumbVideoName(vidItem.name + "")) {
-        thumbErr(shell, "The selected file does not appear to be a supported video.\n\n" + (vidItem.name + ""), "Extract thumbnail");
-        return;
-    }
-
-    var vidPath = vidItem.realpath + "";
-    var folder = vidItem.path + "";
-    var stem = vidItem.name_stem + "";
-    var ext = fileExtLower(vidItem.name + "");
+/** Next unused path folder\\stem.jpg, stem_1.jpg, … */
+function uniqueJpgPathNextToMedia(fso, folder, stem) {
     var outPath = folder + "\\" + stem + ".jpg";
-
     var counter = 1;
     while (fso.FileExists(outPath)) {
         outPath = folder + "\\" + stem + "_" + counter + ".jpg";
         counter++;
     }
-
-    var exec;
-    if (ext == ".mkv") {
-        // MKV stores cover as an attachment; -dump_attachment must precede -i
-        exec = 'ffmpeg.exe -y -dump_attachment:t:0 "' + outPath + '" -i "' + vidPath + '"';
-    } else {
-        // MP4/MOV/etc: cover is the second video stream (0:v:0 = main movie)
-        exec = 'ffmpeg.exe -y -i "' + vidPath + '" -map 0:v:1 -frames:v 1 "' + outPath + '"';
-    }
-    DOpus.Output("Extract thumbnail: " + exec);
-
-    try {
-        var exitCode = shell.Run(exec, 0, true);
-        if (!fso.FileExists(outPath)) {
-            if (ext == ".mkv") {
-                thumbErr(shell, "No cover attachment found in this MKV file. The file may not have an embedded cover image.", "Extract thumbnail");
-            } else {
-                thumbErr(shell, "No embedded thumbnail found, or ffmpeg failed (exit code " + exitCode + "). See DOpus Script Output for details.", "Extract thumbnail");
-            }
-            return;
-        }
-        thumbInfo(shell, "Thumbnail extracted to:\n" + outPath, "Extract thumbnail");
-        try {
-            clickData.func.command.RunCommand("Go REFRESH");
-        } catch (eRf) { /* ignore */ }
-    } catch (ex) {
-        thumbErr(shell, "Error: " + ex.message, "Extract thumbnail");
-    }
+    return outPath;
 }
 
-/** Seconds into the video to grab a frame when no image is selected. */
-var THUMB_AUTO_FRAME_SEC = 2;
-
-/** Embed image as poster on video, or with one video only grab frame at THUMB_AUTO_FRAME_SEC. Uses ffmpeg. */
-function runSetThumbnail(clickData, fso, shell) {
-    var sel = clickData.func.sourcetab.selected_files;
-    var imgItem = null;
-    var vidItem = null;
-    var en = new Enumerator(sel);
-    for (; !en.atEnd(); en.moveNext()) {
-        var it = en.item();
-        var n = it.name + "";
-        if (isThumbImageName(n)) {
-            if (imgItem) {
-                thumbErr(shell, "Multiple images in selection. Choose at most one image and one video.", "Set thumbnail");
-                return;
+/**
+ * Try embedded picture streams: preferSecondVideoFirst true = typical video+poster (try 0:v:1 then 0:v:0);
+ * false = typical audio/cover-only (try 0:v:0 then 0:v:1). Writes JPEG to outPath.
+ */
+function extractCoverViaVideoStreams(shell, fso, mediaPath, outPath, preferSecondVideoFirst) {
+    var order = preferSecondVideoFirst ? ["0:v:1", "0:v:0"] : ["0:v:0", "0:v:1"];
+    var i;
+    for (i = 0; i < order.length; i++) {
+        if (fso.FileExists(outPath)) {
+            try {
+                fso.DeleteFile(outPath);
+            } catch (eDel) { /* ignore */ }
+        }
+        var exec = 'ffmpeg.exe -y -i "' + mediaPath + '" -map ' + order[i] + ' -frames:v 1 -q:v 2 "' + outPath + '"';
+        DOpus.Output("Extract thumbnail: " + exec);
+        try {
+            var exitCode = shell.Run(exec, 0, true);
+            if (exitCode === 0 && fso.FileExists(outPath)) {
+                return true;
             }
-            imgItem = it;
-        } else if (isThumbVideoName(n)) {
-            if (vidItem) {
-                thumbErr(shell, "Multiple videos in selection. Choose one video only, or one image + one video.", "Set thumbnail");
-                return;
-            }
-            vidItem = it;
-        } else {
-            thumbErr(shell, "Each selected file must be an image (jpg, png, …) or a video (mp4, mkv, …).\n\nNot supported: " + n, "Set thumbnail");
-            return;
+        } catch (ex) {
+            DOpus.Output("Extract thumbnail stream attempt error: " + ex.message);
         }
     }
-    if (!vidItem) {
-        thumbErr(shell, "Select one video file, or one image + one video with the same base name.", "Set thumbnail");
-        return;
-    }
-    if (sel.count != 1 && sel.count != 2) {
-        thumbErr(shell, "Select one video, or one image + one video (same base name).", "Set thumbnail");
-        return;
-    }
-    if (sel.count == 2 && !imgItem) {
-        thumbErr(shell, "Second file must be an image when two files are selected.", "Set thumbnail");
-        return;
-    }
+    return false;
+}
 
-    if (imgItem) {
-        var stemImg = (imgItem.name_stem + "").toLowerCase();
-        var stemVid = (vidItem.name_stem + "").toLowerCase();
-        if (stemImg != stemVid) {
-            thumbErr(shell, "Image and video must share the same base name (e.g. Clip.jpg and Clip.mp4).\n\nImage: " + (imgItem.name_stem + "") + "\nVideo: " + (vidItem.name_stem + ""), "Set thumbnail");
-            return;
+/**
+ * Matroska cover is often an attachment; dump then decode to JPEG so .jpg matches file contents (PNG/WebP attachments).
+ * Returns true if outPath exists.
+ */
+function extractCoverMatroskaAttachment(shell, fso, mediaPath, folder, stem, outPath) {
+    var rawPath = folder + "\\" + stem + ".__opus_cover_raw";
+    if (fso.FileExists(rawPath)) {
+        try {
+            fso.DeleteFile(rawPath);
+        } catch (e0) { /* ignore */ }
+    }
+    var dumpExec = 'ffmpeg.exe -y -dump_attachment:t:0 "' + rawPath + '" -i "' + mediaPath + '"';
+    DOpus.Output("Extract thumbnail (MKV/MKA attachment): " + dumpExec);
+    var dumpExit;
+    try {
+        dumpExit = shell.Run(dumpExec, 0, true);
+    } catch (exD) {
+        DOpus.Output("Extract thumbnail: dump attachment error: " + exD.message);
+        return false;
+    }
+    if (!fso.FileExists(rawPath)) {
+        DOpus.Output("Extract thumbnail: no Matroska attachment t:0 (exit " + dumpExit + "); will try video streams if any.");
+        return false;
+    }
+    if (fso.FileExists(outPath)) {
+        try {
+            fso.DeleteFile(outPath);
+        } catch (e1) { /* ignore */ }
+    }
+    var convExec = 'ffmpeg.exe -y -i "' + rawPath + '" -frames:v 1 -q:v 2 "' + outPath + '"';
+    DOpus.Output("Extract thumbnail (normalize to JPEG): " + convExec);
+    var convExit;
+    try {
+        convExit = shell.Run(convExec, 0, true);
+    } catch (exC) {
+        convExit = -1;
+        DOpus.Output("Extract thumbnail: JPEG normalize error: " + exC.message);
+    }
+    try {
+        fso.DeleteFile(rawPath);
+    } catch (eR) { /* ignore */ }
+    if (convExit !== 0 || !fso.FileExists(outPath)) {
+        DOpus.Output("Extract thumbnail: could not decode attachment to JPEG (exit " + convExit + "); will try video streams if any.");
+        return false;
+    }
+    return true;
+}
+
+/** Try to write embedded cover from media to outPath (.jpg). */
+function tryExtractCoverToPath(shell, fso, mediaPath, mediaName, folder, stem, ext, outPath) {
+    if (ext == ".mkv" || ext == ".mka") {
+        if (extractCoverMatroskaAttachment(shell, fso, mediaPath, folder, stem, outPath)) {
+            return true;
+        }
+        return extractCoverViaVideoStreams(shell, fso, mediaPath, outPath, false);
+    }
+    if (isThumbVideoName(mediaName)) {
+        return extractCoverViaVideoStreams(shell, fso, mediaPath, outPath, true);
+    }
+    return extractCoverViaVideoStreams(shell, fso, mediaPath, outPath, false);
+}
+
+/** True if this filename is a supported video or audio container for embed cover/poster. */
+function isThumbMediaName(name) {
+    return isThumbVideoName(name) || isThumbAudioName(name);
+}
+
+/**
+ * ffmpeg command to embed imgPath as cover/poster into mediaPath -> tmpPath.
+ * isVideoExt: from THUMB_VIDEO_EXT (mp4, mov, …), not audio-only extensions.
+ */
+function ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt) {
+    if (ext == ".mkv" || ext == ".mka") {
+        var mime = mimeTypeForImageExt(imgPathForMime);
+        return 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map_chapters 0 -map 0 -map -0:t -c copy -attach "' + imgPath + '" -metadata:s:t mimetype=' + mime + ' "' + tmpPath + '"';
+    }
+    if (isVideoExt) {
+        return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 0:a? -map 0:s? -map 0:d? -map 0:t? -map 1 -c copy -c:v:1 mjpeg -disposition:v:1 attached_pic "' + tmpPath + '"';
+    }
+    if (ext == ".m4a" || ext == ".aac") {
+        return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 -c copy -c:v:0 mjpeg -disposition:v:0 attached_pic "' + tmpPath + '"';
+    }
+    if (ext == ".mp3") {
+        return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map 0:a? -map 1:0 -c copy "' + tmpPath + '"';
+    }
+    return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map 0:a? -map 1:0 -c copy "' + tmpPath + '"';
+}
+
+/**
+ * Remux without extra video/cover streams or attachments (best-effort). Matroska tries video+attachments drop then audio-only.
+ * Returns true if stripTmp was created.
+ */
+function tryStripCoverToTmp(shell, fso, mediaPath, ext, stripTmp, isVideoExt) {
+    function runAttempt(cmd) {
+        if (fso.FileExists(stripTmp)) {
+            try {
+                fso.DeleteFile(stripTmp);
+            } catch (e0) { /* ignore */ }
+        }
+        DOpus.Output("Strip cover: " + cmd);
+        try {
+            var ex = shell.Run(cmd, 0, true);
+            return ex === 0 && fso.FileExists(stripTmp);
+        } catch (exRun) {
+            return false;
         }
     }
+    var cmdVideo = 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 0:a? -map 0:s? -map 0:d? -map 0:t? -c copy "' + stripTmp + '"';
+    var cmdMkvAudioOnly = 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -map 0:s? -c copy "' + stripTmp + '"';
+    var cmdM4a = 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -c copy "' + stripTmp + '"';
+    var cmdMp3 = 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map 0:a? -c copy "' + stripTmp + '"';
+    var cmdAudioGeneric = 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map 0:a? -c copy "' + stripTmp + '"';
 
-    var vidPath = vidItem.realpath + "";
-    var folder = vidItem.path + "";
-    var stem = vidItem.name_stem + "";
-    var ext = fileExtLower(vidItem.name + "");
+    if (ext == ".mkv" || ext == ".mka") {
+        if (runAttempt(cmdVideo)) {
+            return true;
+        }
+        return runAttempt(cmdMkvAudioOnly);
+    }
+    if (isVideoExt) {
+        return runAttempt(cmdVideo);
+    }
+    if (ext == ".m4a" || ext == ".aac") {
+        return runAttempt(cmdM4a);
+    }
+    if (ext == ".mp3") {
+        return runAttempt(cmdMp3);
+    }
+    return runAttempt(cmdAudioGeneric);
+}
+
+/**
+ * Embed imgPath into mediaItem in place (tmp/bak replace).
+ * @return {{ ok: boolean, err: string }}
+ */
+function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
+    var mediaName = mediaItem.name + "";
+    var mediaPath = mediaItem.realpath + "";
+    var folder = mediaItem.path + "";
+    var stem = mediaItem.name_stem + "";
+    var ext = fileExtLower(mediaName);
+    var isVideoExt = isThumbVideoName(mediaName);
     var tmpPath = folder + "\\" + stem + ".__opus_thumb_tmp" + ext;
     var bakPath = folder + "\\" + stem + ".__opus_thumb_orig" + ext;
-    var imgPath = null;
-    var imgPathForMime = null;
-    var autoFramePath = folder + "\\" + stem + ".__opus_thumb_frame.jpg";
-
-    if (imgItem) {
-        imgPath = imgItem.realpath + "";
-        imgPathForMime = fileExtLower(imgItem.name + "");
-    } else {
-        if (fso.FileExists(autoFramePath)) {
-            try {
-                fso.DeleteFile(autoFramePath);
-            } catch (eAf0) { /* ignore */ }
-        }
-        var genExec = 'ffmpeg.exe -y -ss ' + THUMB_AUTO_FRAME_SEC + ' -i "' + vidPath + '" -map 0:v:0 -frames:v 1 -q:v 2 "' + autoFramePath + '"';
-        DOpus.Output("Set thumbnail (auto frame): " + genExec);
-        try {
-            var genExit = shell.Run(genExec, 0, true);
-            if (genExit != 0 || !fso.FileExists(autoFramePath)) {
-                thumbErr(shell, "Could not grab a frame at " + THUMB_AUTO_FRAME_SEC + " s (ffmpeg exit " + genExit + "). Video may be shorter or invalid.\n\nSee DOpus Script Output.", "Set thumbnail");
-                return;
-            }
-        } catch (exGen) {
-            thumbErr(shell, "Error grabbing frame: " + exGen.message, "Set thumbnail");
-            return;
-        }
-        imgPath = autoFramePath;
-        imgPathForMime = ".jpg";
-    }
 
     if (fso.FileExists(tmpPath)) {
         try {
@@ -234,66 +276,166 @@ function runSetThumbnail(clickData, fso, shell) {
         } catch (e1) { /* ignore */ }
     }
 
-    var exec;
-    if (ext == ".mkv") {
-        var mime = mimeTypeForImageExt(imgPathForMime);
-        exec = 'ffmpeg.exe -y -i "' + vidPath + '" -map 0 -map -0:t -c copy -attach "' + imgPath + '" -metadata:s:t mimetype=' + mime + ' "' + tmpPath + '"';
-    } else {
-        exec = 'ffmpeg.exe -y -i "' + vidPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 0:a? -map 0:s? -map 0:d? -map 0:t? -map 1 -c copy -c:v:1 mjpeg -disposition:v:1 attached_pic "' + tmpPath + '"';
-    }
-    DOpus.Output("Set thumbnail: " + exec);
-
-    function cleanupAutoFrame() {
-        if (!imgItem && fso.FileExists(autoFramePath)) {
-            try {
-                fso.DeleteFile(autoFramePath);
-            } catch (eCl) { /* ignore */ }
-        }
-    }
+    var exec = ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt);
+    DOpus.Output("Embed cover: " + exec);
 
     try {
         var exitCode = shell.Run(exec, 0, true);
         if (exitCode != 0) {
-            cleanupAutoFrame();
-            thumbErr(shell, "ffmpeg failed (exit code " + exitCode + "). See DOpus Script Output.", "Set thumbnail");
-            return;
+            return { ok: false, err: "ffmpeg failed (exit code " + exitCode + "). See DOpus Script Output." };
         }
         if (!fso.FileExists(tmpPath)) {
-            cleanupAutoFrame();
-            thumbErr(shell, "ffmpeg finished but the output file was not created.", "Set thumbnail");
-            return;
+            return { ok: false, err: "ffmpeg finished but the output file was not created." };
         }
 
         try {
-            fso.MoveFile(vidPath, bakPath);
+            fso.MoveFile(mediaPath, bakPath);
         } catch (eRen) {
-            cleanupAutoFrame();
-            thumbErr(shell, "Could not rename the original video (it may be open in another program).\n\nNew file left at:\n" + tmpPath, "Set thumbnail");
-            return;
+            return { ok: false, err: "Could not rename the original file (it may be open in another program).\n\nNew file left at:\n" + tmpPath };
         }
         try {
-            fso.MoveFile(tmpPath, vidPath);
+            fso.MoveFile(tmpPath, mediaPath);
         } catch (eMv) {
             try {
-                fso.MoveFile(bakPath, vidPath);
+                fso.MoveFile(bakPath, mediaPath);
             } catch (eRest) { /* ignore */ }
-            cleanupAutoFrame();
-            thumbErr(shell, "Could not replace the video file; the original was restored.", "Set thumbnail");
-            return;
+            return { ok: false, err: "Could not replace the media file; the original was restored." };
         }
         try {
             fso.DeleteFile(bakPath);
         } catch (eDel) { /* leave backup if locked */ }
 
-        cleanupAutoFrame();
+        return { ok: true, err: "" };
+    } catch (ex) {
+        return { ok: false, err: "Error: " + ex.message };
+    }
+}
 
-        thumbInfo(shell, "Thumbnail embedded in:\n" + vidPath, "Set thumbnail");
+/**
+ * Like split/combine AV: 1 image + 1 media → embed cover and delete the image file; 1 media → extract .jpg and remux media without embedded cover.
+ */
+function runSplitOrCombineCover(clickData, fso, shell) {
+    var logTitle = "Split/combine cover";
+    var sel = clickData.func.sourcetab.selected_files;
+    var imgItems = [];
+    var mediaItems = [];
+    var badNames = [];
+    var en = new Enumerator(sel);
+    for (; !en.atEnd(); en.moveNext()) {
+        var it = en.item();
+        var n = it.name + "";
+        if (isThumbImageName(n)) {
+            imgItems.push(it);
+        } else if (isThumbMediaName(n)) {
+            mediaItems.push(it);
+        } else {
+            badNames.push(n);
+        }
+    }
+
+    if (badNames.length > 0) {
+        thumbErr(shell, "Unsupported file type(s): " + badNames.join(", "), logTitle);
+        return;
+    }
+
+    if (imgItems.length > 0) {
+        if (sel.count != 2 || imgItems.length != 1 || mediaItems.length != 1) {
+            thumbErr(shell, "To combine cover: select exactly one image and one video or audio file (nothing else).", logTitle);
+            return;
+        }
+        var imgItem = imgItems[0];
+        var mediaItem = mediaItems[0];
+        var imgPath = imgItem.realpath + "";
+        var imgPathForMime = fileExtLower(imgItem.name + "");
+        var res = thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime);
+        if (!res.ok) {
+            thumbErr(shell, res.err, logTitle);
+            return;
+        }
+        try {
+            fso.DeleteFile(imgPath);
+        } catch (exDel) {
+            DOpus.Output("[" + logTitle + "] Embedded OK but could not delete image file (in use?): " + imgPath + " — " + exDel.message);
+        }
+        thumbInfo(shell, "Cover embedded in media (same as combine AV). Image file removed if possible:\n" + (mediaItem.realpath + ""), logTitle);
         try {
             clickData.func.command.RunCommand("Go REFRESH");
         } catch (eRf) { /* ignore */ }
+        return;
+    }
+
+    if (mediaItems.length != 1 || sel.count != 1) {
+        thumbErr(shell, "To split cover: select exactly one video or audio file (nothing else).", logTitle);
+        return;
+    }
+
+    var mediaItem = mediaItems[0];
+    var mediaName = mediaItem.name + "";
+    var mediaPath = mediaItem.realpath + "";
+    var folder = mediaItem.path + "";
+    var stem = mediaItem.name_stem + "";
+    var ext = fileExtLower(mediaName);
+    var isVideoExt = isThumbVideoName(mediaName);
+    var outPath = uniqueJpgPathNextToMedia(fso, folder, stem);
+    var stripTmp = folder + "\\" + stem + ".__opus_strip_tmp" + ext;
+    var stripBak = folder + "\\" + stem + ".__opus_strip_orig" + ext;
+
+    try {
+        if (!tryExtractCoverToPath(shell, fso, mediaPath, mediaName, folder, stem, ext, outPath)) {
+            thumbErr(shell, "No embedded cover to split, or extract failed. See DOpus Script Output.\n\n" + mediaName, logTitle);
+            return;
+        }
+
+        if (fso.FileExists(stripTmp)) {
+            try {
+                fso.DeleteFile(stripTmp);
+            } catch (eSt0) { /* ignore */ }
+        }
+        if (fso.FileExists(stripBak)) {
+            try {
+                fso.DeleteFile(stripBak);
+            } catch (eSt1) { /* ignore */ }
+        }
+
+        if (!tryStripCoverToTmp(shell, fso, mediaPath, ext, stripTmp, isVideoExt)) {
+            thumbInfo(shell, "Cover saved to:\n" + outPath + "\n\nCould not remove embedded cover from the media file (see Script Output). Original media unchanged.", logTitle);
+            try {
+                clickData.func.command.RunCommand("Go REFRESH");
+            } catch (eRf0) { /* ignore */ }
+            return;
+        }
+
+        try {
+            fso.MoveFile(mediaPath, stripBak);
+        } catch (eRen) {
+            thumbErr(shell, "Cover saved to:\n" + outPath + "\n\nCould not rename media to strip cover (file in use?). Deleted temp strip output.", logTitle);
+            try {
+                fso.DeleteFile(stripTmp);
+            } catch (eCl) { /* ignore */ }
+            return;
+        }
+        try {
+            fso.MoveFile(stripTmp, mediaPath);
+        } catch (eMv) {
+            try {
+                fso.MoveFile(stripBak, mediaPath);
+            } catch (eRest) { /* ignore */ }
+            try {
+                fso.DeleteFile(stripTmp);
+            } catch (eCl2) { /* ignore */ }
+            thumbErr(shell, "Could not replace media after strip; restored original. Cover file:\n" + outPath, logTitle);
+            return;
+        }
+        try {
+            fso.DeleteFile(stripBak);
+        } catch (eDelB) { /* ignore */ }
+
+        thumbInfo(shell, "Split cover: media without embedded cover:\n" + mediaPath + "\nImage:\n" + outPath, logTitle);
+        try {
+            clickData.func.command.RunCommand("Go REFRESH");
+        } catch (eRf1) { /* ignore */ }
     } catch (ex) {
-        cleanupAutoFrame();
-        thumbErr(shell, "Error: " + ex.message, "Set thumbnail");
+        thumbErr(shell, "Error: " + ex.message, logTitle);
     }
 }
 
@@ -353,7 +495,7 @@ function runAudioToMono(clickData, fso, shell) {
             } catch (eT1) { /* ignore */ }
         }
 
-        var exec = 'ffmpeg.exe -y -i "' + vidPath + '" -map 0 -c copy -c:a ' + aEnc + ' "' + tmpPath + '"';
+        var exec = 'ffmpeg.exe -y -i "' + vidPath + '" -map_metadata 0 -map_chapters 0 -map 0 -c copy -c:a ' + aEnc + ' "' + tmpPath + '"';
         DOpus.Output("Audio to mono: " + exec);
 
         try {
@@ -462,7 +604,7 @@ function runSplitAvCopy(clickData, fso, shell) {
                 fso.DeleteFile(bakPath);
             } catch (eBk0) { /* ignore */ }
         }
-        var execMux = 'ffmpeg.exe -y -i "' + vidPath + '" -i "' + audPath + '" -map 0:v:0 -map 1:a:0 -c copy -shortest "' + muxTmp + '"';
+        var execMux = 'ffmpeg.exe -y -i "' + vidPath + '" -i "' + audPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 1:a:0 -c copy -shortest "' + muxTmp + '"';
         DOpus.Output(logTitle + " (combine): " + execMux);
         try {
             var muxExit = shell.Run(execMux, 0, true);
@@ -559,8 +701,8 @@ function runSplitAvCopy(clickData, fso, shell) {
             ac++;
         }
 
-        var execV = 'ffmpeg.exe -y -i "' + vidPath + '" -map 0:v:0 -c copy -an "' + vidTmp + '"';
-        var execA = 'ffmpeg.exe -y -i "' + vidPath + '" -map 0:a:0 -c copy -vn "' + audOut + '"';
+        var execV = 'ffmpeg.exe -y -i "' + vidPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -c copy -an "' + vidTmp + '"';
+        var execA = 'ffmpeg.exe -y -i "' + vidPath + '" -map_metadata 0 -map_chapters 0 -map 0:a:0 -c copy -vn "' + audOut + '"';
 
         DOpus.Output(logTitle + " (split video): " + execV);
         try {
@@ -738,6 +880,8 @@ function OnClick(clickData) {
 
     // Variable to track if user clicked OK or Cancel
     var dialogResult = 0;
+    /** True after Split/combine cover, Audio→mono, or Split/combine AV — skip Convert (dlg.result may not be string "0"). */
+    var dialogClosedAfterTool = false;
 
     // Message loop to handle events
     while (true) {
@@ -749,15 +893,9 @@ function OnClick(clickData) {
             break;
         }
 
-        if (msg.event == "click" && msg.control == "set_thumbnail_btn") {
-            runSetThumbnail(clickData, fso, shell);
-            dlg.EndDlg("0");
-            dialogResult = dlg.result;
-            break;
-        }
-
-        if (msg.event == "click" && msg.control == "extract_thumbnail_btn") {
-            runExtractThumbnail(clickData, fso, shell);
+        if (msg.event == "click" && msg.control == "split_cover_btn") {
+            runSplitOrCombineCover(clickData, fso, shell);
+            dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;
             break;
@@ -765,6 +903,7 @@ function OnClick(clickData) {
 
         if (msg.event == "click" && msg.control == "audio_mono_btn") {
             runAudioToMono(clickData, fso, shell);
+            dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;
             break;
@@ -772,6 +911,7 @@ function OnClick(clickData) {
 
         if (msg.event == "click" && msg.control == "split_av_btn") {
             runSplitAvCopy(clickData, fso, shell);
+            dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;
             break;
@@ -791,12 +931,15 @@ function OnClick(clickData) {
     }
 
     // Check if user clicked OK (close="1") or Cancel (close="2")
-    // dlg.result will be "1" for OK, "2" for Cancel, or "0" for window close
+    // dlg.result will be "1" for OK, "2" for Cancel, or "0" for window close / tool buttons
+    if (dialogClosedAfterTool) {
+        return;
+    }
     if (dialogResult == "2") {
         DOpus.Output("Dialog cancelled");
         return;
     }
-    if (dialogResult == "0") {
+    if (dialogResult == "0" || dialogResult === 0 || dialogResult == "") {
         return;
     }
 
@@ -860,9 +1003,9 @@ function OnClick(clickData) {
             if (fmt.crf) {
                 vcodec = vcodec.replace(/-crf\s+\d+/, "-crf " + qStr);
             }
-            exec = 'ffmpeg.exe -i "' + item.realpath + '" -c:v ' + vcodec + ' -y "' + outPath + '"';
+            exec = 'ffmpeg.exe -i "' + item.realpath + '" -map_metadata 0 -map_chapters 0 -c:v ' + vcodec + ' -y "' + outPath + '"';
         } else {
-            exec = 'ffmpeg.exe -i "' + item.realpath + '" -vn -c:a ' + fmt.codec + ' -y "' + outPath + '"';
+            exec = 'ffmpeg.exe -i "' + item.realpath + '" -map_metadata 0 -map_chapters 0 -vn -c:a ' + fmt.codec + ' -y "' + outPath + '"';
         }
 
         DOpus.Output("Converting: " + item.name + " -> " + fmt.name);

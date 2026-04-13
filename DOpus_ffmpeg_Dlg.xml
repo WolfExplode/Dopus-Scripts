@@ -1,6 +1,6 @@
 <resources>
   <resource name="DOpus_ffmpeg_Dlg" type="dialog">
-    <dialog fontsize="9" height="208" lang="english" title="Video/Audio Converter" width="360">
+    <dialog fontsize="9" height="236" lang="english" title="Video/Audio Converter" width="360">
       <!-- Header -->
       <control halign="left" height="10" name="header_label" title="Convert selected files:" type="static" width="200" x="12" y="10"/>
 
@@ -24,18 +24,17 @@
       <control height="14" name="quality_edit" title="23" type="edit" width="80" x="95" y="72"/>
       <control halign="left" height="10" name="quality_hint" title="18–28 typical (lower = better quality)" type="static" width="260" x="12" y="90"/>
 
-      <!-- Poster / thumbnail (separate from Convert) -->
-      <control halign="left" height="10" name="thumb_header" title="Poster / cover image:" type="static" width="320" x="12" y="102"/>
-      <control halign="left" height="10" name="thumb_hint" title="Set: one video (frame @ 2s) or Name.jpg + video.  Extract: one video." type="static" width="330" x="12" y="116"/>
-      <control height="18" name="set_thumbnail_btn" title="Set thumbnail" type="button" width="100" x="12" y="130"/>
-      <control height="18" name="extract_thumbnail_btn" title="Extract thumbnail" type="button" width="110" x="118" y="130"/>
-      <control height="18" name="audio_mono_btn" title="Audio → mono" type="button" width="120" x="234" y="130"/>
-      <control halign="left" height="10" name="split_av_hint" title="1 video: replace with video-only + .audio.mka. 1 video + 1 audio: remux to video filename, delete audio (-c copy)." type="static" width="330" x="12" y="148"/>
-      <control height="18" name="split_av_btn" title="Split or combine audio and video" type="button" width="160" x="12" y="160"/>
+      <!-- Cover split/combine (like AV split/combine) -->
+      <control halign="left" height="10" name="thumb_header" title="Cover (split / combine):" type="static" width="320" x="12" y="102"/>
+      <control halign="left" height="10" name="thumb_hint" title="1 image + 1 video/audio: embed cover, delete image (one file). 1 video/audio: extract .jpg + remove embedded cover (two files)." type="static" width="330" x="12" y="116"/>
+      <control height="18" name="split_cover_btn" title="Split or combine cover" type="button" width="160" x="12" y="130"/>
+      <control height="18" name="audio_mono_btn" title="Audio → mono" type="button" width="120" x="218" y="130"/>
+      <control halign="left" height="10" name="split_av_hint" title="1 video: replace with video-only + .audio.mka. 1 video + 1 audio: remux to video filename, delete audio (-c copy)." type="static" width="330" x="12" y="154"/>
+      <control height="18" name="split_av_btn" title="Split or combine audio and video" type="button" width="160" x="12" y="166"/>
 
       <!-- Buttons -->
-      <control close="1" default="yes" height="18" name="ok_btn" title="Convert" type="button" width="70" x="150" y="180"/>
-      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="70" x="230" y="180"/>
+      <control close="1" default="yes" height="18" name="ok_btn" title="Convert" type="button" width="70" x="150" y="200"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="70" x="230" y="200"/>
     </dialog>
   </resource>
 </resources>
