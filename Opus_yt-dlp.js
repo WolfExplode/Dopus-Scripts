@@ -6,6 +6,16 @@ function trimStr(s) {
     return String(s).replace(/^\s+|\s+$/g, "");
 }
 
+// FSO TextStream.WriteLine throws "Invalid procedure call or argument" if the string contains \0
+function safeWriteStr(s) {
+    return String(s).replace(/\x00/g, "");
+}
+
+// PowerShell single-quoted literal: only ' is escaped as ''
+function escapePsSingleQuoted(s) {
+    return safeWriteStr(s).replace(/'/g, "''");
+}
+
 // Literal text before %(…) in -o template; % -> %%, " -> ' so -o "…" stays valid
 function escapeYtdlpOutputPrefix(s) {
     var t = trimStr(s);
@@ -124,7 +134,7 @@ function OnClick(clickData) {
     var shell = new ActiveXObject("WScript.Shell");
     var fso = new ActiveXObject("Scripting.FileSystemObject");
 
-    var destPath = String(clickData.func.sourcetab.path);
+    var destPath = safeWriteStr(clickData.func.sourcetab.path + "");
 
     // Read clipboard (DOpus API is GetClip("text"), not GetClipText)
     var url = "";
@@ -178,7 +188,7 @@ function OnClick(clickData) {
     }
 
     // Read final values from controls
-    var finalUrl = trimStr(dlg.control("url_edit").value);
+    var finalUrl = safeWriteStr(trimStr(dlg.control("url_edit").value));
     var filePrefixRaw = String(dlg.control("prefix_edit").value);
     var filePrefixEsc = escapeYtdlpOutputPrefix(filePrefixRaw);
     var isAudio = dlg.control("audio_radio").value;
@@ -190,7 +200,8 @@ function OnClick(clickData) {
     var keepPsOpen = dlg.control("keepps_check").value;
 
     if (!finalUrl) {
-        DOpus.dlg.message("No URL provided.", "yt-dlp");
+        // After detached dlg, DOpus.dlg.message can throw 0x8000ffff; use Popup instead
+        shell.Popup("No URL provided.", 0, "yt-dlp", 48);
         return;
     }
 
@@ -211,36 +222,40 @@ function OnClick(clickData) {
     // Build yt-dlp argument string
     // Written into a .ps1 file so % format specifiers are never touched by cmd.exe
     // Plain mode: no metadata/embed flags; with metadata: previous full options
-    var ytArgs;
+    // URL is appended with PS single-quoted literal so & ? etc. never break parsing; avoids NUL/ANSI WriteLine issues
+    var ytArgsBody;
     if (isAudio) {
-        ytArgs = "-o " + outTemplate
+        ytArgsBody = "-o " + outTemplate
                + ' -f bestaudio'
                + overwriteArg
                + ejsArg
                + (includeMetadata ? metaAudio : "")
-               + cookiesArg
-               + ' "' + finalUrl + '"';
+               + cookiesArg;
     } else {
-        ytArgs = "-o " + outTemplate
+        ytArgsBody = "-o " + outTemplate
                + overwriteArg
                + ejsArg
                + (includeMetadata ? metaVideo : "")
-               + cookiesArg
-               + ' "' + finalUrl + '"';
+               + cookiesArg;
     }
 
     // Write a temp PowerShell script to avoid cmd.exe expanding % characters
     var tempPs1 = shell.ExpandEnvironmentStrings("%TEMP%") + "\\yt-dlp-run.ps1";
     try {
-        var ps1 = fso.CreateTextFile(tempPs1, true, false);
-        ps1.WriteLine("Set-Location '" + destPath.replace(/'/g, "''") + "'");
+        // unicode=true: UTF-16LE + BOM so non-ANSI paths / pasted text do not break WriteLine
+        var ps1 = fso.CreateTextFile(tempPs1, true, true);
+        ps1.WriteLine("Set-Location '" + escapePsSingleQuoted(destPath) + "'");
         if (doUpdate) {
             writeYtDlpUpdateBlock(ps1);
         }
-        ps1.WriteLine("yt-dlp " + ytArgs);
+        ps1.WriteLine("yt-dlp " + ytArgsBody + " '" + escapePsSingleQuoted(finalUrl) + "'");
         ps1.Close();
     } catch (e) {
-        DOpus.dlg.message("Failed to write temp script: " + e.message, "yt-dlp Error");
+        var errMsg = "Failed to write temp script.";
+        try {
+            if (e && e.message) errMsg += " " + e.message;
+        } catch (x) { /* ignore */ }
+        shell.Popup(errMsg, 0, "yt-dlp Error", 16);
         return;
     }
 

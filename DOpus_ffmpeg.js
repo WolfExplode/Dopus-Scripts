@@ -50,9 +50,38 @@ function fileExtLower(name) {
     return (name + "").substring(p).toLowerCase();
 }
 
-var THUMB_IMAGE_EXT = { ".jpg": 1, ".jpeg": 1, ".png": 1, ".webp": 1, ".bmp": 1, ".gif": 1, ".tif": 1, ".tiff": 1 };
-var THUMB_VIDEO_EXT = { ".mp4": 1, ".mkv": 1, ".mov": 1, ".avi": 1, ".webm": 1, ".m4v": 1, ".wmv": 1 };
-var THUMB_AUDIO_EXT = { ".mp3": 1, ".m4a": 1, ".aac": 1, ".flac": 1, ".wav": 1, ".ogg": 1, ".opus": 1, ".mka": 1, ".wma": 1, ".ac3": 1, ".eac3": 1 };
+var THUMB_IMAGE_EXT = {
+    ".jpg": 1, ".jpeg": 1, ".jfif": 1, ".pjpeg": 1, ".pjp": 1,
+    ".png": 1, ".apng": 1,
+    ".webp": 1, ".bmp": 1, ".dib": 1, ".gif": 1,
+    ".tif": 1, ".tiff": 1,
+    ".heic": 1, ".heif": 1, ".avif": 1, ".jxl": 1
+};
+var THUMB_VIDEO_EXT = {
+    ".mp4": 1, ".m4v": 1, ".mov": 1, ".qt": 1,
+    ".mkv": 1, ".webm": 1, ".avi": 1, ".wmv": 1, ".asf": 1,
+    ".mpg": 1, ".mpeg": 1, ".mpe": 1, ".m1v": 1, ".m2v": 1, ".mpv": 1,
+    ".vob": 1,
+    ".ts": 1, ".mts": 1, ".m2t": 1, ".m2ts": 1,
+    ".3gp": 1, ".3g2": 1,
+    ".flv": 1, ".f4v": 1,
+    ".ogv": 1, ".ogm": 1,
+    ".dv": 1,
+    ".mxf": 1
+};
+var THUMB_AUDIO_EXT = {
+    ".mp3": 1, ".mp2": 1, ".mpa": 1,
+    ".m4a": 1, ".m4b": 1, ".m4p": 1, ".aac": 1, ".adts": 1,
+    ".flac": 1, ".wav": 1, ".aiff": 1, ".aif": 1, ".aifc": 1, ".caf": 1,
+    ".ogg": 1, ".oga": 1, ".opus": 1,
+    ".mka": 1,
+    ".wma": 1,
+    ".ac3": 1, ".eac3": 1, ".dts": 1,
+    ".amr": 1, ".awb": 1,
+    ".au": 1, ".snd": 1,
+    ".ape": 1, ".tta": 1, ".wv": 1,
+    ".weba": 1
+};
 
 function isThumbImageName(name) {
     return THUMB_IMAGE_EXT[fileExtLower(name)] == 1;
@@ -65,12 +94,15 @@ function isThumbAudioName(name) {
 }
 
 function mimeTypeForImageExt(ext) {
-    if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
-    if (ext == ".png")  return "image/png";
+    if (ext == ".jpg" || ext == ".jpeg" || ext == ".jfif" || ext == ".pjpeg" || ext == ".pjp") return "image/jpeg";
+    if (ext == ".png" || ext == ".apng") return "image/png";
     if (ext == ".webp") return "image/webp";
-    if (ext == ".gif")  return "image/gif";
-    if (ext == ".bmp")  return "image/bmp";
+    if (ext == ".gif") return "image/gif";
+    if (ext == ".bmp" || ext == ".dib") return "image/bmp";
     if (ext == ".tif" || ext == ".tiff") return "image/tiff";
+    if (ext == ".heic" || ext == ".heif") return "image/heif";
+    if (ext == ".avif") return "image/avif";
+    if (ext == ".jxl") return "image/jxl";
     return "image/jpeg";
 }
 
@@ -199,7 +231,7 @@ function ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath
     if (isVideoExt) {
         return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 0:a? -map 0:s? -map 0:d? -map 0:t? -map 1 -c copy -c:v:1 mjpeg -disposition:v:1 attached_pic "' + tmpPath + '"';
     }
-    if (ext == ".m4a" || ext == ".aac") {
+    if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac") {
         return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 -c copy -c:v:0 mjpeg -disposition:v:0 attached_pic "' + tmpPath + '"';
     }
     if (ext == ".mp3") {
@@ -242,7 +274,7 @@ function tryStripCoverToTmp(shell, fso, mediaPath, ext, stripTmp, isVideoExt) {
     if (isVideoExt) {
         return runAttempt(cmdVideo);
     }
-    if (ext == ".m4a" || ext == ".aac") {
+    if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac") {
         return runAttempt(cmdM4a);
     }
     if (ext == ".mp3") {
@@ -449,6 +481,15 @@ function monoAudioEncodeArgsForExt(ext) {
     }
     if (ext == ".wmv") {
         return "wmav2 -ac 1 -b:a 128k";
+    }
+    if (ext == ".ogv" || ext == ".ogm") {
+        return "libvorbis -ac 1 -b:a 192k";
+    }
+    if (ext == ".flv" || ext == ".f4v") {
+        return "aac -ac 1 -b:a 192k";
+    }
+    if (ext == ".mpg" || ext == ".mpeg" || ext == ".mpe" || ext == ".m1v" || ext == ".vob") {
+        return "mp2 -ac 1 -b:a 192k";
     }
     return "aac -ac 1 -b:a 192k";
 }
