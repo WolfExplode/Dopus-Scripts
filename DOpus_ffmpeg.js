@@ -830,6 +830,114 @@ function runSplitAvCopy(clickData, fso, shell) {
     } catch (eRf) { /* ignore */ }
 }
 
+/** Video re-encode args for in-place rotate/flip (must match container). */
+function videoEncodeForTransform(ext) {
+    var e = (ext + "").toLowerCase();
+    if (e == ".webm") {
+        return "libvpx-vp9 -crf 30 -b:v 0";
+    }
+    return "libx264 -crf 18 -preset fast -pix_fmt yuv420p";
+}
+
+/**
+ * Rotate or flip video in place (re-encode first video stream, copy audio). vfFilter e.g. transpose=1, hflip.
+ */
+function runVideoTransform(clickData, fso, shell, vfFilter, logTitle) {
+    var sel = clickData.func.sourcetab.selected_files;
+    if (sel.count < 1) {
+        thumbErr(shell, "Select one or more video files.", logTitle);
+        return;
+    }
+    var list = [];
+    var en = new Enumerator(sel);
+    for (; !en.atEnd(); en.moveNext()) {
+        var it = en.item();
+        if (!isThumbVideoName(it.name + "")) {
+            thumbErr(shell, "Not a supported video file:\n\n" + it.name, logTitle);
+            return;
+        }
+        list.push(it);
+    }
+
+    var ok = 0;
+    var fail = 0;
+
+    for (var i = 0; i < list.length; i++) {
+        var vidItem = list[i];
+        var vidPath = vidItem.realpath + "";
+        var folder = vidItem.path + "";
+        var ext = fileExtLower(vidItem.name + "");
+        var stem = vidItem.name_stem + "";
+        var tmpPath = folder + "\\" + stem + ".__opus_xform_tmp" + ext;
+        var bakPath = folder + "\\" + stem + ".__opus_xform_orig" + ext;
+        var vEnc = videoEncodeForTransform(ext);
+
+        if (fso.FileExists(tmpPath)) {
+            try {
+                fso.DeleteFile(tmpPath);
+            } catch (eT0) { /* ignore */ }
+        }
+        if (fso.FileExists(bakPath)) {
+            try {
+                fso.DeleteFile(bakPath);
+            } catch (eT1) { /* ignore */ }
+        }
+
+        var exec = 'ffmpeg.exe -y -i "' + vidPath + '" -vf "' + vfFilter + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map "0:a?" -c:v ' + vEnc + ' -c:a copy "' + tmpPath + '"';
+        DOpus.Output(logTitle + ": " + exec);
+
+        try {
+            var exitCode = shell.Run(exec, 0, true);
+            if (exitCode != 0) {
+                DOpus.Output(logTitle + " failed (exit " + exitCode + "): " + vidItem.name);
+                fail++;
+                continue;
+            }
+            if (!fso.FileExists(tmpPath)) {
+                DOpus.Output(logTitle + ": output missing after ffmpeg: " + vidItem.name);
+                fail++;
+                continue;
+            }
+
+            try {
+                fso.MoveFile(vidPath, bakPath);
+            } catch (eRen) {
+                DOpus.Output(logTitle + ": could not rename original (in use?): " + vidItem.name + " — left temp: " + tmpPath);
+                fail++;
+                continue;
+            }
+            try {
+                fso.MoveFile(tmpPath, vidPath);
+            } catch (eMv) {
+                try {
+                    fso.MoveFile(bakPath, vidPath);
+                } catch (eRest) { /* ignore */ }
+                DOpus.Output(logTitle + ": could not replace file, restored original: " + vidItem.name);
+                fail++;
+                continue;
+            }
+            try {
+                fso.DeleteFile(bakPath);
+            } catch (eDel) { /* leave backup if locked */ }
+            ok++;
+        } catch (ex) {
+            DOpus.Output(logTitle + " error on " + vidItem.name + ": " + ex.message);
+            fail++;
+        }
+    }
+
+    if (fail > 0 && ok === 0) {
+        thumbErr(shell, "All " + fail + " file(s) failed. See DOpus Script Output.", logTitle);
+    } else if (fail > 0) {
+        thumbInfo(shell, "Finished with errors. OK: " + ok + ", Failed: " + fail + ". Details in Script Output.", logTitle);
+    } else {
+        thumbInfo(shell, logTitle + " finished. Files updated: " + ok, logTitle);
+    }
+    try {
+        clickData.func.command.RunCommand("Go REFRESH");
+    } catch (eRf) { /* ignore */ }
+}
+
 /**
  * Run conversion using saved or dialog values (shared by OK and Ctrl+click).
  * modeIndex: 0 = video, 1 = audio. formatName must match a preset name or first preset is used.
@@ -958,7 +1066,7 @@ function OnClick(clickData) {
     if (qualStr.indexOf("ctrl") >= 0) {
         var lastQuick = loadLastSettings(shell, fso);
         var act = lastQuick.lastAction || "convert";
-        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav") {
+        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav" && act != "rotatecw" && act != "rotateccw" && act != "fliph" && act != "flipv") {
             act = "convert";
         }
         DOpus.Output("ffmpeg: Ctrl+click — last action: " + act + " (no dialog)");
@@ -972,6 +1080,22 @@ function OnClick(clickData) {
         }
         if (act == "splitav") {
             runSplitAvCopy(clickData, fso, shell);
+            return;
+        }
+        if (act == "rotatecw") {
+            runVideoTransform(clickData, fso, shell, "transpose=1", "Rotate 90° CW");
+            return;
+        }
+        if (act == "rotateccw") {
+            runVideoTransform(clickData, fso, shell, "transpose=2", "Rotate 90° CCW");
+            return;
+        }
+        if (act == "fliph") {
+            runVideoTransform(clickData, fso, shell, "hflip", "Flip horizontal");
+            return;
+        }
+        if (act == "flipv") {
+            runVideoTransform(clickData, fso, shell, "vflip", "Flip vertical");
             return;
         }
         runConvertWithSelectedFiles(clickData, tab, fso, shell, videoFormats, audioFormats, lastQuick.mode, lastQuick.formatName, lastQuick.quality);
@@ -1052,7 +1176,7 @@ function OnClick(clickData) {
 
     // Variable to track if user clicked OK or Cancel
     var dialogResult = 0;
-    /** True after Split/combine cover, Audio→mono, or Split/combine AV — skip Convert (dlg.result may not be string "0"). */
+    /** True after rotate/flip, Split/combine cover, Audio→mono, or Split/combine AV — skip Convert (dlg.result may not be string "0"). */
     var dialogClosedAfterTool = false;
 
     // Message loop to handle events
@@ -1068,6 +1192,39 @@ function OnClick(clickData) {
         if (msg.event == "click" && msg.control == "split_cover_btn") {
             saveLastActionOnly(shell, fso, "cover");
             runSplitOrCombineCover(clickData, fso, shell);
+            dialogClosedAfterTool = true;
+            dlg.EndDlg("0");
+            dialogResult = dlg.result;
+            break;
+        }
+
+        if (msg.event == "click" && msg.control == "rotate90_cw_btn") {
+            saveLastActionOnly(shell, fso, "rotatecw");
+            runVideoTransform(clickData, fso, shell, "transpose=1", "Rotate 90° CW");
+            dialogClosedAfterTool = true;
+            dlg.EndDlg("0");
+            dialogResult = dlg.result;
+            break;
+        }
+        if (msg.event == "click" && msg.control == "rotate90_ccw_btn") {
+            saveLastActionOnly(shell, fso, "rotateccw");
+            runVideoTransform(clickData, fso, shell, "transpose=2", "Rotate 90° CCW");
+            dialogClosedAfterTool = true;
+            dlg.EndDlg("0");
+            dialogResult = dlg.result;
+            break;
+        }
+        if (msg.event == "click" && msg.control == "flip_h_btn") {
+            saveLastActionOnly(shell, fso, "fliph");
+            runVideoTransform(clickData, fso, shell, "hflip", "Flip horizontal");
+            dialogClosedAfterTool = true;
+            dlg.EndDlg("0");
+            dialogResult = dlg.result;
+            break;
+        }
+        if (msg.event == "click" && msg.control == "flip_v_btn") {
+            saveLastActionOnly(shell, fso, "flipv");
+            runVideoTransform(clickData, fso, shell, "vflip", "Flip vertical");
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;

@@ -71,6 +71,41 @@ function writeYtDlpUpdateBlock(ps1) {
     }
 }
 
+// PowerShell: move console to bottom-right of primary monitor work area (Win32 + Forms)
+function writeConsoleWindowBottomRight(ps1) {
+    var lines = [
+        "try {",
+        "    Add-Type @\"",
+        "using System;",
+        "using System.Runtime.InteropServices;",
+        "public struct YtdlpRect { public int Left; public int Top; public int Right; public int Bottom; }",
+        "public static class YtdlpConsoleWin {",
+        "    [DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow();",
+        "    [DllImport(\"user32.dll\")] public static extern bool GetWindowRect(IntPtr hWnd, ref YtdlpRect lpRect);",
+        "    [DllImport(\"user32.dll\")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);",
+        "}",
+        "\"@",
+        "    Add-Type -AssemblyName System.Windows.Forms",
+        "    $hwnd = [YtdlpConsoleWin]::GetConsoleWindow()",
+        "    if ($hwnd -ne [IntPtr]::Zero) {",
+        "        $r = New-Object YtdlpRect",
+        "        [void][YtdlpConsoleWin]::GetWindowRect($hwnd, [ref]$r)",
+        "        $winW = $r.Right - $r.Left",
+        "        $winH = $r.Bottom - $r.Top",
+        "        $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea",
+        "        $x = [Math]::Max($wa.Left, $wa.Right - $winW)",
+        "        $y = [Math]::Max($wa.Top, $wa.Bottom - $winH)",
+        "        $flags = [uint32]0x0001 -bor 0x0004 -bor 0x0040",
+        "        [void][YtdlpConsoleWin]::SetWindowPos($hwnd, [IntPtr]::Zero, $x, $y, 0, 0, $flags)",
+        "    }",
+        "} catch { }",
+        ""
+    ];
+    for (var i = 0; i < lines.length; i++) {
+        ps1.WriteLine(lines[i]);
+    }
+}
+
 function getSettingsPath(shell) {
     if (!SETTINGS_FILE) {
         SETTINGS_FILE = shell.ExpandEnvironmentStrings("%APPDATA%") + "\\DOpus_ytdlp_settings.ini";
@@ -278,6 +313,7 @@ function OnClick(clickData) {
         // unicode=true: UTF-16LE + BOM so non-ANSI paths / pasted text do not break WriteLine
         var ps1 = fso.CreateTextFile(tempPs1, true, true);
         ps1.WriteLine("Set-Location '" + escapePsSingleQuoted(destPath) + "'");
+        writeConsoleWindowBottomRight(ps1);
         if (doUpdate) {
             writeYtDlpUpdateBlock(ps1);
         }
