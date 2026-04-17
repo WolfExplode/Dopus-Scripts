@@ -10,7 +10,7 @@ function getSettingsPath(shell) {
 
 function loadLastSettings(shell, fso) {
     var path = getSettingsPath(shell);
-    var out = { mode: 0, formatName: "", quality: "23" };
+    var out = { mode: 0, formatName: "", quality: "23", lastAction: "convert" };
     try {
         if (fso.FileExists(path)) {
             var stream = fso.OpenTextFile(path, 1, false);
@@ -26,22 +26,34 @@ function loadLastSettings(shell, fso) {
                     if (key == "mode") out.mode = parseInt(val, 10) || 0;
                     else if (key == "formatName") out.formatName = val;
                     else if (key == "quality") out.quality = val;
+                    else if (key == "lastAction") out.lastAction = val;
                 }
             }
         }
     } catch (e) { /* use defaults */ }
+    if (!out.lastAction) out.lastAction = "convert";
     return out;
 }
 
-function saveLastSettings(shell, fso, mode, formatName, quality) {
+function saveLastSettings(shell, fso, mode, formatName, quality, lastAction) {
     try {
+        if (lastAction === undefined || lastAction === null || lastAction === "") {
+            lastAction = "convert";
+        }
         var path = getSettingsPath(shell);
         var stream = fso.OpenTextFile(path, 2, true);  // ForWriting, Create
         stream.WriteLine("mode=" + mode);
         stream.WriteLine("formatName=" + formatName);
         stream.WriteLine("quality=" + (quality || "23"));
+        stream.WriteLine("lastAction=" + lastAction);
         stream.Close();
     } catch (e) { /* ignore */ }
+}
+
+/** Remember which command was used (convert / cover / mono / splitav) while keeping convert presets. */
+function saveLastActionOnly(shell, fso, action) {
+    var last = loadLastSettings(shell, fso);
+    saveLastSettings(shell, fso, last.mode, last.formatName, last.quality, action);
 }
 
 function fileExtLower(name) {
@@ -818,6 +830,96 @@ function runSplitAvCopy(clickData, fso, shell) {
     } catch (eRf) { /* ignore */ }
 }
 
+/**
+ * Run conversion using saved or dialog values (shared by OK and Ctrl+click).
+ * modeIndex: 0 = video, 1 = audio. formatName must match a preset name or first preset is used.
+ */
+function runConvertWithSelectedFiles(clickData, tab, fso, shell, videoFormats, audioFormats, modeIndex, formatName, qualityStr) {
+    if (tab.selstats.selfiles == 0) {
+        DOpus.Output("[Converter ERROR] No files selected to convert. Select files in the lister, then run the converter again.");
+        return;
+    }
+    var isVideo = (modeIndex == 0);
+    var formats = isVideo ? videoFormats : audioFormats;
+    var formatIndex = -1;
+    var fi;
+    for (fi = 0; fi < formats.length; fi++) {
+        if (formats[fi].name === formatName) {
+            formatIndex = fi;
+            break;
+        }
+    }
+    if (formatIndex < 0 || formatIndex >= formats.length) {
+        formatIndex = 0;
+        if (formatName) {
+            DOpus.Output("[Converter] Unknown saved format \"" + formatName + "\"; using first preset.");
+        }
+    }
+    var fmt = formats[formatIndex];
+    var qStr = (qualityStr + "").replace(/^\s+|\s+$/g, "");
+    if (!qStr) {
+        qStr = "23";
+    }
+
+    DOpus.Output("Mode index: " + modeIndex);
+    DOpus.Output("Format index: " + formatIndex);
+    DOpus.Output("Quality: " + qStr);
+    DOpus.Output("Mode: " + (isVideo ? "Video" : "Audio"));
+    DOpus.Output("Format: " + fmt.name);
+
+    var processed = 0;
+    var failed = 0;
+    var enumerator = new Enumerator(tab.selected_files);
+
+    for (; !enumerator.atEnd(); enumerator.moveNext()) {
+        var item = enumerator.item();
+        var outPath = item.path + "\\" + item.name_stem + fmt.ext;
+
+        var counter = 1;
+        while (fso.FileExists(outPath)) {
+            outPath = item.path + "\\" + item.name_stem + "_" + counter + fmt.ext;
+            counter++;
+        }
+
+        var exec;
+        if (isVideo) {
+            var vcodec = fmt.codec;
+            if (fmt.crf) {
+                vcodec = vcodec.replace(/-crf\s+\d+/, "-crf " + qStr);
+            }
+            exec = 'ffmpeg.exe -i "' + item.realpath + '" -map_metadata 0 -map_chapters 0 -c:v ' + vcodec + ' -y "' + outPath + '"';
+        } else {
+            exec = 'ffmpeg.exe -i "' + item.realpath + '" -map_metadata 0 -map_chapters 0 -vn -c:a ' + fmt.codec + ' -y "' + outPath + '"';
+        }
+
+        DOpus.Output("Converting: " + item.name + " -> " + fmt.name);
+
+        try {
+            var exitCode = shell.Run(exec, 0, true);
+            if (exitCode == 0) {
+                processed++;
+                DOpus.Output("Success: " + outPath);
+            } else {
+                DOpus.Output("Failed (code " + exitCode + "): " + item.name);
+                failed++;
+            }
+        } catch (e) {
+            DOpus.Output("Error: " + e.message);
+            failed++;
+        }
+    }
+
+    var summary = "Conversion finished. Successful: " + processed;
+    if (failed > 0) {
+        summary += ", Failed: " + failed;
+    }
+    DOpus.Output("[Converter] " + summary);
+
+    try {
+        clickData.func.command.RunCommand("Go REFRESH");
+    } catch (eRf) { /* ignore */ }
+}
+
 function OnClick(clickData) {
     var tab = clickData.func.sourcetab;
     var fso = new ActiveXObject("Scripting.FileSystemObject");
@@ -846,6 +948,35 @@ function OnClick(clickData) {
         { name: "OGG Vorbis", ext: ".ogg", codec: "libvorbis -q:a 6" },
         { name: "OGG Opus", ext: ".ogg", codec: "libopus -b:a 128k" }
     ];
+
+    var qualStr = "";
+    try {
+        qualStr = String(clickData.func.qualifiers + "");
+    } catch (eq) {
+        qualStr = "";
+    }
+    if (qualStr.indexOf("ctrl") >= 0) {
+        var lastQuick = loadLastSettings(shell, fso);
+        var act = lastQuick.lastAction || "convert";
+        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav") {
+            act = "convert";
+        }
+        DOpus.Output("ffmpeg: Ctrl+click — last action: " + act + " (no dialog)");
+        if (act == "cover") {
+            runSplitOrCombineCover(clickData, fso, shell);
+            return;
+        }
+        if (act == "mono") {
+            runAudioToMono(clickData, fso, shell);
+            return;
+        }
+        if (act == "splitav") {
+            runSplitAvCopy(clickData, fso, shell);
+            return;
+        }
+        runConvertWithSelectedFiles(clickData, tab, fso, shell, videoFormats, audioFormats, lastQuick.mode, lastQuick.formatName, lastQuick.quality);
+        return;
+    }
 
     // Create detached dialog
     var dlg = DOpus.dlg;
@@ -935,6 +1066,7 @@ function OnClick(clickData) {
         }
 
         if (msg.event == "click" && msg.control == "split_cover_btn") {
+            saveLastActionOnly(shell, fso, "cover");
             runSplitOrCombineCover(clickData, fso, shell);
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
@@ -943,6 +1075,7 @@ function OnClick(clickData) {
         }
 
         if (msg.event == "click" && msg.control == "audio_mono_btn") {
+            saveLastActionOnly(shell, fso, "mono");
             runAudioToMono(clickData, fso, shell);
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
@@ -951,6 +1084,7 @@ function OnClick(clickData) {
         }
 
         if (msg.event == "click" && msg.control == "split_av_btn") {
+            saveLastActionOnly(shell, fso, "splitav");
             runSplitAvCopy(clickData, fso, shell);
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
@@ -995,83 +1129,8 @@ function OnClick(clickData) {
     var quality = qualityCtrl.value;
 
     var modeIndex = modeItem.index;
-    var formatIndex = formatItem.index;
 
-    saveLastSettings(shell, fso, modeIndex, formatItem.name, quality);
+    saveLastSettings(shell, fso, modeIndex, formatItem.name, quality, "convert");
 
-    DOpus.Output("Mode index: " + modeIndex);
-    DOpus.Output("Format index: " + formatIndex);
-    DOpus.Output("Quality: " + quality);
-    DOpus.Output("Mode: " + modeItem.name);
-    DOpus.Output("Format: " + formatItem.name);
-
-    // Determine mode and format
-    var isVideo = (modeIndex == 0);
-    var formats = isVideo ? videoFormats : audioFormats;
-
-    if (formatIndex < 0 || formatIndex >= formats.length) {
-        DOpus.Output("[Converter ERROR] Invalid format selected");
-        return;
-    }
-
-    var fmt = formats[formatIndex];
-
-    var qStr = (qualityCtrl.value + "").replace(/^\s+|\s+$/g, "");
-    if (!qStr) {
-        qStr = "23";
-    }
-
-    // Process files
-    var processed = 0;
-    var failed = 0;
-    var enumerator = new Enumerator(tab.selected_files);
-
-    for (; !enumerator.atEnd(); enumerator.moveNext()) {
-        var item = enumerator.item();
-        var outPath = item.path + "\\" + item.name_stem + fmt.ext;
-
-        // Avoid overwrite
-        var counter = 1;
-        while (fso.FileExists(outPath)) {
-            outPath = item.path + "\\" + item.name_stem + "_" + counter + fmt.ext;
-            counter++;
-        }
-
-        // Build ffmpeg command
-        var exec;
-        if (isVideo) {
-            var vcodec = fmt.codec;
-            if (fmt.crf) {
-                vcodec = vcodec.replace(/-crf\s+\d+/, "-crf " + qStr);
-            }
-            exec = 'ffmpeg.exe -i "' + item.realpath + '" -map_metadata 0 -map_chapters 0 -c:v ' + vcodec + ' -y "' + outPath + '"';
-        } else {
-            exec = 'ffmpeg.exe -i "' + item.realpath + '" -map_metadata 0 -map_chapters 0 -vn -c:a ' + fmt.codec + ' -y "' + outPath + '"';
-        }
-
-        DOpus.Output("Converting: " + item.name + " -> " + fmt.name);
-
-        try {
-            var exitCode = shell.Run(exec, 0, true);
-            if (exitCode == 0) {
-                processed++;
-                DOpus.Output("Success: " + outPath);
-            } else {
-                DOpus.Output("Failed (code " + exitCode + "): " + item.name);
-                failed++;
-            }
-        } catch (e) {
-            DOpus.Output("Error: " + e.message);
-            failed++;
-        }
-    }
-
-    var summary = "Conversion finished. Successful: " + processed;
-    if (failed > 0) {
-        summary += ", Failed: " + failed;
-    }
-    DOpus.Output("[Converter] " + summary);
-
-    // Refresh file display
-    clickData.func.command.RunCommand("Go REFRESH");
+    runConvertWithSelectedFiles(clickData, tab, fso, shell, videoFormats, audioFormats, modeIndex, formatItem.name, quality);
 }
