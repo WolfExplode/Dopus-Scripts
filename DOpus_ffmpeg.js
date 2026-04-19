@@ -50,7 +50,7 @@ function saveLastSettings(shell, fso, mode, formatName, quality, lastAction) {
     } catch (e) { /* ignore */ }
 }
 
-/** Remember which command was used (convert / cover / mono / splitav) while keeping convert presets. */
+/** Remember which command was used (convert / cover / mono / splitav / splitch) while keeping convert presets. */
 function saveLastActionOnly(shell, fso, action) {
     var last = loadLastSettings(shell, fso);
     saveLastSettings(shell, fso, last.mode, last.formatName, last.quality, action);
@@ -603,6 +603,154 @@ function runAudioToMono(clickData, fso, shell) {
     } catch (eRf) { /* ignore */ }
 }
 
+/** Channel count for first audio stream (0:a:0), or -1 if missing / ffprobe failed. */
+function probeAudioChannelCount(shell, fso, mediaPath) {
+    var tmp = shell.ExpandEnvironmentStrings("%TEMP%") + "\\DOpus_ffmpeg_chcnt.txt";
+    if (fso.FileExists(tmp)) {
+        try {
+            fso.DeleteFile(tmp);
+        } catch (e0) { /* ignore */ }
+    }
+    var cmd = 'cmd /c ffprobe.exe -v error -select_streams a:0 -show_entries stream=channels -of csv=p=0 "';
+    cmd += mediaPath + '" 1> "' + tmp + '"';
+    var code;
+    try {
+        code = shell.Run(cmd, 0, true);
+    } catch (ex) {
+        return -1;
+    }
+    if (code != 0 || !fso.FileExists(tmp)) {
+        try {
+            if (fso.FileExists(tmp)) {
+                fso.DeleteFile(tmp);
+            }
+        } catch (e1) { /* ignore */ }
+        return -1;
+    }
+    var line = "";
+    try {
+        var ts = fso.OpenTextFile(tmp, 1);
+        line = ts.ReadAll().replace(/^\s+|\s+$/g, "").replace(/\r|\n/g, "");
+        ts.Close();
+    } catch (eR) {
+        line = "";
+    }
+    try {
+        fso.DeleteFile(tmp);
+    } catch (e2) { /* ignore */ }
+    var n = parseInt(line, 10);
+    if (isNaN(n) || n < 1) {
+        return -1;
+    }
+    return n;
+}
+
+/**
+ * First audio stream only: one mono 16-bit WAV per channel (stem.ch01.wav …).
+ * Filter script is written under %TEMP% (short path) so long/Unicode media paths do not exceed MAX_PATH.
+ */
+function runExtractAllAudioChannels(clickData, fso, shell) {
+    var logTitle = "Extract audio channels";
+    var sel = clickData.func.sourcetab.selected_files;
+    if (sel.count < 1) {
+        thumbErr(shell, "Select one or more video or audio files.", logTitle);
+        return;
+    }
+    var list = [];
+    var en = new Enumerator(sel);
+    for (; !en.atEnd(); en.moveNext()) {
+        var it = en.item();
+        var n = it.name + "";
+        if (!isThumbVideoName(n) && !isThumbAudioName(n)) {
+            thumbErr(shell, "Not a supported video or audio file:\n\n" + n, logTitle);
+            return;
+        }
+        list.push(it);
+    }
+
+    var ok = 0;
+    var fail = 0;
+
+    for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        var mediaPath = item.realpath + "";
+        var folder = item.path + "";
+        var stem = item.name_stem + "";
+
+        var ch = probeAudioChannelCount(shell, fso, mediaPath);
+        if (ch < 1) {
+            DOpus.Output(logTitle + ": no audio stream or could not read channel count: " + item.name);
+            fail++;
+            continue;
+        }
+
+        var filtPath = shell.ExpandEnvironmentStrings("%TEMP%") + "\\DOpus_ffmpeg_chfilt_" + i + "_" + (new Date()).getTime() + ".txt";
+        if (fso.FileExists(filtPath)) {
+            try {
+                fso.DeleteFile(filtPath);
+            } catch (eF0) { /* ignore */ }
+        }
+
+        var parts = [];
+        var c;
+        for (c = 0; c < ch; c++) {
+            parts.push("[0:a:0]pan=mono|c0=c" + c + "[ch" + c + "]");
+        }
+        try {
+            var fw = fso.OpenTextFile(filtPath, 2, true);
+            fw.WriteLine(parts.join(";"));
+            fw.Close();
+        } catch (eW) {
+            DOpus.Output(logTitle + ": could not write filter file: " + item.name + " — " + eW.message);
+            fail++;
+            continue;
+        }
+
+        var exec = 'ffmpeg.exe -y -i "' + mediaPath + '" -filter_complex_script "' + filtPath + '" -c:a pcm_s16le';
+        for (c = 0; c < ch; c++) {
+            var idx = c + 1;
+            var suffix = idx < 10 ? "0" + idx : String(idx);
+            var outPath = folder + "\\" + stem + ".ch" + suffix + ".wav";
+            var counter = 1;
+            while (fso.FileExists(outPath)) {
+                outPath = folder + "\\" + stem + ".ch" + suffix + "_" + counter + ".wav";
+                counter++;
+            }
+            exec += ' -map "[ch' + c + ']" "' + outPath + '"';
+        }
+
+        DOpus.Output(logTitle + " (" + ch + " ch): " + exec);
+        try {
+            var exitCode = shell.Run(exec, 0, true);
+            if (exitCode != 0) {
+                DOpus.Output(logTitle + " failed (exit " + exitCode + "): " + item.name);
+                fail++;
+            } else {
+                ok++;
+            }
+        } catch (ex) {
+            DOpus.Output(logTitle + " error on " + item.name + ": " + ex.message);
+            fail++;
+        }
+        try {
+            if (fso.FileExists(filtPath)) {
+                fso.DeleteFile(filtPath);
+            }
+        } catch (eF1) { /* ignore */ }
+    }
+
+    if (fail > 0 && ok === 0) {
+        thumbErr(shell, "All " + fail + " file(s) failed. See DOpus Script Output.", logTitle);
+    } else if (fail > 0) {
+        thumbInfo(shell, "Finished with errors. OK: " + ok + ", Failed: " + fail + ". Details in Script Output.", logTitle);
+    } else {
+        thumbInfo(shell, logTitle + " finished. Files processed: " + ok, logTitle);
+    }
+    try {
+        clickData.func.command.RunCommand("Go REFRESH");
+    } catch (eRf) { /* ignore */ }
+}
+
 /** Split: demux with -c copy; original path becomes video-only, audio → stem.audio.mka. Combine: one video + one audio → remux to video’s path (-c copy), delete audio. */
 function runSplitAvCopy(clickData, fso, shell) {
     var logTitle = "Split/combine AV";
@@ -1066,7 +1214,7 @@ function OnClick(clickData) {
     if (qualStr.indexOf("ctrl") >= 0) {
         var lastQuick = loadLastSettings(shell, fso);
         var act = lastQuick.lastAction || "convert";
-        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav" && act != "rotatecw" && act != "rotateccw" && act != "fliph" && act != "flipv") {
+        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav" && act != "splitch" && act != "rotatecw" && act != "rotateccw" && act != "fliph" && act != "flipv") {
             act = "convert";
         }
         DOpus.Output("ffmpeg: Ctrl+click — last action: " + act + " (no dialog)");
@@ -1080,6 +1228,10 @@ function OnClick(clickData) {
         }
         if (act == "splitav") {
             runSplitAvCopy(clickData, fso, shell);
+            return;
+        }
+        if (act == "splitch") {
+            runExtractAllAudioChannels(clickData, fso, shell);
             return;
         }
         if (act == "rotatecw") {
@@ -1176,7 +1328,7 @@ function OnClick(clickData) {
 
     // Variable to track if user clicked OK or Cancel
     var dialogResult = 0;
-    /** True after rotate/flip, Split/combine cover, Audio→mono, or Split/combine AV — skip Convert (dlg.result may not be string "0"). */
+    /** True after rotate/flip, Split/combine cover, Audio→mono, Split/combine AV, or Extract channels — skip Convert (dlg.result may not be string "0"). */
     var dialogClosedAfterTool = false;
 
     // Message loop to handle events
@@ -1243,6 +1395,15 @@ function OnClick(clickData) {
         if (msg.event == "click" && msg.control == "split_av_btn") {
             saveLastActionOnly(shell, fso, "splitav");
             runSplitAvCopy(clickData, fso, shell);
+            dialogClosedAfterTool = true;
+            dlg.EndDlg("0");
+            dialogResult = dlg.result;
+            break;
+        }
+
+        if (msg.event == "click" && msg.control == "extract_ch_btn") {
+            saveLastActionOnly(shell, fso, "splitch");
+            runExtractAllAudioChannels(clickData, fso, shell);
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;

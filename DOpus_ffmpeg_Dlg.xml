@@ -1,6 +1,6 @@
 <resources>
   <resource name="DOpus_ffmpeg_Dlg" type="dialog">
-    <dialog fontsize="9" height="278" lang="english" title="Video/Audio Converter" width="360">
+    <dialog fontsize="9" height="302" lang="english" title="Video/Audio Converter" width="360">
       <!-- Header -->
       <control halign="left" height="10" name="header_label" title="Convert selected files:" type="static" width="200" x="12" y="10"/>
 
@@ -38,11 +38,13 @@
       <control height="18" name="split_cover_btn" title="Split or combine cover" type="button" width="160" x="12" y="182"/>
       <control height="18" name="audio_mono_btn" title="Audio → mono" type="button" width="120" x="218" y="182"/>
       <control halign="left" height="10" name="split_av_hint" title="1 video: replace with video-only + .audio.mka. 1 video + 1 audio: remux to video filename, delete audio (-c copy)." type="static" width="330" x="12" y="206"/>
-      <control height="18" name="split_av_btn" title="Split or combine audio and video" type="button" width="160" x="12" y="218"/>
+      <control height="18" name="split_av_btn" title="Split/combine Audio/Video" type="button" width="168" x="12" y="220"/>
+      <control height="18" name="extract_ch_btn" title="All audio ch → WAV" type="button" width="168" x="184" y="220"/>
+      <control halign="left" height="10" name="extract_ch_hint" title="First audio stream: mono WAV per channel (stem.ch01.wav …). Requires ffprobe + ffmpeg on PATH." type="static" width="330" x="12" y="242"/>
 
       <!-- Buttons -->
-      <control close="1" default="yes" height="18" name="ok_btn" title="Convert" type="button" width="70" x="150" y="252"/>
-      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="70" x="230" y="252"/>
+      <control close="1" default="yes" height="18" name="ok_btn" title="Convert" type="button" width="70" x="150" y="272"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="70" x="230" y="272"/>
     </dialog>
   </resource>
 </resources>
