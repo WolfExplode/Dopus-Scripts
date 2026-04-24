@@ -6,6 +6,11 @@ function trimStr(s) {
     return String(s).replace(/^\s+|\s+$/g, "");
 }
 
+// Make a string safe to place on a single PowerShell line
+function oneLine(s) {
+    return safeWriteStr(s).replace(/[\r\n\t]+/g, " ");
+}
+
 // FSO TextStream.WriteLine throws "Invalid procedure call or argument" if the string contains \0
 function safeWriteStr(s) {
     return String(s).replace(/\x00/g, "");
@@ -29,7 +34,7 @@ function escapeYtdlpOutputPrefix(s) {
 // PowerShell: compare yt-dlp --version to GitHub latest; pip upgrade only if needed
 function writeYtDlpUpdateBlock(ps1) {
     var lines = [
-        "$ErrorActionPreference = 'Continue'",
+        "$ErrorActionPreference = \"Continue\"",
         "try {",
         "    $localVer = $null",
         "    $yv = & yt-dlp --version 2>&1",
@@ -38,33 +43,33 @@ function writeYtDlpUpdateBlock(ps1) {
         "    }",
         "    $latestVer = $null",
         "    try {",
-        "        $rel = Invoke-RestMethod -Uri 'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest' -UseBasicParsing -TimeoutSec 15",
-        "        $latestVer = ($rel.tag_name -replace '^v','').Trim()",
+        "        $rel = Invoke-RestMethod -Uri \"https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest\" -UseBasicParsing -TimeoutSec 15",
+        "        $latestVer = ($rel.tag_name -replace \"^v\",\"\").Trim()",
         "    } catch {",
-        "        Write-Host 'Could not check latest yt-dlp version on GitHub.'",
+        "        Write-Host \"Could not check latest yt-dlp version on GitHub.\"",
         "    }",
         "    $doPip = $false",
         "    if (-not $localVer) {",
         "        $doPip = $true",
-        "        Write-Host 'yt-dlp not found or version unreadable; running pip upgrade...'",
+        "        Write-Host \"yt-dlp not found or version unreadable; running pip upgrade...\"",
         "    }",
         "    elseif ($latestVer -and $localVer -ne $latestVer) {",
         "        $doPip = $true",
-        "        Write-Host ('yt-dlp update: local ' + $localVer + ' -> latest ' + $latestVer)",
+        "        Write-Host (\"yt-dlp update: local \" + $localVer + \" -> latest \" + $latestVer)",
         "    }",
         "    if ($doPip) {",
         "        python -m pip install --upgrade yt-dlp",
         "        if ($LASTEXITCODE -ne 0) { py -m pip install --upgrade yt-dlp }",
-        "        if ($LASTEXITCODE -ne 0) { Write-Host 'pip upgrade failed; install Python/pip or update yt-dlp manually (e.g. yt-dlp -U).' }",
+        "        if ($LASTEXITCODE -ne 0) { Write-Host \"pip upgrade failed; install Python/pip or update yt-dlp manually (e.g. yt-dlp -U).\" }",
         "    } elseif ($latestVer) {",
-        "        Write-Host ('yt-dlp is up to date (' + $localVer + ').')",
+        "        Write-Host (\"yt-dlp is up to date (\" + $localVer + \").\")",
         "    } else {",
-        "        Write-Host 'Skipping pip update (could not fetch latest release from GitHub).'",
+        "        Write-Host \"Skipping pip update (could not fetch latest release from GitHub).\"",
         "    }",
         "} catch {",
-        "    Write-Host ('Update check error: ' + $_.Exception.Message)",
+        "    Write-Host (\"Update check error: \" + $_.Exception.Message)",
         "}",
-        "Write-Host ''"
+        "Write-Host \"\""
     ];
     for (var i = 0; i < lines.length; i++) {
         ps1.WriteLine(lines[i]);
@@ -75,7 +80,7 @@ function writeYtDlpUpdateBlock(ps1) {
 function writeConsoleWindowBottomRight(ps1) {
     var lines = [
         "try {",
-        "    Add-Type @\"",
+        "Add-Type @\"",
         "using System;",
         "using System.Runtime.InteropServices;",
         "public struct YtdlpRect { public int Left; public int Top; public int Right; public int Bottom; }",
@@ -85,19 +90,19 @@ function writeConsoleWindowBottomRight(ps1) {
         "    [DllImport(\"user32.dll\")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);",
         "}",
         "\"@",
-        "    Add-Type -AssemblyName System.Windows.Forms",
-        "    $hwnd = [YtdlpConsoleWin]::GetConsoleWindow()",
-        "    if ($hwnd -ne [IntPtr]::Zero) {",
-        "        $r = New-Object YtdlpRect",
-        "        [void][YtdlpConsoleWin]::GetWindowRect($hwnd, [ref]$r)",
-        "        $winW = $r.Right - $r.Left",
-        "        $winH = $r.Bottom - $r.Top",
-        "        $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea",
-        "        $x = [Math]::Max($wa.Left, $wa.Right - $winW)",
-        "        $y = [Math]::Max($wa.Top, $wa.Bottom - $winH)",
-        "        $flags = [uint32]0x0001 -bor 0x0004 -bor 0x0040",
-        "        [void][YtdlpConsoleWin]::SetWindowPos($hwnd, [IntPtr]::Zero, $x, $y, 0, 0, $flags)",
-        "    }",
+        "Add-Type -AssemblyName System.Windows.Forms",
+        "$hwnd = [YtdlpConsoleWin]::GetConsoleWindow()",
+        "if ($hwnd -ne [IntPtr]::Zero) {",
+        "    $r = New-Object YtdlpRect",
+        "    [void][YtdlpConsoleWin]::GetWindowRect($hwnd, [ref]$r)",
+        "    $winW = $r.Right - $r.Left",
+        "    $winH = $r.Bottom - $r.Top",
+        "    $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea",
+        "    $x = [Math]::Max($wa.Left, $wa.Right - $winW)",
+        "    $y = [Math]::Max($wa.Top, $wa.Bottom - $winH)",
+        "    $flags = [uint32]0x0001 -bor 0x0004 -bor 0x0040",
+        "    [void][YtdlpConsoleWin]::SetWindowPos($hwnd, [IntPtr]::Zero, $x, $y, 0, 0, $flags)",
+        "}",
         "} catch { }",
         ""
     ];
@@ -312,18 +317,19 @@ function OnClick(clickData) {
     try {
         // unicode=true: UTF-16LE + BOM so non-ANSI paths / pasted text do not break WriteLine
         var ps1 = fso.CreateTextFile(tempPs1, true, true);
-        ps1.WriteLine("Set-Location '" + escapePsSingleQuoted(destPath) + "'");
+        ps1.WriteLine("Set-Location '" + escapePsSingleQuoted(oneLine(destPath)) + "'");
         writeConsoleWindowBottomRight(ps1);
         if (doUpdate) {
             writeYtDlpUpdateBlock(ps1);
         }
-        ps1.WriteLine("yt-dlp " + ytArgsFirst + " '" + escapePsSingleQuoted(finalUrl) + "'");
+        // Use PowerShell stop-parsing operator so URLs with special chars never break parsing.
+        ps1.WriteLine("yt-dlp " + ytArgsFirst + " --% " + oneLine(finalUrl));
         if (useCookies) {
             ps1.WriteLine("$code = $LASTEXITCODE");
             ps1.WriteLine("if ($code -ne 0) {");
             ps1.WriteLine("    Write-Host ''");
             ps1.WriteLine("    Write-Host \"yt-dlp failed (exit $code); retrying without browser cookies...\" -ForegroundColor Yellow");
-            ps1.WriteLine("    yt-dlp " + ytArgsBody + " '" + escapePsSingleQuoted(finalUrl) + "'");
+            ps1.WriteLine("    yt-dlp " + ytArgsBody + " --% " + oneLine(finalUrl));
             ps1.WriteLine("}");
         }
         ps1.Close();
