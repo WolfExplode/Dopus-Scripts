@@ -119,7 +119,7 @@ function getSettingsPath(shell) {
 }
 
 function loadSettings(shell, fso) {
-    var out = { mode: 0, cookies: 0, metadata: 0, dateprefix: 1, fileprefix: "", overwrite: 0, update: 0, keepps: 0 };
+    var out = { mode: 0, cookies: 0, metadata: 0, dateprefix: 1, fileprefix: "", overwrite: 0, update: 0, keepps: 0, mp4container: 0 };
     try {
         var path = getSettingsPath(shell);
         if (fso.FileExists(path)) {
@@ -147,6 +147,10 @@ function loadSettings(shell, fso) {
                     else if (key === "overwrite") out.overwrite = parseInt(val, 10) || 0;
                     else if (key === "update") out.update = parseInt(val, 10) || 0;
                     else if (key === "keepps") out.keepps = parseInt(val, 10) || 0;
+                    else if (key === "mp4container") {
+                        var mp4v = parseInt(val, 10);
+                        out.mp4container = (mp4v === 0) ? 0 : 1;
+                    }
                 }
             }
         }
@@ -154,7 +158,7 @@ function loadSettings(shell, fso) {
     return out;
 }
 
-function saveSettings(shell, fso, mode, cookies, metadata, dateprefix, fileprefix, overwrite, update, keepps) {
+function saveSettings(shell, fso, mode, cookies, metadata, dateprefix, fileprefix, overwrite, update, keepps, mp4container) {
     try {
         var path = getSettingsPath(shell);
         var stream = fso.OpenTextFile(path, 2, true);
@@ -166,6 +170,7 @@ function saveSettings(shell, fso, mode, cookies, metadata, dateprefix, fileprefi
         stream.WriteLine("overwrite=" + overwrite);
         stream.WriteLine("update=" + update);
         stream.WriteLine("keepps=" + keepps);
+        stream.WriteLine("mp4container=" + mp4container);
         stream.Close();
     } catch (e) { /* ignore */ }
 }
@@ -203,6 +208,7 @@ function OnClick(clickData) {
     var allowOverwrite;
     var doUpdate;
     var keepPsOpen;
+    var mp4Container;
 
     if (skipUi) {
         var savedQuick = loadSettings(shell, fso);
@@ -215,6 +221,7 @@ function OnClick(clickData) {
         allowOverwrite = (savedQuick.overwrite === 1);
         doUpdate = (savedQuick.update === 1);
         keepPsOpen = (savedQuick.keepps === 1);
+        mp4Container = (savedQuick.mp4container === 1);
 
         if (!finalUrl) {
             shell.Popup("No URL in clipboard. Ctrl+click uses saved settings and the clipboard URL.", 0, "yt-dlp", 48);
@@ -243,6 +250,7 @@ function OnClick(clickData) {
         dlg.control("overwrite_check").value = (saved.overwrite === 1);
         dlg.control("update_check").value = (saved.update === 1);
         dlg.control("keepps_check").value = (saved.keepps === 1);
+        dlg.control("mp4_check").value = (saved.mp4container === 1);
 
         dlg.Show();
 
@@ -269,13 +277,14 @@ function OnClick(clickData) {
         allowOverwrite = dlg.control("overwrite_check").value;
         doUpdate = dlg.control("update_check").value;
         keepPsOpen = dlg.control("keepps_check").value;
+        mp4Container = dlg.control("mp4_check").value;
 
         if (!finalUrl) {
             shell.Popup("No URL provided.", 0, "yt-dlp", 48);
             return;
         }
 
-        saveSettings(shell, fso, isAudio ? 0 : 1, useCookies ? 1 : 0, includeMetadata ? 1 : 0, datePrefix ? 1 : 0, trimStr(filePrefixRaw), allowOverwrite ? 1 : 0, doUpdate ? 1 : 0, keepPsOpen ? 1 : 0);
+        saveSettings(shell, fso, isAudio ? 0 : 1, useCookies ? 1 : 0, includeMetadata ? 1 : 0, datePrefix ? 1 : 0, trimStr(filePrefixRaw), allowOverwrite ? 1 : 0, doUpdate ? 1 : 0, keepPsOpen ? 1 : 0, mp4Container ? 1 : 0);
     }
 
     var filePrefixEsc = escapeYtdlpOutputPrefix(filePrefixRaw);
@@ -286,6 +295,7 @@ function OnClick(clickData) {
     var ejsArg = " --remote-components ejs:github";
     var metaAudio = " --extract-audio --audio-format best --add-metadata --embed-thumbnail --embed-subs --parse-metadata \":(?P<chapters>)\"";
     var metaVideo = " --add-metadata --embed-thumbnail --write-auto-subs --embed-subs";
+    var videoMp4Args = (mp4Container && !isAudio) ? " --merge-output-format mp4 --remux-video mp4" : "";
     var innerCore = datePrefix
         ? "[%(upload_date>%m-%d-%Y)s] %(title)s.%(ext)s"
         : "%(title)s.%(ext)s";
@@ -307,6 +317,7 @@ function OnClick(clickData) {
         ytArgsBody = "-o " + outTemplate
                + overwriteArg
                + ejsArg
+               + videoMp4Args
                + (includeMetadata ? metaVideo : "");
     }
 
@@ -344,7 +355,7 @@ function OnClick(clickData) {
 
     DOpus.Output("yt-dlp | URL: " + finalUrl);
     DOpus.Output("yt-dlp | Dest: " + destPath);
-    DOpus.Output("yt-dlp | Mode: " + (isAudio ? "Audio" : "Video") + " | Metadata: " + includeMetadata + " | Date prefix: " + datePrefix + " | File prefix: " + (trimStr(filePrefixRaw) ? trimStr(filePrefixRaw) : "(none)") + " | Cookies: " + useCookies + " | Overwrite: " + allowOverwrite + " | Update check: " + doUpdate + " | Keep PS: " + keepPsOpen + " | UI: " + (skipUi ? "skipped (Ctrl)" : "dialog"));
+    DOpus.Output("yt-dlp | Mode: " + (isAudio ? "Audio" : "Video") + (isAudio ? "" : (" | MP4 container: " + mp4Container)) + " | Metadata: " + includeMetadata + " | Date prefix: " + datePrefix + " | File prefix: " + (trimStr(filePrefixRaw) ? trimStr(filePrefixRaw) : "(none)") + " | Cookies: " + useCookies + " | Overwrite: " + allowOverwrite + " | Update check: " + doUpdate + " | Keep PS: " + keepPsOpen + " | UI: " + (skipUi ? "skipped (Ctrl)" : "dialog"));
 
     var psCmd = keepPsOpen
         ? 'powershell -NoExit -ExecutionPolicy Bypass -File "' + tempPs1 + '"'

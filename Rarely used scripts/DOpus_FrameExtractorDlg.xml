@@ -1,0 +1,21 @@
+<resources>
+  <resource name="DOpus_FrameExtractorDlg" type="dialog">
+    <dialog fontsize="9" height="178" lang="english" title="Frame extract (timelapse sample)" width="360">
+      <control halign="left" height="10" name="hdr" title="Sampling for selected video files:" type="static" width="330" x="12" y="10"/>
+
+      <control halign="left" height="10" name="lbl_start" title="Start offset (seconds):" type="static" width="150" x="12" y="34"/>
+      <control height="14" name="start_edit" title="3" type="edit" width="72" x="200" y="32"/>
+
+      <control halign="left" height="10" name="lbl_interval" title="Interval between samples (seconds):" type="static" width="180" x="12" y="58"/>
+      <control height="14" name="interval_edit" title="2" type="edit" width="72" x="200" y="56"/>
+
+      <control halign="left" height="10" name="lbl_count" title="Number of output frames:" type="static" width="180" x="12" y="82"/>
+      <control height="14" name="frame_count_edit" title="48" type="edit" width="72" x="200" y="80"/>
+
+      <control halign="left" height="10" name="hint" title="Writes basename_frames.mp4 next to each source (no audio)." type="static" width="330" x="12" y="104"/>
+
+      <control close="1" default="yes" height="20" name="ok_btn" title="Extract" type="button" width="88" x="78" y="132"/>
+      <control close="2" height="20" name="cancel_btn" title="Cancel" type="button" width="88" x="194" y="132"/>
+    </dialog>
+  </resource>
+</resources>
