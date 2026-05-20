@@ -9,7 +9,7 @@ collapse a duplicated final extension (e.g. ``.mp4.mp4`` → ``.mp4``; case-inse
 and remove trailing copy suffixes like `` (1)`` / `` (23)`` (1–3 digits; avoids `` (2024)``-style years).
 Also: under the target tree, append a chosen `` [tag]`` before the file extension (any text you enter).
 
-GUI (Dear PyGui): edit source paths (folders and/or files), target folder, and strip characters; settings are stored under %APPDATA%\\OrganizeFiles.
+GUI (Dear PyGui): edit source paths (folders and/or files), target folder, and strip characters; drag files/folders from Explorer onto the path fields (Windows); settings are stored under %APPDATA%\\OrganizeFiles.
 """
 
 from __future__ import annotations
@@ -1058,9 +1058,13 @@ def run_gui(
         TIP_SOURCE = (
             "One path per line. A folder = every file inside that folder. "
             "A file = only that file (paths can be outside the target folder). "
-            "Launch from Directory Opus to fill this from your selection."
+            "Launch from Directory Opus to fill this from your selection. "
+            "Drag files or folders from Explorer onto this box to append paths."
         )
-        TIP_TARGET = "Folder tree where renames, tags, and incoming files are applied."
+        TIP_TARGET = (
+            "Folder tree where renames, tags, and incoming files are applied. "
+            "Drag a folder from Explorer onto this box (dropping a file uses its parent folder)."
+        )
         TIP_MARK = (
             "Target only: prepend ✔ to a filename when the same relative folder contains a source file "
             "with a matching peeled basename (e.g. source foo.mkv ↔ target foo.mp4.jpg).\n"
@@ -1114,6 +1118,7 @@ def run_gui(
             self._section_tags: dict[str, int | str] = {}
 
             dpg.create_context()
+            self._init_os_drag_drop()
             self._build_themes()
 
             with dpg.window(tag="primary_window", label="Organize Files", no_title_bar=True):
@@ -1127,6 +1132,7 @@ def run_gui(
                 min_width=780,
                 min_height=520,
             )
+            self._register_os_drag_drop_handlers()
             dpg.setup_dearpygui()
             dpg.show_viewport()
             dpg.set_primary_window("primary_window", True)
@@ -1190,6 +1196,12 @@ def run_gui(
                 with dpg.theme_component(dpg.mvChildWindow):
                     dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (20, 23, 30))
                     dpg.add_theme_color(dpg.mvThemeCol_Border, (44, 50, 66))
+
+            with dpg.theme(tag="theme_drop_hover"):
+                with dpg.theme_component(dpg.mvInputText):
+                    dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (40, 68, 82))
+                    dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (52, 88, 108))
+                    dpg.add_theme_color(dpg.mvThemeCol_Border, (72, 168, 190))
 
             dpg.bind_theme("app_theme")
 
@@ -1445,6 +1457,75 @@ def run_gui(
             path = pick_native_folder("Select target folder", current)
             if path:
                 dpg.set_value(self.TAG_TARGET, path)
+
+        def _init_os_drag_drop(self) -> None:
+            if sys.platform != "win32":
+                return
+            import DearPyGui_DragAndDrop as dpg_dnd
+
+            dpg_dnd.initialize()
+
+        def _register_os_drag_drop_handlers(self) -> None:
+            if sys.platform != "win32":
+                return
+            import DearPyGui_DragAndDrop as dpg_dnd
+
+            dpg_dnd.set_drop(self._on_os_drop)
+            dpg_dnd.set_drag_over(self._on_os_drag_over)
+            dpg_dnd.set_drag_leave(self._on_os_drag_leave)
+
+        def _path_as_target_folder(self, path: str) -> Optional[str]:
+            p = Path(path)
+            if p.is_dir():
+                return os.fspath(p)
+            if p.is_file():
+                return os.fspath(p.parent)
+            return None
+
+        def _apply_target_drop(self, paths: list[str]) -> None:
+            for raw in paths:
+                folder = self._path_as_target_folder(raw)
+                if folder:
+                    dpg.set_value(self.TAG_TARGET, folder)
+                    return
+
+        def _clear_drop_hover_themes(self) -> None:
+            for tag in (self.TAG_SOURCE, self.TAG_TARGET):
+                if dpg.does_item_exist(tag):
+                    dpg.bind_item_theme(tag, None)
+
+        def _on_os_drop(self, data, keys) -> None:
+            if not isinstance(data, list):
+                return
+            paths = [str(p).strip() for p in data if str(p).strip()]
+            if not paths:
+                return
+            if dpg.is_item_hovered(self.TAG_TARGET):
+                self._apply_target_drop(paths)
+            elif dpg.is_item_hovered(self.TAG_SOURCE):
+                self._merge_source_paths(paths)
+            self._clear_drop_hover_themes()
+
+        def _on_os_drag_over(self, keys) -> None:
+            import DearPyGui_DragAndDrop as dpg_dnd
+
+            if dpg.is_item_hovered(self.TAG_TARGET):
+                dpg.bind_item_theme(self.TAG_TARGET, "theme_drop_hover")
+                dpg.bind_item_theme(self.TAG_SOURCE, None)
+                dpg_dnd.set_drop_effect(dpg_dnd.DROPEFFECT.MOVE)
+            elif dpg.is_item_hovered(self.TAG_SOURCE):
+                dpg.bind_item_theme(self.TAG_SOURCE, "theme_drop_hover")
+                dpg.bind_item_theme(self.TAG_TARGET, None)
+                dpg_dnd.set_drop_effect(dpg_dnd.DROPEFFECT.MOVE)
+            else:
+                self._clear_drop_hover_themes()
+                dpg_dnd.set_drop_effect()
+
+        def _on_os_drag_leave(self) -> None:
+            import DearPyGui_DragAndDrop as dpg_dnd
+
+            self._clear_drop_hover_themes()
+            dpg_dnd.set_drop_effect()
 
         def _source_list_lines(self) -> list[str]:
             return str(dpg.get_value(self.TAG_SOURCE)).splitlines()
