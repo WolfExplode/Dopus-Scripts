@@ -155,14 +155,14 @@ def run_gui(
             "videos are copied into Target (same relative path; Source is not deleted)."
         )
         TIP_COMPARE = (
-            "Compare two text lists (Artist - Title per line): a streaming playlist export vs a local "
-            "file list. Uses exact keys plus RapidFuzz fuzzy matching (ratio, partial, character coverage).\n"
-            "Source paths: two list files — first line playlist export (e.g. www.txt), second line local "
-            "file list (e.g. Music.txt). Target folder: report files "
-            "(missing-from-library.txt, extra-not-in-playlist.txt, fuzzy-matches.txt)."
+            "Compare two text files (one line per entry). Exact line match first, then word-based fuzzy "
+            "(words are space-separated; each word must score at or above the threshold against a word "
+            "in the other line).\n"
+            "Source paths: two files — first line file A, second line file B. Target folder: "
+            "missing-from-<other-file-name>.txt per side, plus fuzzy-matches.txt."
         )
         TIP_COMPARE_THRESHOLD = (
-            "Minimum match score (0–100). A pair matches if any fuzzy metric reaches this value."
+            "Minimum word match score (0–100). Line score = matched words ÷ longer line's word count."
         )
         TIP_PREVIEW_PANEL = "Output from the last Preview or Apply scan."
 
@@ -479,24 +479,25 @@ def run_gui(
                         )
 
                     hdr_compare = self._section(
-                        "Compare playlists", self.TIP_COMPARE, "compare"
+                        "Compare text", self.TIP_COMPARE, "compare"
                     )
                     with dpg.group(parent=hdr_compare):
-                        dpg.add_text("Fuzzy threshold %", color=(150, 158, 175))
-                        thr_input = dpg.add_input_int(
-                            tag=self.TAG_COMPARE_THRESHOLD,
-                            default_value=cmp_thr_default,
-                            min_value=0,
-                            max_value=100,
-                            width=80,
-                        )
-                        self._hover_tip(thr_input, self.TIP_COMPARE_THRESHOLD)
-                        dpg.add_spacer(height=4)
-                        btn_compare = dpg.add_button(
-                            label="Compare",
-                            callback=self.on_compare_playlists,
-                            width=-1,
-                        )
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("Fuzzy threshold %", color=(150, 158, 175))
+                            thr_input = dpg.add_input_int(
+                                tag=self.TAG_COMPARE_THRESHOLD,
+                                default_value=cmp_thr_default,
+                                min_value=0,
+                                max_value=100,
+                                step=0,
+                                width=160,
+                            )
+                            self._hover_tip(thr_input, self.TIP_COMPARE_THRESHOLD)
+                            btn_compare = dpg.add_button(
+                                label="Compare",
+                                callback=self.on_compare_playlists,
+                                width=-1,
+                            )
                         dpg.bind_item_theme(btn_compare, self._theme_apply)
                         self._hover_tip(
                             btn_compare,
@@ -715,24 +716,24 @@ def run_gui(
                 import compare_playlists
             except ImportError:
                 self._msg(
-                    "Playlist compare",
+                    "Text compare",
                     "rapidfuzz is not installed.\n\n"
                     'Run: pip install -r "Organize Files/requirements.txt"',
                 )
                 return
-            playlist_p, library_p, output_p, err = resolve_compare_paths(
+            file_a, file_b, output_p, err = resolve_compare_paths(
                 str(dpg.get_value(self.TAG_SOURCE)),
                 str(dpg.get_value(self.TAG_TARGET)),
             )
             if err:
-                self._msg("Playlist compare", err)
+                self._msg("Text compare", err)
                 return
             threshold = int(dpg.get_value(self.TAG_COMPARE_THRESHOLD))
             self.persist_paths()
-            self._set_preview("Comparing playlists…\n")
+            self._set_preview("Comparing…\n")
             result = compare_playlists.run_compare(
-                playlist_p,
-                library_p,
+                file_a,
+                file_b,
                 output_dir=output_p,
                 threshold=threshold,
             )

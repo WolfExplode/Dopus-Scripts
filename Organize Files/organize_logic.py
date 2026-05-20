@@ -108,7 +108,7 @@ _COMPARE_THRESHOLD_DEFAULT = 80
 
 
 def config_load_compare_threshold() -> int:
-    """Saved fuzzy threshold for playlist compare."""
+    """Saved fuzzy threshold for text compare."""
     default = _COMPARE_THRESHOLD_DEFAULT
     try:
         from compare_playlists import FUZZY_THRESHOLD
@@ -635,7 +635,7 @@ def resolve_compare_paths(
     source_text: str, target_text: str
 ) -> tuple[Optional[Path], Optional[Path], Optional[Path], Optional[str]]:
     """
-    Playlist compare: exactly two list files in Source (playlist export, then local list).
+    Text compare: exactly two files in Source (file A, then file B).
     Report txt files are written under Target.
     """
     tgt_s = target_text.strip()
@@ -656,8 +656,8 @@ def resolve_compare_paths(
                 None,
                 None,
                 None,
-                "Compare playlists needs two list files in Source paths (not folders).\n"
-                "First line = playlist export, second = local file list.",
+                "Compare needs two text files in Source paths (not folders).\n"
+                "First line = file A, second line = file B.",
             )
         if not p.is_file():
             return None, None, None, f"Path not found:\n{p}"
@@ -668,8 +668,8 @@ def resolve_compare_paths(
             None,
             None,
             None,
-            "Compare playlists needs exactly two file paths in Source paths:\n"
-            "playlist export, then local file list (one path per line).",
+            "Compare needs exactly two file paths in Source paths:\n"
+            "file A, then file B (one path per line).",
         )
 
     return files[0], files[1], tgt.resolve(), None
