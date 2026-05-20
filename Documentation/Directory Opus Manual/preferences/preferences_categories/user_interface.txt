@@ -1,0 +1,6 @@
+~~Title: User Interface~~
+<pageheader/>
+
+  * **[[~language]]**: Lets you change the user interface language Opus uses.
+  * **[[~spacing]]**: Adjust the spacing and size of elements of the user interface, and create spacing schemes you can switch between.
+  * **[[~transition_animations]]**: Configure user interface animations that can enhance your experience (i.e. eye candy!)

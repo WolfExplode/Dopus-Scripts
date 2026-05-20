@@ -1,0 +1,99 @@
+~~Title: Directory Opus 13 - Highlights - Page 6~~
+Previous: [[release_history:opus13:page5|Opus 13 Highlights - Page 5]]
+<pageheader/>
+
+=== Columns ===
+
+More "friendly dates" choices:
+
+<WRAP indent>{{:release_history:friendly_dates.png?nolink|}}</WRAP>\\
+
+Freeze columns to keep key information visible:
+
+<WRAP indent>{{:release_history:cols_freeze.gif?nolink|}}</WRAP>\\
+
+Hold <kbd>Ctrl</kbd> and drag with the right button to select and copy individual cells:
+
+<WRAP indent>{{:release_history:cols_select.gif?nolink|}}</WRAP>\\
+
+More options for how filenames are displayed:
+
+<WRAP indent>{{:release_history:col_filename.png?nolink|}}</WRAP>\\
+
+Easy UI for importing columns from File Explorer into Opus:
+
+<WRAP indent>{{:release_history:col_shellprops.png?nolink|}}</WRAP>\\
+
+Custom columns can be created using simplified scripting:
+
+<WRAP indent>{{:release_history:col_eval.png?nolink|}}</WRAP>\\
+
+Alternative ways to group columns (including built-in ones) can be defined:
+
+<WRAP indent>{{:release_history:col_group_eval.png?nolink|}}</WRAP>\\
+
+----
+
+=== Preferences ===
+
+Pages you use often can be favorited:
+
+<WRAP indent>{{:release_history:prefs_pagefaves.png?nolink|}}</WRAP>\\
+
+Privacy settings let you clear or turn off suggestions based on previous actions:
+
+<WRAP indent>{{:release_history:prefs_privacy.png?nolink|}}</WRAP>\\
+
+----
+
+=== Customize ===
+
+Customize and Preferences are no longer on-top. When either is open, Lister titlebars have buttons to show, OK or Cancel them:
+
+<WRAP indent>{{:release_history:cust_minicust.png?nolink|}}</WRAP>\\
+
+Expanded list of pre-made commands you can drag to toolbars:
+
+<WRAP indent>{{:release_history:cust_commands.png?nolink|}}</WRAP>\\
+
+Default toolbars and context menus can be accessed without resetting your actual toolbars. New or changed items can be highlighted:
+
+<WRAP indent>{{:release_history:cust_default_toolbars.png?nolink|}}</WRAP>\\
+
+Improved UI for managing hotkeys:
+
+<WRAP indent>{{:release_history:cust_keys.png?nolink|}}</WRAP>\\
+
+Button editor suggests command and argument names as you type:
+
+<WRAP indent>{{:release_history:cust_cmd_suggestions.png?nolink|}}</WRAP>\\
+
+Button editor can show generated command lines as they run:
+
+<WRAP indent>{{:release_history:cust_cmd_log.png?nolink|}}</WRAP>\\
+
+----
+
+=== Script IDE ===
+
+New IDE for making script add-ins:
+
+<WRAP indent>{{:release_history:script_ide_code.png?nolink|}}</WRAP>\\
+
+Allows editing script code and resources:
+
+<WRAP indent>{{:release_history:script_ide_dialog.png?nolink|}}</WRAP>\\
+
+----
+
+=== More! ===
+
+See the [[release_history:opus13_detailed|detailed list of changes]] for even more!
+
+There are hundreds of additional changes across almost every part of the program, plus more detail on everything discussed above.
+
+If you're updating from an older version, you may also want to read [[:release_history:opus13_upgradetips|Tips for Upgrading from Opus 12]].
+
+----
+
+Next: [[release_history:opus13_detailed]]

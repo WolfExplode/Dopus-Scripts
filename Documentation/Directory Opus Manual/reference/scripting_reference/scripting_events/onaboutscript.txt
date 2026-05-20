@@ -1,0 +1,20 @@
+~~Title: OnAboutScript ~~
+<pageheader/>
+
+The **OnAboutScript** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to display an "about" dialog to the user. It is triggered when the user clicks the //About// button for a script on the **[[:scripting:script_management|Script Management]]** dialog.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnAboutScript
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:aboutdata|AboutData]] **
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The usual implementation for this event would use the **AboutData.window** parameter to display a dialog using the **[[..:scripting_objects:dialog|Dialog]]** object.
+</commandtable>
+
+
+
+

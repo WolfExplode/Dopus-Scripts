@@ -1,0 +1,24 @@
+~~Title: AdjustDate~~
+<evalcmd>
+AdjustDate && date && The adjusted date. &&
+date && date && The date to adjust. &&
+tzinput && string && The timezone to adjust from. &&
+tzoutput && string && The timezone to adjust to.
+</evalcmd>
+
+Adjust a date from one timezone to another.
+
+Timezones can be specified as a positive or negative number of minutes, relative to UTC.
+For example, a value of **60** represents GMT+1.
+
+Timezones can also be referred to by their name in the system registry or IANA name.
+For example, **"AUS Eastern Standard Time"** or **"Australia/Sydney"**.
+You can also specify **"UTC"** for UTC and **"local"** for the local timezone.
+
+//Examples://
+<code>
+date = "2026-01-01 00:00:00" as date;
+Output("At midnight in New York on New Year's Day it will be " + AdjustDate(date, "America/New_York", "Australia/Brisbane") + " in Brisbane.");
+</code>
+
+

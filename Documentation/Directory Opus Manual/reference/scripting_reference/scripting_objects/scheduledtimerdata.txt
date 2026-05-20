@@ -1,0 +1,17 @@
+~~Title: ScheduledTimerData~~
+<pageheader/>
+
+A [[:scripting:script_add-ins|script add-in]] can use the **[[..:scripting_objects:dopus|DOpus]].SetScheduledTimer** method to create timers, which will call your **[[..:scripting_events:onscheduledtimer|OnScheduledTimer]]** method when the desired date/time is reached.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ id
+$$ //string//
+$$ Returns the ID of the timer that your method is being called for.
+</commandtable>
+
+
+
+

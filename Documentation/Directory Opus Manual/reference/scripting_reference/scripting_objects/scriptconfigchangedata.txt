@@ -1,0 +1,16 @@
+~~Title: ScriptConfigChangeData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onscriptconfigchange|OnScriptConfigChange ]]**event, the method receives a **ScriptConfigChangeData** object whenever the user modifies the script's configuration via the Preferences editor.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ changed
+$$ **[[vector|Vector]]**://string//
+$$ Returns a **[[vector|Vector]]** containing the names of the configuration items that were modified.
+</commandtable>
+
+

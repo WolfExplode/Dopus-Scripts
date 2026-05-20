@@ -1,0 +1,29 @@
+~~Title: Simple Command Editor ~~
+<pageheader/>
+
+{{:media:command_editor_1.png?nolink|}}
+
+See the [[.|Command Editor]] page for a description of the elements which the Simple and Advanced modes have in common. This page only covers things unique to the Simple mode.
+
+In the Command Editor's Simple mode (shown above), the **Function** field is only a single line. In this mode you can specify the function (what the button actually does when you click it) in three different ways:
+
+  * Using the drop-down attached to the field, you can select a pre-defined command (as shown on the [[..:..:the_customize_dialog:commands|Commands Tab]] in the Customize dialog). When you select a pre-defined command from the drop-down, the function field will be populated with the underlying Opus internal command and arguments. For example, selecting **Viewer Pane** from the drop-down will fill the field in with **Set VIEWPANE=Toggle** as shown above. 
+  * You can directly enter the name of an [[:reference:command_reference:internal_commands|Opus internal command]], with its optional arguments. 
+  * You can select an external program to run using the Browse button ({{:media:browse.png?nolink|}}). You can append various [[:reference:command_reference:external_control_codes|external control codes]] to the external program's command line in order to [[..:passing_files_to_external_programs|pass filenames of selected files]] to the program.
+
+{{:media:function_-_notepad.png?nolink|}}
+
+This would launch **Notepad**, passing it the name of the first selected file in the file display. 
+
+
+
+When you select an external program to run, the **Start in** and **Run** fields will be enabled.
+
+  * **Start in**: When a command runs an external program, this field specifies the folder that the program will start in (in other words, the new program's current directory). 
+  * **Run**: When running an external program this lets you specify how the program's window is to appear. You can choose from //Normal Window// (the program itself defines the window size), //Minimized// (the program will open minimized to the taskbar), //Maximized// (it will open full screen) and //Hidden// (it won't show a window at all). Not all programs will respect these settings. You need to be careful when using //Hidden// as it can result in the program running without any visible user interface - you should only use it when you know that's definitely what you want. It's most useful when launching a DOS script that runs and quickly exits, as it lets you hide the quick "flash" of the DOS command prompt. 
+
+
+
+Click the **Advanced** button to switch to [[advanced_command_editor|Advanced mode]].
+
+

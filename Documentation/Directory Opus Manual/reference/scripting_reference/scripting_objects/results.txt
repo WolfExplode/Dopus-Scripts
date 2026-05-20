@@ -1,0 +1,30 @@
+~~Title: Results ~~
+<pageheader/>
+
+The **Results** object provides information about the outcome of a function run by the **[[command|Command]]** object. It is obtained from the **Command.results** property.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ changes
+$$ //collection of// **[[filechange|FileChange]]**
+$$ This property returns a collection of **[[filechange|FileChange]]** objects representing any file changes made by the command. You must set the `logchanges` property in the **[[command|Command]]** object if you want file changes logged.
+$$ result
+$$ //int//
+$$ Indicates whether or not the command ran successfully. Zero indicates the command could not be run or was aborted; any other number indicates the command was run for at least some files. (Note that this is not the "exit code" for external commands. For external commands it only indicates whether or not Opus launched the command. If you need the exit code of an external command, use the WScript.Shell Run or Exec methods to run the command.)
+$$ newtabs
+$$ //collection of// **[[tab|Tab]]** 
+$$ This property returns a collection of **[[tab|Tab]]** objects representing any new tabs created by the command.
+$$ newlisters 
+$$ //collection of// **[[lister|Lister]]** 
+$$ This property returns a collection of **[[lister|Lister]]** objects representing any new Listers created by the command.
+$$ newviewers 
+$$ //collection of// **[[viewer|Viewer]]** 
+$$ This property returns a collection of **[[viewer|Viewer]]** objects representing any new image viewers created by the command. (This is only for standalone viewers, not the viewer pane.)
+</commandtable>
+
+
+
+

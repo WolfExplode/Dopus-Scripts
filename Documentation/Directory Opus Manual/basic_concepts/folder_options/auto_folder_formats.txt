@@ -1,0 +1,8 @@
+~~Title: Auto-Remembered Formats~~
+<pageheader/>
+
+As well as being able to manually save [[folder_formats|folder formats]] for specific folders, Opus can automatically remember changes to the folder format for your most recently used folders.
+
+Automatically remembered formats can be configured from the [[:preferences:preferences_categories:folders:folder_formats:automatic_formats|Folders / Automatic Formats]] page in Preferences.
+
+You can choose how many folders Opus will automatically remember the format for.

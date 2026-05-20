@@ -1,0 +1,8 @@
+~~Title: DialogListSubItems~~
+<pageheader/>
+
+The **DialogListSubItems** object lets you query or modify the subitems belonging to a **[[DialogListItem]]**. Use the `subitems` property to obtain this object from a list view item in a script dialog.
+
+You can enumerate this object to query the subitems. Each subitem is represented by a **[[dialoglistsubitem|DialogListSubItem]]** object.  
+
+You can also address a specific subitem by index; for example, `subitem(0)` represents the item's first subitem (that is, the string in the second column).

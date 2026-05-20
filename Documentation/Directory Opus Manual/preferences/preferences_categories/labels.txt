@@ -1,0 +1,8 @@
+~~Title: Labels~~
+<pageheader/>
+
+  * **[[~label_definitions]]**: Define labels that can change colors, font styles and icons when assigned to files or folders.
+  * **[[~label_assignments]]**: Assign labels to files and folders.
+    * **[[~label_assignments:in_specific_folders]]**: Configure wildcard labels that work in specific locations.
+  * **[[~options]]**: General options relating to labels.
+

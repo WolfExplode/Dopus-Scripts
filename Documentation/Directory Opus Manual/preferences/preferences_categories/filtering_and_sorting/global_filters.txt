@@ -1,0 +1,14 @@
+~~Title: Global Filters~~
+<pageheader/>
+
+This page contains options that let you specify files that Opus will never show in file displays or folder trees. While you can configure filters on a per-folder basis using the [[..:folders:folder_formats|Folder Formats]] system (specifically, the Show and Hide [[:basic_concepts:folder_options:folder_options_dialog:filters|Filters]] pages), this provides an easy way to hide files globally without needing to configure folder formats.
+
+  * **Hide hidden files**: This option causes Opus to hide files and folders that have **H** attribute set and do not have the **S** attribute set. You can toggle this option quickly via the **Show Hidden Files** item in the **Folder Options** menu on the [[:basic_concepts:the_lister:toolbars:the_default_toolbars:menu_toolbar|Menu toolbar]].
+  * **Hide operating system files**: This option causes Opus to hide files and folders that have both the **H** and **S** attributes set, which generally indicates they are a special operating system files and folders. You can toggle this option quickly via the **Show System Files** item in the **Folder Options** menu on the [[:basic_concepts:the_lister:toolbars:the_default_toolbars:menu_toolbar|Menu toolbar]].
+
+  * **Enable global wildcard filters**: With this on you are able to define wildcard filter strings for both files and folders that are to be hidden globally. You can match files by name or file extension, either using the Opus [[:reference:wildcard_reference:pattern_matching_syntax|pattern matching syntax]] or, with the **Use regular expression** option turned on, [[:reference:wildcard_reference:regular_expression_syntax|regular expression syntax]]. For example, to never display desktop.ini files or thumbs.db files, you might specify the pattern <nobr>`(desktop.ini|*thumbs*.db)`</nobr>. You can enter multiple patterns, one per line.
+
+
+All filtering can be quickly disabled in a folder tab by toggling [[:basic_concepts:searching_and_filtering:show_everything|Show Everything]] mode.
+
+

@@ -1,0 +1,29 @@
+~~Title: AddButtonHelper~~
+<pageheader/>
+
+The **AddButtonHelper** object is used to add dynamic buttons to a toolbar. It's obtained from the `buttons` property of the **[[addbuttonsdata|AddButtonsData]]** object.
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddButton
+$$ //none//
+$$ [[buttondata|ButtonData]]
+$$ Adds a new (normal) button to the toolbar. Use the properties of the returned **ButtonData** object to customize the button.
+$$ AddMenu
+$$ //none//
+$$ [[buttondata|ButtonData]]
+$$ Adds a new drop-down menu to the toolbar.
+$$ AddMenuButton
+$$ //none//
+$$ [[buttondata|ButtonData]]
+$$ Adds a new menu button to the toolbar.
+$$ AddThreeButton
+$$ //none//
+$$ [[buttondata|ButtonData]]
+$$ Adds a new three-button button to the toolbar.
+</commandtable>
+
+

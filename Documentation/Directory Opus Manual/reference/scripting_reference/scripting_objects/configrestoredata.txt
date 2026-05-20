@@ -1,0 +1,21 @@
+~~Title: ConfigRestoreData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] implements the **[[..:scripting_events:onconfigrestore|OnConfigRestore]]** event, the method receives a **ConfigRestoreData** object when the configuration is restored from a backup.
+
+This method will be called twice; once before the restore begins, and once after Opus has restarted with the new configuration. The `step` property tells you which invocation this is.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ location
+$$ //object//:**[[path|Path]]**
+$$ Returns the path of the staging area that backed up Opus configuration has been extracted to. Any changes your script makes to files in the staging folder will be imported into the Opus configuration. Note that this property is only provided if `step` equals "before".
+$$ step
+$$ //string//
+$$ Returns either "before" or "after", to indicate which invocation of the event this is.
+</commandtable>
+
+

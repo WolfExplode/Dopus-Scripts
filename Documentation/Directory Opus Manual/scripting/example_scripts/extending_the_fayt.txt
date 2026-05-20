@@ -1,0 +1,7 @@
+~~Title: Extending the FAYT Field~~
+<pageheader/>
+
+Find-As-You-Type (FAYT) scripts let you type into the FAYT field and pass it to a script. The script can then (optionally) pass back a list of matches and perform actions, either as you type or when you push return.
+
+Several FAYT script examples can be found on the [[https://resource.dopus.com/t/find-as-you-type-fayt-scripts/44736|support forum]].
+

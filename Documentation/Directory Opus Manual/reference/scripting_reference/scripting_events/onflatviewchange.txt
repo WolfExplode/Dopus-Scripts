@@ -1,0 +1,20 @@
+~~Title: OnFlatViewChange ~~
+<pageheader/>
+
+The **OnFlatViewChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification whenever the user changes the [[:basic_concepts:the_lister:view_modes|display mode]] in a tab.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnFlatViewChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:flatviewchangedata|FlatViewChangeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **FlatViewChangeData.tab** property identifies the tab, and the **mode** property identifies the new Flat View mode ("off", "grouped", "mixed", "mixednofolders").
+</commandtable>
+
+
+
+

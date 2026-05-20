@@ -1,0 +1,30 @@
+~~Title: Updates ~~
+<pageheader/>
+
+This page lets you configure the [[:additional_functionality:update_checker|update checker]].
+
+The update checker can run in the background automatically, or can be triggered manually via **Help > Check For Program Updates** from the main window.
+
+== Automatic updates ==
+
+  * **Check for news and program updates**: When on, Opus will automatically look for updates on a schedule. When off, you can still trigger checks manually via **Help > Check for Program updates**.
+  * **Check frequency**: Choose from a daily, weekly or monthly check for updates.
+  * **Notification style**: 
+      * **Open updater before checking**: The update checker dialog will appear before Opus connects to the update server, whether or not an update is then found. Can be useful if you need to know when Opus is connecting to the internet.
+      * **Open updater if update found**: Update check happens in the background. When an update is ready to download or install, the update checker dialog will appear to tell you.
+      * **Status bar icon if update found**: Update check happens in the background. When an update is ready, an icon will be added to the Lister status bar to tell you.
+  * **Automatically download new program updates**: When an update is found, Opus will download it for you. You can still choose when to install it, but won't have to wait for the download.
+  * **Automatically install when Opus is inactive**: After an update is downloaded, Opus will launch the installer automatically when idle (e.g. no file copies are ongoing). A UAC prompt may still be required.
+
+== Beta updates ==
+
+  * **Check for new beta releases**: Tells the update checker to find beta updates as well as stable ones.
+
+New changes are often available first in beta versions to allow them to be tested before inclusion in stable releases. Betas are not always fully translated and may be unstable as they are still being tested.
+
+If a beta is already installed, and you turn this option off, Opus will still check for newer betas until a stable version is installed, and a link will be shown allowing you to return to the previous stable version.
+
+== Options ==
+
+  * **Install updates with minimal interaction**: Streamlines update installation when done via the update checker. A UAC prompt may still be required to install each update, but you won't normally need to see or click on the installer beyond that.
+  * **Check for and install updated Program Certificates**: When doing the update check, Opus can also check for new program certificates and install them automatically. This saves you having to install a new certificate manually after actions such as adding more licences or purchasing an add-on.

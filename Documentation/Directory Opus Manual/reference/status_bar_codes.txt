@@ -1,0 +1,27 @@
+~~Title: Status Bar Codes ~~
+<pageheader/>
+
+The information displayed in the [[:basic_concepts:the_lister:status_bar|status bar]] at the bottom of a Lister can be configured with a number of different codes. The information that can be displayed includes:
+
+
+
+  * The number and total size of selected files and folders 
+  * How many items are hidden from the display 
+  * Amount of disk space used and free 
+  * Total duration of music and video files 
+  * Various graphical elements like bar graphs and icons 
+
+The status bar is configured from the **[[:preferences:preferences_categories:file_displays:status_bar|Status Bar]]** page in Preferences. You can optionally define a completely separate status bar for dual-display Listers.
+
+
+
+More:
+
+[[~codes_for_file_and_folder_counts|Codes for file and folder counts]]\\
+[[~codes_for_disk_space|Codes for disk space]]\\
+[[~codes_for_music_and_video_duration|Codes for music and video duration]]\\
+[[~codes_for_graphical_elements|Codes for graphical elements]]\\
+[[~other_codes|Other Codes]]\\
+[[~bar_graphs_and_percentages|Bar graphs and Percentages]]\\
+[[~hiding_sections_on_the_status_bar|Hiding sections on the status bar]]\\
+[[~padding_sections_on_the_status_bar|Padding sections on the status bar]]\\

@@ -1,0 +1,20 @@
+~~Title: ColumnValue~~
+<pageheader/>
+
+The **ColumnValue** object represents a selected cell in a **[[tab|Tab]]**. A collection of these is returned as a **[[highlightedcolumns|HighlightedColumns]]** object from the **[[item|Item]].highlighted** property.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ column
+$$ //string//
+$$ Returns the name of the column.
+$$ label
+$$ //string//
+$$ Returns the display name of the column.
+$$ value
+$$ //string//
+$$ Returns the value of the column.
+</commandtable>
+

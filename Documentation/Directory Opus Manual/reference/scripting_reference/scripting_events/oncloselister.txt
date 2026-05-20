@@ -1,0 +1,21 @@
+~~Title: OnCloseLister ~~
+<pageheader/>
+
+The **OnCloseLister** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification whenever a Lister is closed.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnCloseLister
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:closelisterdata|CloseListerData]]** 
+$$ (#)**Return Type:**
+$$ //bool//
+$$ (#)**Description:**
+$$ The **CloseListerData.lister** property identifies the Lister that is closing. The **shutdown** property is **True** if the Lister is closing because Opus (or Windows) is shutting down.\\
+If shutdown is **False**, you can prevent the Lister from closing by returning **True** from this event (or **False** to allow the close, which is the default). If Opus or Windows is shutting down then you can't prevent the Lister from closing.
+</commandtable>
+
+
+
+

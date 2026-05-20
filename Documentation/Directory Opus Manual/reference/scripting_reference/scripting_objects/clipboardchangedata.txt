@@ -1,0 +1,21 @@
+~~Title: ClipboardChangeData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] implements the **[[..:scripting_events:onclipboardchange|OnClipboardChange]]** event, the method receives a **ClipboardChangeData** object whenever the system clipboard contents change.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ count
+$$ //int//
+$$ Returns a count which increments each time the clipboard contents change (when Opus is running).
+$$ has_files
+$$ //bool//
+$$ Returns **True** if the clipboard now contains files.
+</commandtable>
+
+
+
+

@@ -1,0 +1,18 @@
+~~Title: UCase~~
+<evalcmd>
+UCase && string && Upper-case string. &&
+string && string && Input string to upper-case.
+</evalcmd>
+
+Returns //string// converted to upper-case.
+
+//Example://
+<code>
+Output( UCase("Hello World") );
+--> HELLO WORLD
+</code>
+
+//See also://\\
+[[capitalize]]\\
+[[lcase]]\\
+

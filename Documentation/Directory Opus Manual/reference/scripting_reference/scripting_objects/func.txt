@@ -1,0 +1,64 @@
+~~Title: Func ~~
+===Func===
+
+The **Func** object is passed to a script when it is invoked via a command. In a [[:scripting:script_functions|script function]], it is passed to the **[[..:scripting_events:onclick|OnClick]]** method as the **[[clickdata|ClickData]].func** property, and in a script add-in that [[:scripting:example_scripts:adding_a_new_internal_command|adds an internal command]], via the **[[scriptcommanddata|ScriptCommandData]].func** property. The **Func** object provides information about the default source and destination of the command, as well as details about how it was invoked.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ args
+$$ //object://**[[args|Args]]** 
+$$ Returns an **[[args|Args]]** object that provides access to any arguments given on the command line that invoked this script. This is used when the script has added an [[:scripting:example_scripts:adding_a_new_internal_command|internal command]] to Opus. A command line template can be provided when the command is added, and any arguments the user provides on the command line for the script command will be available via this object.\\
+For most use the **argsmap** property may be an easier way to access your command's arguments.
+$$ argsmap
+$$ //object://**[[map|Map]]** 
+$$ Returns a **[[map|Map]]** object that provides keyword lookup for each of the arguments given on the command line. An argument will only be present in the **[[map|Map]]** if it was used on the command line, so you can easily check which arguments are present using the **[[map|Map]].exists()** method.
+$$ command
+$$ //object://**[[command|Command]]** 
+$$ This property returns a pre-filled **[[command|Command]]** object that can be used to run commands against the source and destination tabs. Using this object is the equivalent of calling **[[dopusfactory|DOpusFactory]].Command** and setting the source and destination tabs manually.
+$$ desttab
+$$ //object://**[[tab|Tab]]** 
+$$ This object represents the default destination tab for the function.
+$$ fromdrop
+$$ //bool//
+$$ Returns **True** if the command was invoked via a drag-and-drop operation.
+$$ fromkey
+$$ //bool//
+$$ Returns **True** if the command was invoked via the keyboard (i.e. via a hotkey rather than a button).
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the command was invoked.
+
+The string can contain any or all of the following: //shift,// //ctrl//, //alt//, //lwin//, //rwin//.
+
+If no qualifiers were down, the string will be: //none//
+
+Note that any qualifiers that were actually involved in launching this command will be filtered out from this property. For example, a hotkey assigned to <kbd>Ctrl+L</kbd> would not report that the <kbd>Ctrl</kbd> key was held down, because it was integral in launching the command. Use the `qualifiers_raw` property to access an unfiltered set of qualifiers.
+$$ qualifiers_raw
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the command was invoked. This provides the true qualifier set, without the filtering as described above.
+
+The string can contain any or all of the following: //shift,// //ctrl//, //alt//, //lwin//, //rwin//.
+$$ sourcetab
+$$ //object://**[[tab|Tab]]**
+$$ This object represents the default source tab for the function.
+$$ viewer
+$$ //object://**[[viewer|Viewer]]** 
+$$ If this button was run from the [[:additional_functionality:viewing_images|standalone image viewer]], this object represents the viewer window.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Dlg
+$$ //none//
+$$ //object://**[[dialog|Dialog]]**
+$$ Creates a new **[[dialog|Dialog]]** object, that lets you display dialogs and popup menus. The dialog's **window** property will be automatically assigned to the source tab.
+</commandtable>
+
+

@@ -1,0 +1,39 @@
+~~Title: MenuItem~~
+<pageheader/>
+
+The **MenuItem** object represents an item in a popup menu defined by a **[[menu|Menu]]**. You can create a popup menu using the **[[dialog|Dialog]].CreateMenu** method.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ bold
+$$ bool
+$$ True if the item should appear in bold. The convention is that this indicates the menu's default action (the item that will be chosen if you press the <kbd>Enter</kbd> key).
+$$ checked
+$$ bool
+$$ True if the item is checked.
+$$ data
+$$ int
+$$ User data value associated with the item.
+$$ disabled
+$$ bool
+$$ True if the item appears disabled.
+$$ id
+$$ int
+$$ The numeric ID of the item. This is used in a number of [[menu|Menu]] methods and also to identify the command chosen by the user when the menu is displayed.
+$$ label
+$$ string
+$$ The item's label.
+$$ radio
+$$ bool
+$$ For toggle items, set this to True to make it a radio toggle. You can then assign the item to a group using the [[menu|Menu]].AddRadioGroup method to create sets of mutually-exclusive options.
+$$ type
+$$ string
+$$ The item type. Types are "item", "toggle", "separator" and "submenu".
+$$ submenu
+$$ [[menu|Menu]]
+$$ The sub-menu displayed by this item.
+</commandtable>
+
+

@@ -1,0 +1,5 @@
+~~Title: Permanent Filters~~
+<pageheader/>
+
+Similar to [[global_filters|Global Filters]], this page contains options that let you specify files that Opus will never show in file displays or folder trees. The difference with these filters is that the hidden items will **never** be shown - they won't contribute to "hidden files" counts and won't be revealed by [[:basic_concepts:searching_and_filtering:show_everything|Show Everything]] mode.
+

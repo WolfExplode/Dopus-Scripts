@@ -1,0 +1,51 @@
+~~Title: External Tools~~
+<pageheader/>
+
+This page lets you configure certain external tools which are used by various functions. If you don't configure these the default tools will be used.
+
+  * **Text viewer**: The text viewer is used when double-clicking on an unknown file type.
+  * **Script editor**: The [[:scripting:script_editor|script IDE]] can be configured to use an external editor rather than the internal one.
+
+==Image Formats==
+
+This section lets you integrate support for alternate image formats into Opus using external command line tools (e.g. ImageMagick).
+
+For each image format, you can specify separate command lines for viewing files within Opus and for writing images (converting to that format with the Image Conversion tool). You can also optionally specify a separate command line for extracting thumbnails.
+
+The command line invokes an external command to convert an image between formats Opus understands natively and the "external format". Command lines must include tokens to provide the input and output filenames to the selected conversion tool.
+
+Note:
+  * Command lines can use `%alias:...%` to insert the value of a folder alias into the generated command line.
+  * External formats can be defined for multiple file extensions at once (separate extensions by semicolon or spaces, e.g. `abc;xyz` or `abc xyz`). They can also use `grp:xxx` to define a format for all extensions in a filetype group.
+
+
+==Viewing==
+
+For viewing (and thumbnails), the tokens are:
+
+|`%in%`|input filename (this will be a file with the file extension specified for the format)|
+|`%out_png%`|output filename with a .png suffix|
+|`%out_jpg%`|output filename with a .jpg suffix|
+|`%out_gif%`|output filename with a .gif suffix|
+|`%out_bmp%`|output filename with a .bmp suffix, etc.|
+  
+The output filename will be a file in the `%TEMP%` folder. The conversion tool must be able to convert the input file to a format that Opus is able to load. You can use any format Opus understands for this - the output tokens shown above are just a guide. For example, `%out_psd%` could be used if your conversion tool produces Photoshop files.
+
+You should pick an output format that preserves the essential elements of the input image as much as possible. For example, if the format supports alpha transparency, converting to PNG would be more sensible than JPG.
+
+When viewing images it's important the conversion is done as quickly as possible and compression isn't really important (unless you have limited disk space), so you should use any settings supported by your conversion tool to speed up the process as much as possible. For example, when using ImageMagick to convert a file to PNG format you might want to use the `-quality 01` flag on the command line to reduce compression to a minimum.
+
+==Writing==
+
+For writing images with the Image Conversion tool, the tokens are:
+
+|`%in_png%`|input filename in PNG format|
+|`%in_jpg%`|input filename in JPG format|
+|`%in_gif%`|input filename in GIF format|
+|`%in_bmp%`|input filename in BMP format|
+|`%out%`|output filename (this will be a file with the file extension specified for the format)|
+|`%quality%`|quality setting from 1-100|
+  
+The input filename will be a file in the `%TEMP%` folder in the specified format. You can only use formats that Opus is able to write, so unlike for viewing the above input tokens are the only ones that are supported.
+
+If your command string includes the `%quality%` token then the quality field will be available in the Image Conversion tool. This will pass a value from 1 - 100 into your command line.

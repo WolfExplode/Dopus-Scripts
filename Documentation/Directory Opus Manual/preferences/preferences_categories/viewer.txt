@@ -1,0 +1,15 @@
+~~Title: Viewer ~~
+<pageheader/>
+
+This category contains options that affect the Opus image viewer - both the [[:additional_functionality:viewing_images|standalone viewer]] and the [[:basic_concepts:the_lister:viewer_pane|viewer pane]].
+
+  * **[[~standalone_viewer]]**: Contains options that affect the behavior of the standalone image viewer. 
+    * **[[~standalone_viewer:options]]**: More options for the standalone viewer.
+    * **[[~standalone_viewer:size_and_position]]**: Options that control size and position of the viewer.
+    * **[[~standalone_viewer:mouse_buttons]]**: Contains options that affects how your mouse buttons behave in the standalone image viewer.
+    * **[[~standalone_viewer:marked_pictures]]**: Options that control the [[:additional_functionality:viewing_images:image_marking|image marking]] system.
+    * **[[~standalone_viewer:slideshow]]**: Slideshow options for the standalone viewer.
+    * **[[~standalone_viewer:quickshow]]**: Options relating to [[:additional_functionality:viewing_images:quickshow|QuickShow]].
+  * **[[~viewer_pane]]**: Contains options that modify the behaviour of the viewer pane. 
+  * **[[~viewer_plugins]]**: View and configure your installed viewer plugins (third-party components that can add additional image formats to Opus). 
+

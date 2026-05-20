@@ -1,0 +1,27 @@
+~~Title: Parent~~
+<evalcmd>
+Parent && path && Parent of specified path. &&
+path && path && File or folder path. &&
+[levels] && int && Number of levels up to go.
+</evalcmd>
+
+Returns the parent of the specified path (i.e. the input //path// with the final component removed).
+
+The optional //levels// argument lets you go up more than one level.
+
+On error, an empty string will be returned.
+
+//Example://
+<code>
+Output(Parent("C:\one\two\file.jpg"));
+--> C:\one\two
+</code>
+
+//See also://\\
+[[count]]\\
+[[fileext]]\\
+[[filepart]]\\
+[[isparent]]\\
+[[root]]\\
+[[stem]]
+

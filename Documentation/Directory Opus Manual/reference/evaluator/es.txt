@@ -1,0 +1,29 @@
+~~Title: ES~~
+<evalcmd>
+ES && string && Output string containing literal characters. &&
+str && string && Input string containing escaped characters.
+</evalcmd>
+
+Returns the input string with escaped characters converted to literal characters.
+
+Escape sequences are:
+|%%\'%%|single quote|
+|%%\"%%|double quote|
+|%%\\%%|backslash|
+|%%\b%%|backspace|
+|%%\n%%|new line|
+|%%\r%%|carriage return|
+|%%\t%%|horizontal tab|
+|%%\%%//nnn//|octal value|
+|%%\%%x//n..//|hexadecimal value|
+|%%\%%u//nnnn//|Unicode code point (4 hex digits)|
+|%%\%%U//nnnnnnnn//|Unicode code point (8 hex digits)|
+
+
+//Example://
+<code>
+Output(ES("a\r\nb") == ("a" + CRLF + "b"));
+--> true
+</code>
+
+

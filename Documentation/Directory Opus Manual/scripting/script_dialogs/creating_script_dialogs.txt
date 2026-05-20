@@ -1,0 +1,28 @@
+~~Title: Creating Script Dialogs ~~
+<pageheader/>
+
+==In script add-ins==
+
+Dialogs can be created via the //Resources// tab in the [[..script_editor|script editor]].
+
+==In button functions==
+
+When you're in [[:customize|Customize]] mode and editing a button that's set as a //[[..:script_functions|Script Function]]//, a **Resources** tab is visible:
+
+
+
+{{:media:image063.png?nolink|}}
+
+
+
+This tab lets you edit the [[..:resources|resources]] associated with the script function. You can edit them in free-form XML if you like, but for dialogs you can also use the in-built dialog editor which is a much easier way of designing dialogs.
+
+
+
+To add a script dialog, select the **Resources** tab and then click the **Dialogs** drop-down, as shown above. The **New Dialog** command will prompt you for a name for your dialog (this is the name your script will use to access it), and then display the [[..script_editor:editors:dialog_editor|dialog editor]].
+
+
+
+You can see in the above image that three dialogs have already been defined - **books**, **interests** and **person**. You can edit existing dialogs simply by selecting them from the **Dialogs** drop-down.
+
+

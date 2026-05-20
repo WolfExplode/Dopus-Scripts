@@ -1,0 +1,15 @@
+~~Title: File Displays ~~
+<pageheader/>
+
+This category contains options that control the behavior of the main part of the Lister, the area that displays files and folders.
+
+  * **[[~folder_expansion]]**: Options relating to [[:basic_concepts:expandable_folders]].
+  * **[[~mouse]]**: Options relating to the behavior of the mouse in file displays (selecting files, etc.)
+    * **[[~mouse:background_events]]**: Lets you configure what happens when you double-click the empty space in a file display.
+  * **[[~navigation]]**: Options that control what happens when you change folder.
+  * **[[~options]]**: General options that control the behavior of the file displays.
+    * **[[~options:info_tips]]**: Options relating to [[:file_types:filetype_editor:info_tip|info tips]].
+    * **[[~options:tab_key]]**: What happens when you press the <kbd>Tab</kbd> key.
+  * **[[~status_bar]]**: Configure what information is displayed on the status bar at the bottom of the Lister.
+  * **[[~title_bar]]**: Configure what's shown in the Lister title bar.
+

@@ -1,0 +1,24 @@
+~~Title: FlatViewChangeData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onflatviewchange|OnFlatViewChange ]]**event, the method receives a **FlatViewChangeData** object when the [[:basic_concepts:flat_view|Flat View]] mode is changed in a tab.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ mode
+$$ //string//
+$$ Returns a //string// indicating the new Flat View mode. Will be one of //off//, //grouped//, //mixed// or //mixednofolders//.
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the event was triggered.\\
+The string can contain any or all of the following: //shift// //ctrl//, //alt//, //lwin//, //rwin//\\
+If no qualifiers were down, the string will be: //none//
+$$ tab
+$$ //object://**[[tab|Tab]]** 
+$$ Returns a **[[tab|Tab]]** object representing the tab the Flat View mode changed in.
+</commandtable>
+
+

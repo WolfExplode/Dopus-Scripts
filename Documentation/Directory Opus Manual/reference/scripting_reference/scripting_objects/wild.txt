@@ -1,0 +1,62 @@
+~~Title: Wild ~~
+<pageheader/>
+
+The **Wild** object allows a script to access the in-built pattern matching functions in Opus. Even though most ActiveX scripting languages have their own pattern matching support (usually via a regular expression system of some sort), you may wish to use the one that Opus provides for consistency with internal Opus functions.
+
+You can create a **Wild** object using the **[[fsutil|FSUtil]].NewWild** method. To use the **Wild** object, you must first give it the pattern to match against (this step is called "parsing the pattern"). You can do this when it is created or later on using the **Parse** method. Once the object has a pattern you can call the **Match** method to test a string against the pattern.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //string//
+$$ Returns the current pattern in the Wild object
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ EscapeString
+$$ <string:input>\\
+<string:type>
+$$ //string//
+$$ Escapes all wildcard characters in the input string and returns the result. For example, "**the * 'dog' said** *" would be conterted to "**the '* %%''%%dog%%''%% said '***".
+
+The optional type argument lets you specify the conversion:\\
+//none//: Escape characters used in [[..:..:wildcard_reference:pattern_matching_syntax|standard pattern matching]]\\
+**r**: Escape characters used in [[..:..:wildcard_reference:regular_expression_syntax|regular expressions]] \\
+**b**: Double all back-slashes\\
+**n**: Double all back-slashes that come before the letter '**n**'\\
+Note that these modes cannot be combined.
+$$ Match
+$$ <string:test>
+$$ //bool//
+$$ Compares the specified string against the previously-parsed pattern, and returns **True** if it matches.
+$$ Parse
+$$ <string:pattern>\\
+<string:flags>
+$$ //bool//
+$$ Parses the supplied pattern. The flags string is optional - if supplied it must be a string consisting of one or more of the following characters:
+
+|**c**|consider case when performing the operation|
+|**x**|simple matching against multiple file extensions|
+|**d**|support DOS wildcard characters only|
+|**r**|use regular expression|
+|**h**|easy handling for file paths (\ and / are considered the same)|
+|**a**|"any word" mode|
+|**i**|ignore diacritics|
+|**f**|support filetype groups|
+|**p**|partial matching|
+|**n**|force partial match on for regular expression (see below)|
+
+By default this uses [[..:..:wildcard_reference:pattern_matching_syntax|standard pattern matching]] - specify the **r** flag to use [[..:..:wildcard_reference:regular_expression_syntax|regular expressions]] instead.
+
+For regular expression, partial match is automatically disabled if the pattern begins or ends with a `.*` sequence. To prevent this, specify the **n** flag. This forces partial match (as the "normal" regex behaviour), but you can perform a non-partial match by adding `^^` to the start and `$` to the end of the pattern.
+</commandtable>
+
+

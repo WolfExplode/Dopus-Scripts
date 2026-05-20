@@ -1,0 +1,18 @@
+~~Title: LCase~~
+<evalcmd>
+LCase && string && Lower-case string. &&
+string && string && Input string to lower-case.
+</evalcmd>
+
+Returns //string// converted to lower-case.
+
+//Example://
+<code>
+Output( LCase("Hello World") );
+--> hello world
+</code>
+
+//See also://\\
+[[capitalize]]\\
+[[ucase]]\\
+

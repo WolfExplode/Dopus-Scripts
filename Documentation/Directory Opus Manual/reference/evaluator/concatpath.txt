@@ -1,0 +1,25 @@
+~~Title: ConcatPath~~
+<evalcmd>
+ConcatPath && string && Concatenate one or more strings into a single path. &&
+part1 && string && First path part. &&
+part2 && string && Second path part. &&
+[part...] && string && Additional parts to add... &&
+</evalcmd>
+
+Joins one or more strings together into a path and returns the result. Empty strings are skipped. 
+
+Similar to [[concat|Concat]], but you don't need to specify the path separator or number of components.
+
+By default, a backslash "\" will be used as the path separator. A forward slash "/" will be used instead if one or more of the parts already contains a forward slash "/" and none of the parts contain any backslashes.
+
+//Example://
+<code>
+Output(ConcatPath("C:\Program Files", "GPSoftware", "Directory Opus"));
+--> C:\Program Files\GPSoftware\Directory Opus
+
+Output(ConcatPath("C:/Program Files", "GPSoftware", "Directory Opus"));
+--> C:/Program Files/GPSoftware/Directory Opus
+</code>
+
+//See also:// [[concat|Concat]]
+

@@ -1,0 +1,13 @@
+~~Title: Viewer Pane ~~
+<pageheader/>
+
+This page contains options that affect the [[:basic_concepts:the_lister:viewer_pane|Lister viewer pane]]. Changes you make here don't affect the [[:additional_functionality:viewing_images|standalone image viewer]] - there are separate pages for those options.
+
+  * **Accelerated scrolling while dragging**: Grabbing the image with the mouse will move the image faster, such that you only have to move the mouse a small amount to scroll the entire image. If it's turned off, you'll get 1:1 movement where the part of the image you drag will stay under the mouse. Holding <kbd>Ctrl</kbd> while dragging will also switch modes, in case you sometimes need both.
+  * **Allow download of files from cloud storage**: By default the viewer pane will not trigger the download of offline files from cloud storage. You can enable this if you want to.
+  * **Automatically refresh image when file changes**: Opus will monitor the currently viewed file, and refresh the display of it if it changes.
+  * **Automatically select next file when viewed image is deleted**: If the image you are currently viewing is deleted, Opus will automatically select the next file in the file display. This lets you quickly weed out a large collection of pictures using only the keyboard - click on the first file to view, press <kbd>Down</kbd> if you want to keep it, or <kbd>Del</kbd> if you want to delete or (in which case Opus will automatically move on to the next file). You can also do this sort of thing using [[:additional_functionality:viewing_images:image_marking|marking]].
+  * **Leave file in viewer until another is selected**: If you click on the file display background to deselect all files, the viewer pane will continue to show the last image it displayed.
+  * **Show control bar**: Causes a toolbar to be displayed at the bottom of the viewer panel, which contains buttons for commonly used functions.
+  * **Show lock button**: Displays a lock button in the Viewer Pane's title bar that lets you lock it to the currently displayed image.
+

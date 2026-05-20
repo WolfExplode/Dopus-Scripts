@@ -1,0 +1,33 @@
+~~Title: Items~~
+<pageheader/>
+
+The **Items** object lets you enumerate a collection of one or more **[[item|Item]]** objects. An **Items** object is retrieved from a number of methods and properties, including **[[dialog|Dialog]].Multi**, **[[dopus|DOpus]].GetClip**, **[[command|Command]].files** and several others.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //collection://**[[item]]** 
+$$ Returns a collection of **[[item]]** objects that you can enumerate.
+$$ result
+$$ //bool//
+$$ When this **Items** object comes from the **[[dialog|Dialog]].Multi** method, it includes a **result** property giving the result of the dialog. The collection of items is only valid if **result** returns **True**. If it returns **False** it means the user cancelled the dialog.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ RemoveNested
+$$ //none//
+$$ //int//
+$$ Removes any nested items from the collection (items that came from sub-folders rather than the root folder). The number of items removed is returned.
+$$ Update
+$$ //none//
+$$ //none//
+$$ Updates the state of this object. This only applies to collections that come from certain sources (e.g. from a **[[tab|Tab]]**). When the **Items** object is first retrieved, a snapshot is taken. Changes made after that outside of the script will not be detected unless you call the **Update** method.
+</commandtable>
+

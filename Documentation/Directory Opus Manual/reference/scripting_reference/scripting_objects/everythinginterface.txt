@@ -1,0 +1,123 @@
+~~Title: EverythingInterface~~
+<pageheader/>
+
+If [[:additional_functionality:everything_integration|Everything]] by voidtools is installed, this provides an interface that lets you easily communicate with Everything from a script. You can start and stop Everything, query its status, send it arbitrary commands and query its database.
+
+Create an **EverythingInterface** object via the **[[dopus|DOpus]].Create** factory method.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ autorun
+$$ //bool//
+$$ Returns True if Everything is configured to auto-start (via the **[[:preferences:preferences_categories:miscellaneous:advanced_options|Miscellaneous / Advanced Options]]** Preferences page).
+$$ autoruncmd
+$$ //string//
+$$ Returns the configured auto-start command, if any.
+$$ indexed
+$$ //int//
+$$ Returns a value indicating which attributes Everything is configured to index. This is a bitmask made up of the following values:
+
+|2|File sizes|
+|4|Folder sizes|
+|8|Created date|
+|16|Modified date|
+|32|Accessed date|
+|64|Attributes|
+$$ isrunning
+$$ //bool//
+$$ Returns True if Everything is currently running.
+$$ roots
+$$ //object://**[[stringset|StringSet]]**
+$$ Returns a set representing the drive roots that Everything has indexed.
+$$ version
+$$ //string//
+$$ Returns Everything's version number.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Indexed
+$$ <string:path>
+$$ //bool//
+$$ Returns True if the specified path is indexed by Everything.
+$$ Query
+$$ <query>\\
+<search_flags>\\
+<request_flags>\\
+<sort_type>\\
+<max_results>\\
+<offset>\\
+<timeout>
+$$ **[[vector|Vector]]** of **[[everythingresult|EverythingResult]]**
+$$ Sends the specified query string to Everything. Returns the results as a [[vector|Vector]] of [[everythingresult|EverythingResult]] objects.
+
+All arguments after the query string are optional, and represent flags provided by the Everything API.
+
+//search_flags// should be a bitmask representing the `EVERYTHING_IPC_xxx` search flags, or a string containing one or more of the following characters. Defaults to `0` if not provided.
+
+|c|match case (`EVERYTHING_IPC_MATCHCASE`)|
+|w|match whole words (`EVERYTHING_IPC_MATCHWHOLEWORDS`)|
+|p|match path (`EVERYTHING_IPC_MATCHPATH`)|
+|r|regex (`EVERYTHING_IPC_REGEX`)|
+|a|match accents (`EVERYTHING_IPC_MATCHACCENTS`)|
+
+//request_flags// should be a bitmask representing the `EVERYTHING_IPC_QUERY2_REQUEST_xxx` request flags, or a string containing one or more of the following characters. Defaults to `EVERYTHING_IPC_QUERY2_REQUEST_FULL_PATH_AND_NAME` if not provided.
+
+|n|name (`EVERYTHING_IPC_QUERY2_REQUEST_NAME`)|
+|p|path (`EVERYTHING_IPC_QUERY2_REQUEST_PATH`)|
+|f|full path and name (`EVERYTHING_IPC_QUERY2_REQUEST_FULL_PATH_AND_NAME`)|
+|x|extension (`EVERYTHING_IPC_QUERY2_REQUEST_EXTENSION`)|
+|s|size (`EVERYTHING_IPC_QUERY2_REQUEST_SIZE`)|
+|c|created (`EVERYTHING_IPC_QUERY2_REQUEST_DATE_CREATED`)|
+|m|modified (`EVERYTHING_IPC_QUERY2_REQUEST_DATE_MODIFIED`)|
+|e|accessed (`EVERYTHING_IPC_QUERY2_REQUEST_DATE_ACCESSED`)|
+|a|attributes (`EVERYTHING_IPC_QUERY2_REQUEST_ATTRIBUTES`)|
+|r|run count (`EVERYTHING_IPC_QUERY2_REQUEST_RUN_COUNT`)|
+|R|date run (`EVERYTHING_IPC_QUERY2_REQUEST_DATE_RUN`)|
+|M|date recently changed (`EVERYTHING_IPC_QUERY2_REQUEST_DATE_RECENTLY_CHANGED`)|
+|N|highlighted name (`EVERYTHING_IPC_QUERY2_REQUEST_HIGHLIGHTED_NAME`)|
+|P|highlighted path (`EVERYTHING_IPC_QUERY2_REQUEST_HIGHLIGHTED_PATH`)|
+|F|highlighted full path and name (`EVERYTHING_IPC_QUERY2_REQUEST_HIGHLIGHTED_FULL_PATH_AND_NAME`)|
+
+//sort_type// should be one of the `EVERYTHING_IPC_SORT_xxx` constants (the numeric value). Defaults to `0` if not provided.
+
+//max_results// lets you limit the number of results returned. Defaults to the //everything_max_results// advanced Preferences value if not provided.
+
+//offset// specifies the result offset. In conjunction with //max_results// this lets you query large datasets without having to deal with all the results at once.
+
+//timeout// specifies a timeout in milliseconds. Defaults to `1000` if not provided.
+$$ RunCountGet
+$$ <string:file>
+$$ //int//
+$$ Returns the run count for the specified file.
+$$ RunCountInc
+$$ <string:file>
+$$ //int//
+$$ Increments the run count for the specified file and returns the new count.
+$$ RunCountSet
+$$ <string:file>\\
+<int:count>
+$$ //bool//
+$$ Sets the run count for the specified file to the value provided. Returns True on success.
+$$ SendCmd
+$$ <int:command>\\
+[<int:data>]
+$$ //int//
+$$ Sends the specified command to Everything and returns its response. The commands are documented in the Everything API SDK (e.g. 401 equates to `EVERYTHING_IPC_IS_DB_LOADED` and returns 1 to indicate Everything's database is loaded).
+$$ Start
+$$ [<int:timeout>]
+$$ //bool//
+$$ Starts Everything if it's not already running and Opus has been configured to auto-start it. The optional timeout parameter lets you specify in milliseconds how long Opus should wait for Everything to start up before it gives up and returns failure. The default if not specified is 2500.
+$$ Stop
+$$ //none//
+$$ //bool//
+$$ Stops Everything (tells it to quit).
+</commandtable>
+
+

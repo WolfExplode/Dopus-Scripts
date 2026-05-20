@@ -1,0 +1,20 @@
+~~Title: OnActivateTab ~~
+<pageheader/>
+
+The **OnActivateTab** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive a notification every time a tab becomes active (i.e. comes to the front of another tab in the same file display).
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnActivateTab
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:activatetabdata|ActivateTabData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **ActivateTabData.oldtab** property identifies the tab that was previously active, and the **newtab** property identifies the new active tab.
+</commandtable>
+
+
+
+

@@ -1,0 +1,20 @@
+~~Title: Command Reference ~~
+<pageheader/>
+
+[[:customize:the_customize_dialog:toolbars|Toolbar]] buttons, [[:customize:the_customize_dialog:context_menus|menu]] items and [[:customize:the_customize_dialog:keys|hotkeys]] are constructed from one or more commands. There are two main types of commands, or instructions: internal and external.
+
+  * [[~internal_commands|Internal commands]] are the set of functions built-in to Opus - its "native language" if you like. There are around 30 commands that make up the internal command set, and each command takes one or more [[:customize:creating_your_own_buttons:internal_command_arguments|arguments]] that defines or modifies its behavior. 
+  * External commands are other programs outside of Opus. Using one or more special [[~external_control_codes|control codes]], a toolbar button or hotkey can launch an external program and pass information like the names of selected files to it. 
+
+
+
+The third type of instruction that can be used in a button or hotkey is the [[:customize:creating_your_own_buttons:command_modifiers|command modifier]]. These are not commands themselves - instead, they modify the behaviour of the overall button.
+
+
+
+More:
+
+[[~argument_types|Argument Types]]\\
+[[~internal_commands|Internal Commands]]\\
+[[~external_control_codes|External control codes]]\\
+[[~command_modifier_reference|Command modifier reference]]\\

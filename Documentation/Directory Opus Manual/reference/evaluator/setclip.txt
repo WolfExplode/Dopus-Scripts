@@ -1,0 +1,8 @@
+~~Title: SetClip~~
+<evalcmd>
+SetClip && none && &&
+text && string && Text to place on the clipboard.
+</evalcmd>
+
+Places the specific text on the clipboard.
+

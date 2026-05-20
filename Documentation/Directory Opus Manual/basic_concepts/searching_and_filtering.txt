@@ -1,0 +1,20 @@
+~~Title: Searching and Filtering ~~
+<pageheader/>
+
+While working in folders you will often encounter the situation where there are many more files displayed than the ones you actually want to work with. There are two main systems for reducing the number of files displayed to those you specifically want to target:
+
+  * Filtering is used to hide files from the current display of a folder - for example, you might hide all files ending in **.bak**, or filter the display to only show image files. You can filter the list in two ways - with the quick filter using the [[~filter_bar|Filter Bar]], or with the various filter fields in the [[folder_options|Folder Options]] system. There are also some global filtering options on the **[[:preferences:preferences_categories:filtering_and_sorting:global_filters|Global Filters]]** Preferences page that you can use to always hide particular files. 
+  * Searching is used to locate files in and below the current folder - you might search for all MP3 files in the current folder or its sub-folders. The easiest way to search is with the indexed [[~windows_search|Windows Search]] system, although you can also use the [[~find_files|Find Files]] function to perform more structured searches. 
+
+
+
+The main difference between filtering and searching is that filtering operates on the current list of files and removes files from the display, whereas searching starts from the current location and builds a new list of files that match the supplied criteria.
+
+
+
+More:\\
+[[~filter_bar|Filter Bar]]\\
+[[~show_everything|Show Everything]]\\
+[[~toolbar_filter_fields|Toolbar Filter Fields]]\\
+[[~windows_search|Quick Search]]\\
+[[~find_files|Find Files]]\\

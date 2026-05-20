@@ -1,0 +1,10 @@
+~~Title: Script/FTP Logs~~
+<pageheader/>
+
+  * **Maximum size of FTP and script logs**: This specifies the maximum size of FTP and script logs. Opus maintains a separate log for each FTP site you connect to, as well as a unified log for all FTP activity, and another separate log for script and evaluator output. Each log will be no larger than the number of kilobytes specified here. 
+
+==Prefixes==
+
+The options in this section control the header that's added to each line of the script and FTP logs.
+
+These options affect which information is written for future log lines and do not affect what's already in the log.

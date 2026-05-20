@@ -1,0 +1,16 @@
+~~Title: AboutData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] provides an **[[..:scripting_events:onaboutscript|OnAboutScript]]** method, it is passed an **AboutData** object when invoked via the user clicking the //About// button in Preferences.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ window
+$$ //int//
+$$ This is a handle to the parent window that the script should use if displaying a dialog via the **[[dialog|Dialog]]** object. Even though this is not a **[[lister|Lister]]** or **[[tab|Tab]]**, it can still be assigned to the **Dialog.window** property to set the parent window of the dialog.
+</commandtable>
+
+

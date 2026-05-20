@@ -1,0 +1,17 @@
+~~Title: OnFAYTClose~~
+<pageheader/>
+
+The **OnFAYTClose** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when the FAYT closes (assuming it has been used with a script FAYT command).
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnFAYTClose
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:faytclosedata|FAYTCloseData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **FAYTCloseData** object has a **tab** property which identifies the tab the FAYT closed in.
+</commandtable>
+

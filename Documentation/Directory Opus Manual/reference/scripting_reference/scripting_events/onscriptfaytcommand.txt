@@ -1,0 +1,22 @@
+~~Title: OnScriptFAYTCommand ~~
+<pageheader/>
+
+The **OnScriptFAYTCommand** event is the entry point for a [[:scripting:script_add-ins|script add-in]] that [[:scripting:example_scripts:extending_the_fayt|extends the FAYT field]]. The actual name of the event is defined by the script itself, when the command is added via the **[[..:scripting_objects:scriptinitdata|ScriptInitData]].AddCommand** method - **OnScriptFAYTCommand** is merely a placeholder name.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnScriptFAYTCommand
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:scriptfaytcommanddata|ScriptFAYTCommandData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ When a script extends the FAYT field by adding a new internal command using **ScriptInitData.AddCommand**, it specifies the name of its entry point with the **ScriptCommand.method** property. When the FAYT extension is triggered, Opus will call that method within your script.
+
+The **[[..:scripting_objects:scriptfaytcommanddata]]** object provides information about what the user has typed to trigger your extension.
+</commandtable>
+
+
+
+

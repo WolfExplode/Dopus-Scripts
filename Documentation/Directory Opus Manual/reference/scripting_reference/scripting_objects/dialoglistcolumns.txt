@@ -1,0 +1,66 @@
+~~Title: DialogListColumns ~~
+<pageheader/>
+
+The **DialogListColumns** object lets you query or modify the columns in a //Details// mode //list view// control in a [[:scripting:script_dialogs|script dialog.]] Use the **[[control|Control]].columns** property to obtain a **DialogListColumns** object.
+
+
+
+You can enumerate this object to query the current columns. Each column is represented by a **[[dialoglistcolumn|DialogListColumn]]** object.  
+
+
+<commandtable columns="4" id="cmdtable_1">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddColumn
+$$ <string:name>\\
+$$ //int//
+$$ Adds a new column to the list view, and returns the index of the new column (or **-1** on failure).
+$$ AutoSize
+$$ //none//\\
+$$ //none//
+$$ Automatically sizes all columns in the list view to fit their content.
+$$ DeleteColumn
+$$ <int:index>
+$$ //none//
+$$ Deletes the specified column.
+
+You may only delete the main column (index 0) if there are no columns or items currently in the list.
+
+You can also specify index **-1** to clear all columns from the control at once. (Provided no items are in the list.)
+$$ GetColumnAt
+$$ <int:index>
+$$ //object://\\
+**[[dialoglistcolumn|DialogListColumn]]**
+$$ Returns a **[[dialoglistcolumn|DialogListColumn]]** object representing the column in the specified index.
+$$ GetDisplayOrder
+$$ //none//
+$$ object:**[[vector|Vector]]** 
+$$ Returns the order which the list's columns are displayed on the screen. This may differ from their natural order if you have previously changed it via **SetDisplayOrder**.\\
+The vector contains the index of each column in the order it appears. As an example, if you create a list with three columns (indexes 0, 1, 2) and move the last one (2) to the start, the returned vector will contain three integers: 2,0,1.
+$$ InsertColumn
+$$ <string:name>\\
+<int:index>
+$$ //int//
+$$ Inserts a new column in the list view at the specified index, and returns the index of the new column (or **-1** on failure).
+
+You may only replace the main column (index 0) if there are no columns or items currently in the list. (Use **SetDisplayOrder** if you want to reorder how the columns are displayed visually.)
+$$ SetDisplayOrder
+$$ <int:indexA>\\
+<int:indexB>\\
+<int:indexC>\\
+...\\
+or\\
+<**[[vector|Vector]]**:indexes>
+$$ //none//
+$$ Changes the order in which the list's columns are displayed.\\
+This can be particularly useful when you want to place one or more columns before the main one, which is not possible when initially creating the columns (due to the way Windows list controls behave). The main column is special, in that it is the only one which can have a checkbox or editable label, but you may not always want it to be displayed first.\\
+You can either pass the column indexes directly as arguments, or pass a vector (or most other collection types) of integers with the same thing.\\
+As an example, if you create a list with three columns (indexes 0, 1, 2) and want to move the last column (2) to the start: //SetDisplayOrder(2,0,1)//\\
+This only changes the order the columns are displayed on the screen; the column indexes you use in your code do not change afterwards.
+</commandtable>
+
+
+
+

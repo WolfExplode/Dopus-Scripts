@@ -1,0 +1,144 @@
+~~Title: Menu ~~
+<pageheader/>
+
+A **Menu** object lets you create and display a popup menu. Menus can appear anywhere on your dialog (or anywhere on screen), and they can also appear attached to certain dialog controls (e.g. a dropdown button, or over a specific listview item).
+
+You create an initial **Menu** object via the **[[dialog|Dialog]].CreateMenu()** method. Once you have the root menu object you can add items and sub-menus to it. The **AddSubMenu** method returns another **Menu** object, which lets you configure the contents of the sub-menu.
+
+Menus contain items of different types - each item is represented by a **[[menuitem|MenuItem]]** object. The item types are:
+
+  * **item**: A normal menu item, used to run a command.
+  * **toggle**: A menu item that toggles on and off (displays a checkmark or radio button glyph)
+  * **separator**: A separator (horizontal line).
+  * **sub-menu**: A sub-menu.
+
+Use the **Show** menu to display your menu once you have configured it.
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddItem
+$$ //label//\\
+//id//\\
+//position//\\
+//type//\\
+//submenu//
+$$ [[menuitem|MenuItem]]
+$$ Adds a new item to the menu and returns a **MenuItem** object that represents it.
+
+All arguments are optional - you can configure the menu item via its properties after creating it if you want. As well as this method you can use the specialised methods **AddSeparator**, **AddSubMenu** and **AddToggle** to add particular types of items.
+
+|label|Specify the item's label. Not used for separators.|
+|id|Specify the item's ID (a numeric value). Not used for separators.|
+|position|Specify the new item's position. By default new items are added to the end.|
+|type|Specify the item's type. Valid types are "item", "toggle", "separator" and "submenu".|
+|submenu|For "sub" type items only, specifies the **Menu** object that defines the contents of the sub-menu.|
+$$ AddRadioGroup
+$$ //id//\\
+//id//\\
+//id//...
+$$ //none//
+$$ Defines a "radio group", a set of two or more mutually exclusive //toggle// items. When an item in a radio group is chosen, it appears selected, and the previously selected item in the group is automatically deselected. The //id// values must be the same as those provided when the menu items were added.
+$$ AddSeparator
+$$ //position//
+$$ [[menuitem|MenuItem]]
+$$ Adds a new separator item to the menu. If //position// is not provided the separator is added to the end.
+$$ AddSubMenu
+$$ //label//\\
+//id//\\
+//position//\\
+//submenu//
+$$ [[menuitem|MenuItem]]
+$$ Adds a new sub-menu item to the menu. All arguments are optional - you can configure the menu item via its properties after creating it if you want.
+
+|label|Specify the item's label.|
+|id|Specify the item's ID (a numeric value).|
+|position|Specify the new item's position. By default new items are added to the end.|
+|submenu|Specify the **Menu** object that defines the contents of the sub-menu.|
+$$ AddToggle
+$$ //label//\\
+//id//\\
+//position//
+$$ [[menuitem|MenuItem]]
+$$ Adds a new toggle item to the menu. All arguments are optional - you can configure the menu item via its properties after creating it if you want.
+
+|label|Specify the item's label.|
+|id|Specify the item's ID (a numeric value).|
+|position|Specify the new item's position. By default new items are added to the end.|
+$$ FindItem
+$$ //id//\\
+//by_position//\\ \\
+or\\ \\
+//label//
+$$ [[menuitem|MenuItem]]
+$$ Locates a menu item either by ID, position or label, and returns the [[menuitem|MenuItem]] object representing it.
+
+By default, //id// specifies the ID provided when the menu item was added. If you set the optional //by_position// argument to **true** the //id// value is interpreted as a position (e.g. `FindItem(3, true)` would return the fourth item in the menu.
+
+You can also locate an item by its label, by passing a string as the argument. Standard wildcard patterns are supported.
+$$ RemoveItem
+$$ //id//\\
+//by_position//\\
+or\\
+//label//
+$$ bool
+$$ Removes a menu item from the menu, either by ID, position or label.
+
+By default, //id// specifies the ID provided when the menu item was added. If you set the optional //by_position// argument to **true** the //id// value is interpreted as a position (e.g. `RemoveItem(3, true)` would remove the fourth item in the menu.
+
+You can also remove an item by its label, by passing a string as the argument. Standard wildcard patterns are supported - only the first matching item will be removed.
+
+The method returns **true** if the item was successfully removed.
+$$ Show
+$$ //[[dialog|Dialog]]//\\
+//control//\\
+//flags//\\ \\
+or\\ \\
+//[[dialog|Dialog]]//\\
+//x//,//y//\\
+//flags//\\ \\
+or\\ \\
+//x//,//y//\\
+//flags//
+$$ int
+
+or
+
+[[menumultiselresults|MenuMultiSelResults]]
+$$ Displays the popup menu. You can show the menu in three ways:
+
+  * Relative to a specific dialog control, e.g. as a drop-down button or context menu on a list view (pass the dialog and control name)
+  * At a specific point relative to a dialog (pass the dialog and x / y coordinates)
+  * At a specific point on the screen (pass x / y coordinates without a dialog)
+
+To display the menu on a dialog, pass the appropriate [[dialog|Dialog]] object and either the name of a control or x,y coordinates relative to the top-left corner of the dialog's client area.
+
+If a control is specified the menu will appear positioned over that control. Special handling exists for button controls - the menu will appear positioned below it, like a drop-down menu button. For other controls the menu will appear at the mouse coordinates if the mouse is currently over that control (this lets you add right-click functionality).
+
+The optional //flags// are:
+|a|auto-assign accelerators|
+|b|bottom-align (above the specified point)|
+|c|center-align (centered horizontally over the specified point)|
+|r|right-align (to the right of the specified point)|
+|v|vcenter-align (centered vertically over the specified point)|
+|m|multi-select (see below)|
+|r|right mouse button (otherwise assumes left mouse button)|
+|s|support scroll (see below)|
+
+The "support scroll" option substitutes an Opus menu for a standard Windows one, which supports showing a scrollbar for long lists. However this does not support multi-select mode.
+
+Multi-select mode allows the user to select more than one item from the menu without it closing. Only "toggle" items support this functionality:
+
+  * Standard toggle items can be checked on or off
+  * Toggle items with their **radio** property set to true will be mutually exclusive with other radio items in the same group. Use the `AddRadioGroup` method to define groups.
+  * The menu will close when a non-toggle item is chosen.
+
+The return value from the **Show** depends on the use of the "m" multi-select flag.
+
+  * With single-select (the default), the return value is the ID of the chosen menu item, or -1 if the menu was cancelled.
+  * With multi-select, the return value is a [[menumultiselresults|MenuMultiSelResults]] object. This object provides the ID of the chosen item (the one that closed the menu), as well as a vector of IDs that were toggled while the menu was open.
+</commandtable>
+
+

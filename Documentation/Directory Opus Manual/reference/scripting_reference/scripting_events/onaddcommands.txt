@@ -1,0 +1,20 @@
+~~Title: OnAddCommands ~~
+<pageheader/>
+
+The **OnAddCommands** event is called to allow your [[:scripting:script_add-ins|script add-in]] to [[:scripting:example_scripts:adding_a_new_internal_command|add internal commands]]. Call the **[[..:scripting_objects:addcmddata|AddCmdData]].AddCommand** method once for each command you wish to add.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnAddCommands
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:addcmddata|AddCmdData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ When Opus starts up, or when a script add-in is added, edited or enabled, its **OnAddCommands** method is called. This allows a script to [[:scripting:example_scripts:adding_a_new_internal_command|add internal commands ]]to the Opus command set. A script can reinitialize its list of commands at any time by calling the **[[..:scripting_objects:script|Script]].InitCommands** method.
+</commandtable>
+
+
+
+

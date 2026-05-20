@@ -1,0 +1,20 @@
+~~Title: OnSourceDestChange ~~
+<pageheader/>
+
+The **OnSourceDestChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification whenever a tab's source/destination state changes.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnSourceDestChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:sourcedestdata|SourceDestData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **SourceDestData.tab** property identifies the tab, and the **source** and **dest** properties identify the new state (if both are **False** it means the tab is "off" - this can only happen in a single file-display Lister).
+</commandtable>
+
+
+
+

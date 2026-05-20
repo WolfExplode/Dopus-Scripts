@@ -1,0 +1,16 @@
+~~Title: ImageMeta ~~
+<pageheader/>
+
+The **ImageMeta** object is retrieved from the **[[metadata|Metadata]].image** or **[[metadata|Metadata]].image_text** properties. It provides access to metadata relating to picture files.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<column keyword>//
+$$ //variant//
+$$ Returns the value of the specified column, as listed in the //Pictures// section of the [[..:..:metadata_keywords:keywords_for_columns|Keywords for Columns]] page.
+</commandtable>
+
+

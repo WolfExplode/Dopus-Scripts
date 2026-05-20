@@ -1,0 +1,24 @@
+~~Title: OpenListerData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onopenlister|OnOpenLister]]** event, the method receives an **OpenListerData** object when invoked when a new Lister opens.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ after
+$$ //bool//
+$$ Initially this is set to **False**, indicating that the event has been called before any tabs have been created. If you return **True** from the **[[..:scripting_events:onopenlister|OnOpenLister]]** event, it will be called again and **after** will be set to **True** to indicate all tabs have been created.
+$$ lister
+$$ //object://**[[lister|Lister]]** 
+$$ Returns a **[[lister|Lister]]** object representing the newly opened Lister.
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the event was triggered.\\
+The string can contain any or all of the following: //shift// //ctrl//, //alt//, //lwin//, //rwin//\\
+If no qualifiers were down, the string will be: //none//
+</commandtable>
+
+

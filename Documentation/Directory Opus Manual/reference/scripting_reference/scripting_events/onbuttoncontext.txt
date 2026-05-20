@@ -1,0 +1,23 @@
+~~Title: OnButtonContext~~
+<pageheader/>
+
+The **OnButtonContext** event can be implemented by a [[:scripting:script_add-ins|script add-in]] that adds one or more new this by adding [[:scripting:example_scripts:adding_a_new_internal_command|new internal commands]] to Opus. Individual command arguments can be flagged as needing context-sensitive state.
+
+For example, a function called `Foo` might have an argument `BAR` that should appear highlighted in certain situations. When the user adds the command `Foo BAR` to a toolbar, your script's **OnButtonContext** event is called to update the button's state.
+
+The arguments that require context-sensitive state are specified when adding the custom command via the `context_args` property of the **[[:reference:scripting_reference:scripting_objects:scriptcommand|ScriptCommand]]** object.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnButtonContext
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:buttoncontextdata|ButtonContextData]] **
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ 
+</commandtable>
+
+
+
+

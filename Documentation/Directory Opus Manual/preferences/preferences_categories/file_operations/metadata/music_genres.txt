@@ -1,0 +1,14 @@
+~~Title: Music Genres~~
+<pageheader/>
+
+This page lets you configure a list of music genres that's shown in the dropdown for the //Genre// field in the [[:basic_concepts:the_lister:metadata_pane|metadata pane]]. A number of genres are pre-defined but you can remove them if you don't need them, and also add your own.
+
+The **Unused genres** list shows the defined genres that won't be listed, and the **Listed genres** list shows the ones that will be.
+
+Use the {{:media:13:arrow_left.png?nolink|}} and {{:media:13:arrow_right.png?nolink|}} buttons to move genres between the two lists. You can also double-click a genre to move it to the other list.
+
+You can change the order of the genres in the **Listed genres** list using the {{:media:13:arrow_up.png?nolink|}} and {{:media:13:arrow_down.png?nolink|}} buttons.
+
+The {{:media:13:sort_button.png?nolink|}} sort button can be used to resort the genres list alphabetically if the order has been changed.
+
+To add a custom genre, enter it in the field at the bottom of the **Unused genres** list and click the {{:media:13:arrow_right.png?nolink|}} button.

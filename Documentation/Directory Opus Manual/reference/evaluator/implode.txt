@@ -1,0 +1,25 @@
+~~Title: Implode~~
+<evalcmd>
+Implode && string && Joined string. &&
+array && array && Input array of string. &&
+[separator] && string && Separator to join input strings with. &&
+[flags] && string && Optional flags.
+</evalcmd>
+
+Concatenates the members of an array to a single string, joining them with the specified separator.
+
+If //separator// isn't specified it will join with spaces by default.
+
+The optional //flags// are:
+|q|Quote individual strings if needed (i.e. if they contain a space).|
+|Q|Always quote individual strings.|
+
+//Example://
+<code>
+arr = ArrayCreate("The", "quick", "brown", "fox");
+Output(Implode(arr));
+--> "The quick brown fox"
+</code>
+
+//See also:// [[explode|Explode]]
+

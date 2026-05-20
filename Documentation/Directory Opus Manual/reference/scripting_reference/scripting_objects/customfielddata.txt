@@ -1,0 +1,24 @@
+~~Title: CustomFieldData ~~
+<pageheader/>
+
+The **CustomFieldData** object is provided to a [[:scripting:rename_scripts|rename script]] via the **[[getnewnamedata|GetNewNameData]].custom** property. It provides access to the value of any [[:scripting:rename_scripts:custom_fields_in_the_rename_dialog|custom fields]] that your script added to the //Rename// dialog.\\
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ <custom field property>
+$$ //variant//
+$$ The properties of the **CustomFieldData** object are entirely determined by the script itself.
+
+In the **[[..:scripting_events:ongetcustomfields|OnGetCustomFields]]** method, assign the default values of any custom fields you want to the **[[getcustomfielddata|GetCustomFieldData]].fields** property. The type of each default value controls the type of the property. 
+
+The //Rename// dialog only supports certain types of variables for custom fields, so you must only assign properties of compatible types. Supported types are:
+
+  * Boolean options (**True** or **False**) - the variable type must be //bool// 
+  * Numeric options - the variable type must be //int// 
+  * String options - the variable type must be //string// 
+  * Drop-down list - the variable type must be a **[[vector|Vector]]** with an //int// as the first element (to specify the default selection), and strings for the remaining elements. 
+
+</commandtable>
+
+

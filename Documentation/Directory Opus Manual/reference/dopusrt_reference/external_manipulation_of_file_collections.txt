@@ -1,0 +1,323 @@
+~~Title: External Manipulation of File Collections ~~
+<pageheader/>
+
+The **[[.|DOpusRT]]** tool can be used from outside of Opus to manipulate [[:basic_concepts:virtual_file_system:file_collections|File Collections]].
+
+This functionality is accessed using the `dopusrt.exe /col` command - following `/col` you must supply a //collection command//, and the appropriate arguments for that collection command.
+
+As with most command-line tools, if a path or other argument contains spaces, you must "put quotes around it".
+
+Since the Directory Opus program files folder isn't normally added to the system path, you will normally need to specify the full path to dopusrt.exe. The examples below only specify the name for brevity.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Command
+$$ Arguments
+$$ Description
+$$ (#)**add**
+$$ //[<flags>] <coll-name> <item> [<item> ...]//
+$$ **Add one or more items to the named collection**.
+
+//<flags>// are one or more optional flags, see below for a list of these. If a flag's value contains a space, the entire flag and value must be enclosed in quotes.
+
+//<coll-name>// is the name of the collection (if adding to a sub-collection, the full path must be provided).
+
+//<item>// is the full path and filename of the item or items to add. If the path or filename contains spaces, it must be enclosed with quotes. The filename can also contain [[..:wildcard_reference:pattern_matching_syntax|standard wildcards]] to add multiple items in a folder at once.
+
+Example:\\
+<code>
+dopusrt.exe /col add "Photos/Holidays" /mypictures/Hawaii/*.jpg
+</code>
+$$ 
+$$ [**/dupeid**//=<id>//]
+$$ Lets you use "duplicate files" style collections by providing a numeric ID to assign items to groups. Items added with the same duplicate ID will be displayed together when the file display is grouped by duplicates.
+$$ 
+$$ [**/name**]
+$$ Lets you assign your own name to a duplicate group. This must be used in conjunction with the `/dupeid` flag. The group name should come after the collection name, not immediately after the `/name` argument.
+
+Example:\\
+<code>
+dopusrt.exe /col add /dupeid=1 /name "My Dupes" "Group number 1"
+</code>
+
+As a fuller example, this sequence will create a collection named `My Dupes`, then add the Directory Opus exe and dll files in their own named groups:
+
+<code>
+dopusrt.exe /col create /dupes "My Dupes"
+dopusrt.exe /col add /dupeid=1 /name "My Dupes" "Exe Files"
+dopusrt.exe /col add /dupeid=2 /name "My Dupes" "DLL Files"
+dopusrt.exe /col add /dupeid=1 "My Dupes" "C:\Program Files\GPSoftware\Directory Opus\*.exe"
+dopusrt.exe /col add /dupeid=2 "My Dupes" "C:\Program Files\GPSoftware\Directory Opus\*.dll"
+</code>
+$$ (#)**clear**
+$$ [**/full**] //<coll-name>//
+$$ **Clears the contents of the named collection**.
+
+//<coll-name>// is the name of the collection (if clearing a sub-collection, the full path must be provided).
+
+Example:\\
+<code>
+dopusrt.exe /col clear "Find Results"
+</code>
+
+By default, sub-collections are not removed when the collection is cleared, but you can specify the `/full` flag to do this:
+
+<code>
+dopusrt.exe /col clear /full "Marked Pictures"
+</code>
+
+
+$$ (#)**create**
+
+
+
+$$ //[<flags>] <coll-name>//
+$$ **Create a new collection**.
+
+//<flags>// are one or more optional flags, see below for a list of these. If a flag's value contains a space, the entire flag and value must be enclosed in quotes.
+
+//<coll-name>// is the name of the collection to create. To create a sub-collection, specify the full path of the collection. The collection name must come after any of the optional flags.
+
+Example:\\
+<code>
+dopusrt.exe /col create "/desc:My Photos" Photos
+</code>
+$$ 
+$$ **/noclear**
+$$ Does not clear the collection if it already exists.
+$$ 
+$$ **/icon:**//<file>//
+$$ Specifies a custom icon for the new collection.
+$$ 
+$$ **/desc:**//<desc>//
+$$ Specifies a description for the new collection.
+$$ 
+$$ **/dupes**
+$$ Marks the collection as a "duplicate files" collection.
+$$ 
+$$ **/query**
+$$ Creates the new collection as a [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query]].\\
+$$ (#)**delete**
+$$ //<coll-name>//
+$$ **Delete the named collection**.
+
+//<coll-name>// is the name of the collection to delete. If deleting a sub-collection, the full path must be provided.
+
+Example:\\
+<code>
+dopusrt.exe /col delete "Photos/Holidays/2010"
+</code>
+$$ (#)**export**
+$$ //[<flags>] <coll-name> <export-file>//
+$$ **Export the contents of a collection to a text file**.
+
+//<flags>// are one or more optional flags, see below for a list of these.
+
+//<coll-name>// is the name of the collection to export.
+
+//<export-file>// is the full path and file to export to - this must be quoted if it contains spaces.
+
+If the encoding type is not specified (using the optional flags), the file will be encoded as UTF16-LE if any filenames require Unicode, and otherwise in the current ANSI code-page.
+
+Example:\\
+<code>
+dopusrt.exe /col export /utf8 "Find Results" D:\Results.txt
+</code>
+$$ 
+$$ **/append**
+$$ If the export file already exists, append to it - otherwise it will be overwritten.
+$$ 
+$$ **/utf16be**
+$$ Force encoding to UTF16-BE.
+$$ 
+$$ **/utf16le**
+$$ Force encoding to UTF16-LE.
+$$ 
+$$ **/utf8**
+$$ Force encoding to UTF8.
+$$ 
+$$ **/ansi**
+$$ Force encoding to the current ANSI code-page.
+$$ 
+$$ **/cp:**//<codepage>//
+$$ Specify the code-page.\\
+$$ (#)**import**\\
+\\
+\\
+$$ //[<flags>] <coll-name> <import-file>//
+$$ **Import the contents of a text file to a collection**.
+
+//<flags>// are one or more optional flags, see below for a list of these.
+
+//<coll-name>// is the name of the collection to import to.
+
+//<import-file>// is the file to import from.
+
+The collection must already exist before you add a list of files to it.
+
+Example:\\
+<code>
+dopusrt.exe /col import /ansi "My Photos" "C:\photos.txt"
+</code>
+
+The import file (`C:\photos.txt` in the example) should contain one file or folder path per line.
+
+If the import file has a byte-order mark (BOM), it will be used to determine the encoding type.
+
+Example import file content to add some folders to a collection:
+
+<code>
+C:\Program Files
+C:\Program Files (x86)
+C:\Windows
+C:\Users
+</code>
+
+Prefix each path with `#<id>,` to specify a duplicates group ID when when adding to a duplicates collection.
+
+Add lines with `group:<id>,<name>` to name the duplicate groups.
+
+Duplicates import file example:
+
+<code>
+group:1,Group One
+group:2,Group Two
+#1,C:\Program Files
+#1,C:\Program Files (x86)
+#2,C:\Windows
+#2,C:\Users
+</code>
+$$ $$ **/clear**
+$$ Clear the collection before importing the new items.
+$$ $$ **/create**
+$$ Create the collection if it doesn't already exist.
+$$ $$ **/nocheck**
+$$ Don't check that the items listed in the import file exist before importing them into the collection.
+$$ $$ **/relative://<path>//**
+$$ Specify the path which lines in the list are relative to, if the file does not contain fully qualified paths. If not specified, paths are assumed to be relative to the same folder the list is in.
+
+Specify **/relative:none** if doing something special where you want the lines imported as-is even if they aren't fully qualified, in which case this cannot be combined with **/nocheck**.
+
+If the path contains spaces, the entire argument should be quoted.
+
+Example:
+<code>
+dopusrt.exe /col import "/relative:C:\My Music" "Jazz" "C:\Trane.m3u"
+</code>
+$$ $$ **/utf16be**
+$$ Assume UTF16-BE if no BOM.
+$$ $$ **/utf16le**
+$$ Assume UTF16-LE if no BOM.
+$$ $$ **/utf8**
+$$ Assume UTF8 if no BOM.
+$$ $$ **/ansi**
+$$ Force conversion from the current ANSI code-page.
+$$ $$ **/cp:**//<codepage>//
+$$ Force conversion from a specific code-page.\\
+$$ (#)**remove**
+$$ //<coll-name> <item> [<item> ...]//
+$$ **Remove items from a collection**.
+
+//<coll-name>// is the name of the collection.
+
+//<item>// is the name of the item or items to remove. This can be given as either the item's full path on disk, or its name within the collection. If the path or filename contains spaces, it must be enclosed with quotes. The filename can also contain [[..:wildcard_reference:pattern_matching_syntax|standard wildcards]] to remove multiple items at once.
+
+Example:\\
+<code>
+dopusrt.exe /col remove "Find Results" *.txt
+</code>
+$$ (#)**rename**
+$$ //<old-coll-name> <new-coll-name>//
+$$ **Rename a collection**.
+
+//<old-coll-name>// is the existing name of the collection.
+
+//<new-coll-name>// is the new name for the collection.
+
+Example:\\
+<code>
+dopusrt.exe /col rename "Find Results" "Saved Results 1"
+</code>
+$$ (#)**runquery**
+$$ //<coll-name>//
+$$ **Run (refresh) a [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query]]**.
+
+//<coll-name>// is the name of the stored query collection.
+
+Example:\\
+<code>
+dopusrt.exe /col runquery "Stored Queries\Backup Files"
+</code>
+$$ (#)**setdesc**
+$$ //<coll-name> <desc>//
+$$ **Set the description for a collection**.
+
+//<coll-name>// is the name of the collection.
+
+//<desc>// is the new description for the collection (or nothing to clear the description).
+
+Example:\\
+<code>
+dopusrt.exe /col setdesc "Saved Results 1" "Music before 1990"
+</code>
+$$ (#)**seticon**
+$$ //<coll-name> <icon-file>//
+$$ **Set a custom icon for a collection**.
+
+//<coll-name>// is the name of the collection.
+
+//<icon-file>// is the full path and filename of the icon file to use.
+
+The icon can come from a .ico or .icl file, or a .exe or .dll file. For files that contain more than one icon, append the desired icon index following the filename.
+
+Example:\\
+<code>
+dopusrt.exe /col seticon "Pics" "C:\Tools\viewer.exe,2"
+</code>
+$$ (#)**setpaths**\\
+$$ //[<flags>] <coll-name> <path> [<path> ...]//
+$$ **Set the search path or paths for a [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query]]**.
+
+//<flags>// are optional flags, see below for a list of these.
+
+//<coll-name>// is the name of the stored query collection.
+
+//<path>// is the path or paths to add to the query. If a path contains spaces it must be enclosed in quotes.
+
+Example:\\
+<code>
+dopusrt.exe /col setpaths "Backup Files" X:\Backup
+</code>
+$$ $$ **/add**
+$$ Add the paths to the query, don't remove any existing ones.\\
+$$ (#)**setquery**\\
+\\
+$$ //[<flags>] <coll-name> <query>//
+$$ **Set the query string for a [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query]]**.
+
+//<flags>// are one or more optional flags, see below for a list of these.
+
+//<coll-name>// is the name of the stored query collection.
+
+//<query>// is the query string, in [[https://learn.microsoft.com/en-us/windows/win32/lwef/-search-2x-wds-aqsreference|Advanced Query Syntax]].
+
+The named collection must have been created as a stored query (e.g. with the `dopusrt.exe /col create /query` command).
+
+In conjunction with this, you can use the `/engine` argument to set the search engine used by the query. The default is Windows search; other options are `everything`, `everythingglobal` and `opus`.
+
+Example:\\
+<code>
+dopusrt.exe /col setquery "Backup Files" name:*.bak /engine=everything
+</code>
+$$ $$ **/auto**
+$$ Set the stored query to "auto refresh" mode - the query will be 
+ run/refreshed whenever it is loaded.
+$$ $$ **/noauto**
+$$ Set the stored query to not automatically refresh.\\
+
+</commandtable>
+
+
+
+
+
+

@@ -1,0 +1,14 @@
+~~Title: Scripting Events ~~
+<pageheader/>
+
+Events are functions in a script file that are called by Opus at various times. There are three main classes of events:
+
+  * Most events are [[:scripting:script_add-ins|script add-in]] events - they are called whenever various events or activities occur. For example, the **[[~onbeforefolderchange|OnBeforeFolderChange]]** event is called before the folder is changed in a tab. Which events a script add-in listens for is completely defined by the script - simply implement the appropriate method and Opus will call it at the appropriate time. 
+  * [[:scripting:script_functions|Script functions]] are called via their **[[~onclick|OnClick]]** event - although implementing this method is optional, as the entire script is executed when a script button or hotkey is run. The advantage of implementing **OnClick** is the **[[.scripting_objects:clickdata|ClickData]]** object passed to the method which can provide useful information about the command's environment. 
+  * [[:scripting:rename_scripts|Rename scripts]] provide an event that's called for each file being renamed. For historical reasons, there are a number of different rename events that can be implemented - the simplest and recommended is the **[[~ongetnewname|OnGetNewName]]** event. 
+
+
+
+With the exception of the legacy rename events (**Rename_GetNewName** and **Rename_GetNewName2**), all event functions have a single argument - an event-specific data object that's passed from Opus to the script each time the event is called. Each object contains properties (and sometimes methods) relevant to the event. The advantage of using a single object is that in the future additional properties can be added without changing the function signature of the event itself.
+
+

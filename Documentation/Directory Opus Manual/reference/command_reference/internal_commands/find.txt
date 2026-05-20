@@ -1,0 +1,552 @@
+~~Title: Find ~~
+<pageheader/>
+
+The **Find** internal command can be used to:
+
+  * Display the [[:basic_concepts:searching_and_filtering:find_files|Find Panel]] where you can perform file searches 
+  * Automate the Find Files function to perform simple searches without displaying a user interface 
+  * Automate the [[:additional_functionality:duplicate_file_finder|Duplicate File Finder]] function 
+
+
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ (#)//(no argument)//
+$$ -
+$$ -
+$$ Display the Find Panel. It will open in whichever mode you last used it.
+
+``Find``
+$$ ADVANCED
+$$ /S
+$$ //(no value)//
+$$ Display the Find Panel in [[:basic_concepts:searching_and_filtering:find_files:advanced_find|Advanced]] mode.
+
+``Find ADVANCED``
+$$ ANYWORD
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to enable the //Any Word// option for name searching.\\
+For example, if this was turned on and you used "cat dog" as the **NAME** argument, Opus would match filenames containing "cat" or "dog" (or both, in any order). This saves you having to construct complicated OR wildcard patterns.
+
+``Find NAME="cat dog" ANYWORD RECURSE IN "c:\"``
+$$ ARCHIVES
+$$ /S
+$$ //(no value)//
+$$ Search inside archive files (when the Find Files function is being automated).
+
+``Find *.doc IN C:\Data ARCHIVES``
+$$ BOTHWAYS
+$$ /S
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you turn on the **Copy files in both directions** option.
+
+//Example:// See the **SYNC** argument for an example.
+$$ CASE
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to specify that the **NAME** argument should be treated as case-sensitive, similar to the related checkbox in the UI.
+
+``Find *.DOC IN C:\ RECURSE CASE``
+$$ CLEAR
+$$ /O
+$$ //(no value)//
+$$ Clear previous results (when the Find Files function is being automated). The output file collection will be cleared before the new Find begins.
+
+``Find *.doc IN C:\Data CLEAR``
+$$ 
+$$ 
+$$ **no**
+$$ Do not clear previous results.
+
+``Find *.doc in C:\Data CLEAR=no``
+$$ COLLNAME
+$$ /K
+$$ //<collection name>//
+$$ Specify the name of the file collection that results are added to. If not supplied the default collections (//Find Results// and //Duplicate Files//) are used.
+
+``Find *.doc in C:\Data COLLNAME Output``
+$$ COLUMN
+$$ /K
+$$ //<column name>//
+$$ When automating the duplicate finder tool with the `DUPES` argument, specifies that duplicates should be matched using the value of a specific column.
+
+``Find IN C:\Data DUPES COLUMN=createddate``
+$$
+$$
+$$ **name**
+$$ Match duplicates by name as well as the value of the specified column
+
+``Find IN C:\Data DUPES COLUMN=createddate,name``
+$$
+$$
+$$ **size**
+$$ Match duplicates by size as well as the value of the specified column
+
+``Find IN C:\Data DUPES COLUMN=createddate,name,size``
+$$ COMPARE
+$$ /K
+$$ **size**
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to compare files by size. By default it will look for different sizes; you can also specify **size,smaller** or **size,larger**.
+
+//Example:// See the **SYNC** argument for an example.
+$$ 
+$$
+$$ **date**
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to compare files by date. By default it will look for different dates; you can also specify **newer**. This can also be combined with **size**.
+$$ 
+$$
+$$ **compare**
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to compare files by comparing the file data (hash).
+$$ COMPUTERS
+$$ /S
+$$ //(no value)//
+$$ Launch the Windows //Search for Computers// function (depending on your version of Windows, this may have no effect).
+
+``Find COMPUTERS``
+$$ CONTAINING
+$$ /K
+$$ //<search text>//
+$$ Specify text to search for (when the Find Files function is being automated).
+
+``Find *.txt CONTAINING printf IN C:\SourceCode``
+$$ CONTANYWORD
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to specify that the **CONTAINING** argument should be handled in "any word" mode, similar to the related checkbox in the UI.
+
+``Find *.txt CONTAINING "apple pear peach plum" CONTANYWORD IN C:\Inventory``
+$$ CONTCASE
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to specify that the **CONTAINING** argument should be treated as case-sensitive, similar to the related checkbox in the UI.
+
+``Find *.txt CONTAINING Apple CONTCASE IN C:\Inventory``
+$$ CONTIGNOREDIACRITICS
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to specify that the **CONTAINING** argument should ignore diacritics (accent marks), similar to the related checkbox in the UI.
+
+``Find *.txt CONTAINING "aeiou" CONTIGNOREDIACRITICS IN C:\Documents``
+$$ CONTNOPARTIAL
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to prevent partial word matching for the **CONTAINING** argument (contents must then match the pattern you specify exactly).
+
+``Find "moo*cow" IN "c:\" RECURSE CONTNOPARTIAL``
+$$ CONTWILD
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to specify that the **CONTAINING** argument should be treated as a wildcard, similar to the related checkbox in the UI.
+
+``Find *.txt CONTAINING (foo|bar) CONTWILD IN C:\Things``
+$$ CONTREGEXP
+$$ /S
+$$ //(no value)//
+$$ Use when automating the Find Files function to specify that the **CONTAINING** argument should use [[:file_operations:renaming_files:advanced_rename:rename_modes:regular_expressions|regular expressions]], similar to the related checkbox in the UI.
+
+``Find *.txt CONTAINING "Mr(s?) Bond" CONTREGEXP IN C:\ RECURSE``
+$$ CONTUTF8
+$$ /S
+$$ //(no value)//
+$$ When automating the Find Files function, plain text files will be assumed to be UTF-8 if no BOM is detected (similar to the related checkbox in the UI).
+
+``Find *.txt CONTAINING printf IN C:\SourceCode CONTUTF8``
+$$ DELETE
+$$ /O
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you turn on the **Delete destination files that aren't in the source** option.
+
+//Example:// See the **SYNC** argument for an example.
+$$ 
+$$ 
+$$ **first**
+$$ Also turns on the **Delete before copy** option.
+$$
+$$
+$$ **norecycle**
+$$ Disables the recycle bin - files will be permanently deleted.
+$$ DSTCOMPENSATION
+$$ /S
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to ignore one hour time differences (daylight savings time) when comparing timestamps.
+
+//Example:// See the **SYNC** argument for an example.
+$$ DUPES
+$$ /S
+$$ //(no value)//
+$$ Automates the Duplicate File Finder.
+
+``Find IN C:\Data DUPES``
+$$ EXCLUDEHIDDEN
+$$ /O
+$$ //(no value)//
+$$ Excludes hidden folders (those with the **H** attribute set) from the search.
+
+``Find *.txt IN D:\ EXCLUDEHIDDEN``
+$$ 
+$$ 
+$$ **no**
+$$ Does not exclude hidden folders. Use this to override a saved preset.
+
+``Find PRESET=DocFiles EXCLUDEHIDDEN=no IN \\storage\data``
+$$ EXCLUDESYSTEM
+$$ /O
+$$ //(no value)//
+$$ Excludes system folders (those with the **H** and **S** attributes set) from the search.
+
+``Find *.exe IN C:\ EXCLUDESYSTEM``
+$$ 
+$$ 
+$$ **no**
+$$ Does not exclude system folders. Use this to override a saved preset.
+
+``Find *.exe IN C:\ EXCLUDESYSTEM=no``
+$$ FILTER
+$$ /S
+$$ //(no value)//
+$$ Indicates that the value of the **NAME** argument is the name of a [[:preferences:preferences_categories:filtering_and_sorting:filters|pre-defined filter]]. This lets you automate more complex searches than just those based on filename and containing text.
+
+``Find NAME image_files IN C:\Pictures FILTER``
+$$ FILTERDEF
+$$ /K/R
+$$ //<filter>//
+$$ Lets you define a filter in [[:file_operations:filtered_operations:textual_filters|text format]]. Similar to the **FILTER** argument, you can automate more complex searches than just those based on filename and containing text - however the filter does not need to be predefined.
+
+This is a **/R** argument and so everything after the **FILTERDEF** keyword will be treated as the argument's value.
+
+``Find FILTERDEF name match *.zip and size match > 2 mb``
+$$ FROM
+$$ /K
+$$ //<path>//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you specify the folder that is the source of the synchronize operation.
+
+//Example:// See the **SYNC** argument for an example.
+$$ HERE
+$$ /S
+$$ //(no value)//
+$$ When automating the Find tool, performs the search below the current folder.
+
+``Find NAME *.txt HERE``
+$$ HIDEUNAFFECTED
+$$ /S
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to hide unaffected files once the comparison process has run.
+
+//Example:// See the **SYNC** argument for an example.
+$$ IGNOREDIACRITICS
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to specify that the **NAME** argument should ignore diacritics (accent marks), similar to the related checkbox in the UI.
+
+``Find ([aeiou]+)\.txt IGNOREDIACRITICS REGEXP IN C:\Documents``
+$$ IGNORELINKS
+$$ /S
+$$ //(no value)//
+$$ When automating the [[:additional_functionality:duplicate_file_finder]], this lets you turn on the **Ignore hard links** option.
+
+``Find IN C:\Data DUPES IGNORELINKS``
+$$ IGNORESECONDS
+$$ /S
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to ignore seconds when comparing timestamps.
+
+//Example:// See the **SYNC** argument for an example.
+$$ IN
+$$ /K/M
+$$ //<search location> ...//
+$$ Specify the folder or folders to search in when automating a search. Remember that if the paths contain a space you must enclose the value in quotes.
+
+``Find *.txt IN "C:\Folder 1" "C:\Folder 2"``
+$$ LOADPREV
+$$ /K
+$$ **no**
+$$ Disable the loading of previous find settings when the Find panel opens. By default, the Find panel will remember its previous settings when it opens unless it has been invoked via an automated search (i.e with both **IN** and **NAME** arguments specified). Use this argument to prevent the command ever remembering its previous settings.
+
+``Find LOADPREV=no``
+$$ 
+$$ 
+$$ **yes**
+$$ Force the Find panel to load its previous settings even when opened by an automated search. This does not restore multiple search paths, however - **LOADPREV=all** must be specified for that.
+
+``Find *.txt IN "C:\Folder 1" LOADPREV=yes``
+$$ 
+$$ 
+$$ **all**
+$$ Forces the Find panel to remember its previous settings, and also restores all paths that were previously listed in the search list.
+
+``Find LOADPREV=all``
+$$ MD5
+$$ /O
+$$ //(no value)//
+$$ Search for duplicates using the MD5 checksum (used with the **DUPES** argument). The default behaviour is to search based on filename and size.
+
+``Find IN C:\Data DUPES MD5``
+$$ 
+$$ 
+$$ //<percentage>//
+$$ Only calculate checksums based on a percentage of the file's contents. This can dramatically speed up duplicate checking for large files, at the expense of some accuracy.
+
+``Find IN C:\Data DUPES MD5=75``
+$$ 
+$$ 
+$$ **cache**
+$$ Use the checksum cache for large files. If a file's checksum has previously been cached and the file does not appear to have changed, the cached value will be used instead of recalculating its checksum.
+
+``Find IN C:\Downloads DUPES MD5=cache,50``
+$$ MINSIZE
+$$ /K/N
+$$ //<size>//
+$$ When automating the [[:additional_functionality:duplicate_file_finder]], this lets you set the value of the **Minimum size** field. The value is given in kilobytes.
+
+``Find IN C:\Data DUPES MD5 MINSIZE=500``
+$$ NAME
+$$ 
+$$ //<filename>//
+$$ This is the default argument for the **Find** command, which means you do not need to use the **NAME** keyword before it (unless you are searching for a word which is recognized as another argument keyword).
+
+Specify the filename or wildcard pattern to search for. To automate the Find Files function you must specify both the **NAME** argument, and the location to search using the **IN** argument.
+
+The **NOWILD**, **ANYWORD** and **NOPARTIAL** arguments can be used to control whether or not wildcards, "any word" or partial matching are used when searching names, similar to the checkboxes in the UI.
+
+You can start the wildcard pattern with **regex:** to use [[:file_operations:renaming_files:advanced_rename:rename_modes:regular_expressions|regular expressions]] instead of wildcards. (Do not specify the **NOWILD** argument in this case.)
+
+You can also search using a pre-defined filter by providing the filter name for the **NAME** argument and also specifying the **FILTER** switch.
+
+``Find *.(doc|txt|bmp) IN C:\ RECURSE ARCHIVES``\\
+``Find regex:foo.+bar\.txt IN C:\ RECURSE``\\
+``Find NAME="Text File (1).txt" NOWILD IN C:\ RECURSE``
+
+When used with the **DUPES** argument, this lets you provide a filename filter for the duplicates search. When used like this, you can specify a regular expression pattern by prefixing the wildcard with the **regex:** prefix.
+
+``Find *.pdf IN C:\Documents RECURSE CLEAR MD5 DUPES``
+$$ NAMEONLY
+$$ /O
+$$ //(no value)//
+$$ Search for duplicates based on filename only (used with the **DUPES** argument). The default behaviour is to search based on filename and size.
+
+``Find IN C:\Data DUPES NAMEONLY``
+$$ 
+$$ 
+$$ **noext**
+$$ Search for duplicates based on filename only, ignoring their file extensions.
+
+``Find IN C:\Data DUPES NAMEONLY=noext``
+$$ NOAUTORUN
+$$ /S
+$$ //(no value)//
+$$ Lets you prevent an automated search from taking place - instead, the Find, Duplicates or Synchronize panel will open with the controls initialised but allow you to make further changes before starting the search. For example, when both the **NAME** and **IN** arguments are provided, the Find Files operation normally begins automatically. To prevent this, specify the **NOAUTORUN** argument as well.
+
+``Find *.doc IN /mydocuments RECURSE NOAUTORUN``
+$$ NOPARTIAL
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to prevent partial name matching (names must then match the pattern you specify exactly).
+
+``Find *.bak IN "c:\" RECURSE NOPARTIAL``
+$$ NOWILD
+$$ /S
+$$ //(no value)//
+$$ Use when automating Find Files to prevent wildcard name matching. Like the similar checkbox in the UI.
+
+``Find "File (1).txt" IN "c:\" RECURSE NOWILD``
+$$ NUMBERGROUPS
+$$ /S
+$$ //(no value)//
+$$ The **Duplicate Finder** creates groups for each set of duplicate files found, and normally these groups are named after the criteria used for the duplicate search. If you turn this option on then each group of duplicates will be numbered (from 1 to //X//, in the order they are found).
+
+``Find IN C:\Data DUPES MD5 NUMBERGROUPS``
+$$ OF
+$$ /K/M
+$$ //<file to match> ...//
+$$ Specifies one or more files to search for duplicates of. If you don't use this argument, all duplicate files in the specified locations will be found. Remember that if the file path you are providing contains spaces, you must enclose the value in quotes.
+
+``Find DUPES OF C:\Report.txt IN C:\Backups MD5``
+$$ OFFLINE
+$$ /S
+$$ //(no value)//
+$$ When automating the [[:additional_functionality:duplicate_file_finder]], this lets you turn off the **Ignore offline files** option (the default for this option is on).
+
+``Find IN E:\TapeBackup DUPES OFFLINE``
+$$ ONLYEXISTING
+$$ /S
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select to only synchronize existing files.
+
+//Example:// See the **SYNC** argument for an example.
+$$ PRESET
+$$ /K
+$$ //<preset name>//
+$$ Loads the specified Find, Synchronize or Duplicates preset. Other arguments you provide will override the preset settings - for example, you can use the **IN** argument to override the search path. Specify the **NOAUTORUN** argument to prevent the operation from starting automatically.
+
+``Find PRESET=ImageFiles IN=D:\Downloads``
+$$ $$ $$ **!list**
+$$ Generates a list of saved presets (acts as a [[customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Selecting an item from the list will open the appropriate panel and run the specified preset.
+
+``Find PRESET=!list DUPES``
+$$ $$ $$ **faves**
+$$ Modifies the generated list of presets to only display those you have marked as favorites.
+
+``Find PRESET=!list,faves``
+$$ $$ $$ **nofaves**
+$$ Modifies the generated list of presets to exclude those you have marked as favorites.
+
+``Find SYNC PRESET=!list,nofaves``
+$$ $$ $$ **nogroups**
+$$ Displays the generated list of presets as a flat list rather than separating them up into any groups you may have created.
+
+``Find PRESET=!list,nofaves,nogroups``
+$$ QUERY
+$$ /K/R
+$$ //<query string>//
+$$ Performs a [[:basic_concepts:searching_and_filtering:windows_search|quick search]] in the specified location using Windows Search, Everything or the Opus internal find engine.
+
+If used on its own, without other arguments, it is like typing a query string into the search field at the top-right of the lister to search below the current folder. You can also run a query on a specified folder or into a custom results collection. Use the `QUERYENGINE` argument to configure which search engine is used.
+
+Everything which follows the **QUERY** argument will be passed to the search engine as the query string, so it //must// be the last argument to the command.
+
+``Find QUERY filename:*.doc author:"Leo Davidson"``\\
+``Find IN "C:\Documents" COLLNAME "Leo's Docs" QUERY filename:*.doc author:"Leo Davidson"``
+$$ QUERYENGINE
+$$ /K
+$$ //<engine and flags>//
+$$ Configures the search engine used to perform a query via the `QUERY` argument.
+
+The argument value must specify a keyword to select the search engine, as well as optional comma-separated flags to configure the behavior of that particular engine.
+
+^Engine^Flags^Description^
+|everything| |Everything|
+|everythingglobal| |Everything (global)|
+| |case|Case sensitive|
+| |whole|Whole word|
+| |regex|Regular expressions|
+| |diacritics|Match diacritics|
+|windows| |Windows Search|
+| |nqs|Natural query syntax|
+| |noauto|No automatic wildcards|
+|opus| |Opus search (non-indexed)|
+| |nonames|Does not search names|
+| |content|Searches file content|
+| |nowild|No wildcards|
+| |regex|Regular expressions|
+| |anywords|Match any word|
+| |case|Case sensitive|
+| |nodiactritcs|Ignore diacritics|
+| |nopartial|No partial matching|
+| |utf8|Assume utf8 in text files|
+
+``Find QUERYENGINE everythingglobal QUERY *.mp4``
+$$ RECURSE
+$$ /O
+$$ //(no value)//
+$$ When automating the Find Files, Duplicate File Finder or Synchronize Files functions, the search will extend into sub-folders below the specified locations.
+
+``Find IN C:\Data DUPES RECURSE``
+$$ 
+$$ 
+$$ **no**
+$$ Prevent the search from extending into sub-folders.
+
+``Find IN C:\Data DUPES RECURSE=no``
+$$ REGEXP
+$$ /S
+$$ //(no value)//
+$$ When automating the Find Files function, enables [[:file_operations:renaming_files:advanced_rename:rename_modes:regular_expressions|regular expressions]] for the value of the **NAME** field.
+
+``Find "foo.+bar\.txt" IN C:\ RECURSE REGEXP``
+$$ RUNINPANEL
+$$ /S
+$$ //(no value)//
+$$ Normal automation of the **Find** command causes it to run in the background, without a visible user interface. The **RUNINPANEL** argument lets you open the Duplicate Finder or Synchronize panel, initialise it with other arguments (including loading a preset), and then automatically start the operation in the user interface, exactly the same as clicking the "go" button manually.
+
+Contrast this with **NOAUTORUN** which will open the panel but not start the operation.
+
+``Find IN C:\Data DUPES RUNINPANEL``
+$$ SAVEQUERY
+$$ /S
+$$ //(no value)//
+$$ When you are currently viewing the results of a [[:basic_concepts:searching_and_filtering:windows_search|Windows Search]] query, this command will save the search as a [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query collection]].
+
+``Find SAVEQUERY``
+$$ SHOWEVERYTHING
+$$ /S
+$$ //(no value)//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you select the option to show and synchronize everything, including files that may normally be hidden by filters.
+
+//Example:// See the **SYNC** argument for an example.
+$$ SHOWRESULTS
+$$ /K
+$$ **source**
+$$ Display the results of the automated search in the current source file display or Lister.
+
+``Find *.txt IN C:\ RECURSE SHOWRESULTS=source``
+$$ 
+$$ 
+$$ **dest**
+$$ Display the results in the destination file display.
+
+``Find *.jpg IN C:\Data SHOWRESULTS=dest``
+$$ 
+$$ 
+$$ **tab**
+$$ Display the results in a new tab. You can combine this with the **source** or **dest** arguments.
+
+``Find IN C:\Data DUPES RECURSE SHOWRESULTS dest,tab``
+$$ SIMPLE
+$$ /S
+$$ //(no value)//
+$$ Display the Find Panel in [[:basic_concepts:searching_and_filtering:find_files:simple_find|simple mode]].
+
+``Find SIMPLE``
+$$ SIZEONLY
+$$ /S
+$$ //(no value)//
+$$ Search for duplicates based on file size only (used with the **DUPES** argument). The default behaviour is to search based on filename and size.
+
+``Find IN C:\Data DUPES SIZEONLY``
+$$ SYNC
+$$ /O
+$$ //(no value)//
+$$ In conjunction with other arguments, this lets you automate the [[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|Synchronize]] tool. The other relevant arguments are **FROM**, **TO**, **BOTHWAYS**, **DELETE**, **COMPARE**, **IGNORESECONDS**, **DSTCOMPENSATION**, **HIDEUNAFFECTED**, **ONLYEXISTING** and **SHOWEVERYTHING**.
+
+This process requires the use of multiple commands. `Find SYNC` performs the initial step in the synchronize process - the comparison. You then need to use `Copy SYNC` to perform any copying required. Finally, `Set CLEARSYNC` can be used to exit synchronize mode once finished.
+
+//Example://
+<code>
+Find SYNC FROM "D:\Work" TO "D:\Backups" RECURSE COMPARE=newer HIDEUNAFFECTED
+Copy SYNC
+Set CLEARSYNC
+</code>
+$$
+$$
+$$ **ltr**
+$$ Performs the synchronize from left-to-right rather than source-to-destination.
+//Example://
+<code>
+Find SYNC=ltr FROM "D:\Work" TO "D:\Backups" RECURSE COMPARE=larger SHOWEVERYTHING
+Copy SYNC
+Set CLEARSYNC
+</code>
+$$ TO
+$$ /K
+$$ //<path>//
+$$ When automating the Synchronize tool with the **SYNC** argument, this lets you specify the folder that is the destination of the synchronize operation.
+
+//Example:// See the **SYNC** argument for an example.
+$$ UAC
+$$ /O
+$$ //(no value)//
+$$ Enables UAC prompts if elevation may be required to search inside folders.
+
+``Find *.txt UAC IN D:\``
+$$ 
+$$ 
+$$ **no**
+$$ Suppresses UAC prompts, skipping folders you don't have access to. (This is the default, so it doesn't normally need specifying. Can be useful if you want to override a preset which enables UAC prompts.)
+
+``Find PRESET=DocFiles UAC=no IN D:\``
+</commandtable2>

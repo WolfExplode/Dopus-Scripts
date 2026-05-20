@@ -1,0 +1,18 @@
+~~Title: MenuMultiSelResults~~
+<pageheader/>
+
+The **MenuMultiSelResults** object is returned by the **[[menu|Menu]].Show** method when used to show a popup menu in multi-select mode.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ changed
+$$ [[vector|Vector]]
+$$ A vector of item IDs that were changed (toggled) while the menu was open.
+$$ id
+$$ int
+$$ The ID of the chosen item that dismissed the menu, or -1 if the menu was cancelled.
+</commandtable>
+
+

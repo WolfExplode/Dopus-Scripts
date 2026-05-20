@@ -1,0 +1,32 @@
+~~Title: Viewers ~~
+<pageheader/>
+
+The **Viewers** object is a collection of all currently open standalone [[:additional_functionality:viewing_images|image viewers]]. It can be obtained via the **[[dopus|DOpus]].viewers** property. 
+
+ 
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //collection://**[[viewer|Viewer]]** 
+$$ Lets you enumerate the currently open viewers.
+$$ lastactive
+$$ //object://**[[viewer|Viewer]]** 
+$$ Returns a **[[viewer|Viewer]]** object representing the most recently active viewer window.
+</commandtable>
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Update
+$$ //none//
+$$ //none//
+$$ The first time a script accesses the **DOpus.viewers** property, a snapshot is taken of all currently open viewers. If anything opens or closes viewers after this, these changes will not be reflected by snapshot unless you re-synchronize it by calling the **Update** method.\\
+</commandtable>
+
+
+
+

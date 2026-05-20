@@ -1,0 +1,95 @@
+~~Title: Help~~
+<pageheader/>
+
+The **Help** internal command can be used to:
+
+  * Display the program help file 
+  * Display information about the program (the About dialog) 
+  * Check for [[:additional_functionality:update_checker|program updates]] 
+  * Access the licence manager to install your program certificate
+  * Send a quick email 
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ (#)//(no argument)//
+$$ -
+$$ -
+$$ Displays the program help file.
+
+``Help``
+$$ ABOUT
+$$ /S
+$$ //(no value)//
+$$ Displays the About dialog, showing information about the current version of the program, copyright and contact details for technical support.
+
+``Help ABOUT``
+$$ CHECKUPDATE
+$$ /O
+$$ //(no value)//
+$$ Checks online for [[:additional_functionality:update_checker|program updates]].
+
+``Help CHECKUPDATE``
+$$ 
+$$ 
+$$ **quiet**
+$$ Perform a silent check for updates - a dialog will only be displayed if an update is found.
+
+``Help CHECKUPDATE=quiet``
+$$ CRASHLOGS
+$$ /S
+$$ //(no value)//
+$$ Displays the [[:additional_functionality:crash_logs]] dialog, which shows any crash logs that have been automatically generated and lets you submit them to GPSoftware for analysis.
+$$ LANG
+$$ /K
+$$ //<language name>//
+$$ Displays a help file in the specified language, if one exists.
+
+``Help LANG=deutsch``
+$$ LICENCEMANAGER
+$$ /S
+$$ //(no value)//
+$$ Displays the licence manager, where you can view and manage your current program licence, or apply for a free evaluation licence.
+
+``Help LICENCEMANAGER``
+$$ NEWEMAIL
+$$ /S
+$$ //(no value)//
+$$ Sends a quick email message. You must have configured Opus to send email via SMTP (on the **[[:preferences:preferences_categories:internet:email|Miscellaneous / Email]]** page in Preferences) for this function to work.
+
+``Help NEWEMAIL``
+$$ REF
+$$ /K
+$$ **commands\\
+dopusrt\\
+metadata\\
+statusbar\\
+wildcards\\
+scripting\\
+cmd_//name//** 
+$$ Provides a shortcut to displays certain reference sections of the help file. For example, you could define a hotkey to take you directly to the //[[..:..:wildcard_reference|Wildcards]]// reference section.
+
+``Help REF=wildcards``\\
+``Help REF=cmd_CreateFolder``
+$$ RELEASENOTES
+$$ /S
+$$ //(no value)//
+$$ Displays the release notes for the current version.
+
+``Help RELEASENOTES``
+$$ TASKMANAGER
+$$ /S
+$$ //(no value)//
+$$ Displays the [[:additional_functionality:task_manager|Task Manager]], a window which displays a list of various types of running Opus tasks.
+
+``Help TASKMANAGER``
+$$ THEMETESTER
+$$ /S
+$$ //(no value)//
+$$ Opens a UI which can be useful for testing how various standard Windows controls look with colors from custom themes.
+
+``Help THEMETESTER``
+</commandtable2>

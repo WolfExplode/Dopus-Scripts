@@ -1,0 +1,16 @@
+~~Title: Progress Indicators ~~
+<pageheader/>
+
+These options control the progress indicators that Opus displays when copying or moving files, or for other file operations.
+
+  * **Delay before indicators appear**: This option is used to stop Opus displaying progress indicators for very quick operations. The indicator for a function won't open at all if the function finishes within the specified time (in milliseconds). 
+  * **Hide from taskbar when jobs bar is visible**: When the [[:file_operations:copying_moving_and_deleting_files:the_jobs_bar|jobs bar]] is visible, progress indicators will no longer show a "footprint" on the taskbar, and won't appear in the <kbd>Alt+Tab</kbd> window list. This means that when progress indicators are minimized they will **only** be accessible from the jobs bar. If the jobs bar is closed and there are hidden progress indicators they will automatically be displayed on the taskbar again, so there is no risk of "losing" a job. 
+  * **Minimize progress indicators automatically**: Progress indicator dialogs will be automatically minimized when they open. Depending on the state of the previous options, this might mean that the only indication of a new job is a new button appearing on the jobs bar, and so Opus will (by default) display a small arrow animation pointing to the newly created jobs bar button to provide feedback that the operation was successfully started. 
+    * **Only when the jobs bar is visible**: Progress indicators will only be minimized if the jobs bar is displayed - if not, they will open in front of the Lister as normal. 
+  * **Remember previous position**: New progress indicators will open up in the same location the previous one was moved to, rather than resetting to be positioned over the Lister.
+  * **Show speed graph in file copy progress indicators**: If this option is on the progress indicator will display a graph representing the transfer speed over time. 
+    * **Retain speed information from one job to the next**: When the copy indicator moves onto the next job, the existing speed history will be retained and the graph will "keep going" rather than starting again.
+  * **Show percent complete in progress indicator titles**: Opus will display the overall percent complete for a function in the title bar. 
+  * **Switch to Queue tab when new jobs are opened**: When a new job is added to the queue, the progress indicator's **Queue** tab will be brought to the front.
+  * **Slide animation when jobs begin**: If a progress job completes while another job is queued behind it, the old job will slide off the top of the progress dialog as the new jobs slides on the bottom. This adds a slight delay between jobs, and can be turned off if undesired. (Regardless of this setting, the slide animation is automatically suppressed if using Remote Desktop or if client-area animations are disabled system-wide.) 
+

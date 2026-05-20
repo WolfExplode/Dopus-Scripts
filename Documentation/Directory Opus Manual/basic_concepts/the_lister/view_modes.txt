@@ -1,0 +1,90 @@
+~~Title: View Modes ~~
+<pageheader/>
+
+{{ :media:13:view_mode_menu.png?nolink|}}Files and folders in the file displays can be shown in a number of different view modes. You can change view mode using the drop-down **View** menu in the default toolbar.
+
+The three buttons to the right of the **View** menu provide quick access to the most commonly used view modes:
+
+  * {{:media:13:detailsbutton.png?nolink|}} **Details**
+  * {{:media:13:thumbtailsbutton.png?nolink|}} **Details + Thumbnails**
+  * {{:media:13:thumbnailsbutton.png?nolink|}} **Thumbnails**
+
+You can use the [[..:folder_options|Folder Format]] system to automatically apply a view mode to specific folders. For example, you could have Opus automatically display your pictures library in thumbnails mode.
+
+In the modes that **don't** display any information besides the filename, you can hover over a file to view its info tip (tooltip). The info tip will often show you lots of pertinent information about a file, and you can configure exactly what's shown from the [[:file_types:filetype_editor:info_tip|File Types]] dialog.
+
+
+==Large icons==
+
+Displays the folder contents using large icons.
+
+{{:media:13:view_mode_-_large_icons.png?nolink|}}
+
+The "large" icon size is defined by Windows itself; this is normally 32 x 32 pixels (scaled for system DPI).
+
+==Small icons==
+
+Displays the folder contents using small icons.
+
+{{:media:13:view_mode_-_small_icon.png?nolink|}}
+
+The "small" icon size is defined by Windows; this is normally 16 x 16 pixels (scaled for system DPI).
+
+==List==
+
+Similar to Small Icons, this mode displays the folder contents with a small icon and label.
+
+{{:media:13:view_mode_-_list.png?nolink|}}
+
+This view mode is popular with many people as it displays the most files at once in each file display. The layout in this mode is different to almost all other modes - instead of icons running left-to-right and then top-to-bottom, the order is reversed - files are displayed in columns running down the file display, and the display scrolls horizontally rather than vertically.
+
+==Details==
+Displays the folder contents as a table, with rows for each file and columns for information about each file.
+
+{{:media:13:view_mode_-_details_001.png?nolink|}}
+
+This mode can display additional columns of information for each file besides the filename. You can choose which columns are displayed using the **[[..:folder_options|Folder Format]]** system. See the **[[:preferences:preferences_categories:file_display_modes:details_mode|File Display Modes / Details Mode]]** Preferences page for a description of the settings that can be configured for Details mode. You can also configure things like grid lines to visibly separate items in the list.
+
+When in Details mode you can hold the <kbd>Ctrl</kbd> key down and turn the mouse wheel to increase or decrease the font size used to display the folder contents.
+
+==Details+Thumbnails==
+
+This is not strictly a view mode in its own right - instead, this is standard **Details** mode with the **Thumbnail** column added.
+
+{{:media:13:detailsthumbnails.png?nolink|}}
+
+The width of the column determines the size of the thumbnail - you can set the default column width using the **Default width** option on the [[:preferences:preferences_categories:file_display_columns:appearance|File Display Columns / Appearance]] Preferences page. You can position the //Thumbnail// column anywhere you like, but if it appears immediately adjacent to the //Name// column Opus will treat the two as a single column as far as selection and highlighting is concerned (as shown in the image above).
+
+The **[[:preferences:preferences_categories:file_display_modes:details_mode|File Display Modes / Details]]** and **[[:preferences:preferences_categories:file_display_modes:power_mode|File Display Modes / Power Mode]]** Preferences pages both have options that let you configure the //Thumbnail// column's aspect ratio (it defaults to 16:9), whether thumbnails in the column have a border displayed, and whether the file icon should be automatically hidden whenever the //Thumbnail// column is visible.
+
+==Power==
+
+Power mode is very similar to Details mode (it looks identical), except the behaviour of the list when [[..:selecting_files:selecting_with_the_mouse_and_keyboard|interacting with it using the mouse and keyboard]] can be configured to a far greater extent. It is aimed at people used to other operating systems or file managers with, for Windows software, unorthodox mouse and selection behaviours.
+
+Power mode's unique behaviors can be configured via the **[[:preferences:preferences_categories:file_display_modes:power_mode|File Display Modes / Power Mode]]** and** [[:preferences:preferences_categories:file_display_modes:power_mode:buttons|Power Mode / Buttons]]** Preferences pages, which describe things in more detail.
+
+Power mode is only included in menus if **Display Power mode toolbar buttons** is turned on in Preferences.
+
+By default, Power mode uses persistent selection: Unlike the other view modes, files are not deselected automatically when you click an empty space in the file display. This can be changed in Preferences.
+
+When in Power mode, you can hold the <kbd>Ctrl</kbd> key down and turn the mouse wheel to increase or decrease the font size used to display the folder contents.
+
+A small dot in the Name column's header indicates that Power mode is turned on (otherwise visually Power mode looks identical to Details).
+
+==Thumbnails==
+
+This mode displays thumbnails for files and folders, which is particularly useful for image or video files.
+
+{{:media:13:view_mode_-_thumbs.png?nolink|}}
+
+Opus can generate thumbnails for many different file formats; files that a thumbnail can not be generated for will be displayed with the usual icon for that file type. As well as the file name, this mode can optionally display the file size and (for image file formats) the dimensions of the image below each thumbnail. You can configure the size and appearance of thumbnails from the **[[:preferences:preferences_categories:file_display_modes:thumbnails_mode|File Display Modes / Thumbnails Mode]]** Preferences page.
+
+By default Opus will display a special toolbar - the [[.toolbars:the_default_toolbars:images_toolbar|Images Toolbar]] - whenever the file display is set to thumbnails mode. This contains several commands for manipulating images, as well as a slider for adjusting thumbnail size. You can also increase or decrease the thumbnail size by holding the <kbd>Ctrl</kbd> key down and turning the mouse wheel.
+
+==Tiles==
+This mode combines large icons (or optionally thumbnails) with the ability of Details mode to display information besides the filename.
+
+{{:media:13:view_mode_-_tiles.png?nolink|}}
+
+You can choose what information is shown for each file type through the [[:file_types:filetype_editor:tiles_mode|File Types]] system. Also see the **[[:preferences:preferences_categories:file_display_modes:tiles_mode|File Display Modes / Tiles Mode]]** Preferences page for settings that can be configured for Tiles mode. 
+

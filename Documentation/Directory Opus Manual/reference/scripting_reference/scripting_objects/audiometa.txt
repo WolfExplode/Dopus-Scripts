@@ -1,0 +1,21 @@
+~~Title: AudioMeta ~~
+<pageheader/>
+
+The **AudioMeta** object is retrieved from the **[[metadata|Metadata]].audio** or **[[metadata|Metadata]].audio_text** properties. It provides access to metadata relating to sound files.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<column keyword>//
+$$ //variant//
+$$ Returns the value of the specified column, as listed in the //Music// section of the [[..:..:metadata_keywords:keywords_for_columns|Keywords for Columns]] page.
+$$ coverart
+$$ //collection://**[[audiocoverart|AudioCoverArt]]** 
+$$ Returns a collection of **[[audiocoverart|AudioCoverArt]]** objects representing any cover art imagery stored in the audio file.
+
+The default value of this property returns the number of cover art images - for performance reasons, you should check whether this is greater than 0 before enumerating or accessing individual items in the collection.
+</commandtable>
+
+

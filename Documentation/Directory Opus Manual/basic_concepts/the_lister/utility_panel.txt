@@ -1,0 +1,33 @@
+~~Title: Utility Panel ~~
+<pageheader/>
+
+The Utility Panel is a multi-purpose panel that appears at the bottom of the Lister whenever certain functions are activated. It acts as a container for several different functions - various tools and log files are displayed that way.
+
+When the utility panel is displayed, you can switch between its various modes using the dropdown in the title bar.{{ :media:13:utility_pane_dropdown.png?nolink|}}
+
+==Tools==
+
+These are all accessed from the **Tools** menu:
+
+  * [[..:searching_and_filtering:find_files|Find Files]]: Lets you search your computer for files and folders. 
+  * [[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|Synchronize]]: Synchronize the contents of two different folders. 
+  * [[:additional_functionality:duplicate_file_finder|Find Duplicate Files]]: Search your computer for any duplicated files (or for duplicates of a specific file). 
+
+==Logs==
+
+These are all accessed from the **Help / Logs** menu.
+
+  * **FTP Log**: Displays [[:ftp|FTP]] site activity. 
+  * **File Log**: Displays a [[:file_operations:tracking_and_undoing_file_operations|log of file actions]] (files copied, deleted, renamed, etc). You can configure the file log from the [[:preferences:preferences_categories:file_operations:logging|File Operations / Logging]] Preferences page. 
+  * **Undo Log**: Displays the most recent file actions that can be [[:file_operations:tracking_and_undoing_file_operations|undone]] (e.g. if a file has been deleted to the recycle bin, you can recover the file). 
+  * **Email Log**: Displays a log of any [[:preferences:preferences_categories:internet:email|outgoing email]] that Opus has sent.
+  * **Script Log**: Displays output from [[:scripting|scripts]] and [[:evaluator|the evaluator]].
+
+
+==Shrinking the panel==
+
+The panel has a button in the top-right corner which shrinks (collapses) it down to just its title bar - this can be useful if, for example, you're running a long find operation and want to do other work while you're waiting.
+
+{{:media:13:utilpane_shrink.png?nolink|}}
+
+Right-click the shrink button to show a context menu which lets you select whether the panel should be automatically shrunk when an operation starts. You can choose this separately for find, synchronize and find duplicates.

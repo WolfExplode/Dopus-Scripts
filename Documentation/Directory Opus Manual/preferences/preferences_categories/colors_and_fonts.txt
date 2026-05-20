@@ -1,0 +1,12 @@
+~~Title: Colors And Fonts ~~
+<pageheader/>
+
+This category contains options relating to the appearance of Directory Opus.
+
+  * **[[~dark_mode]]**: Switch between the light and dark modes
+  * **[[~themes]]**: Save your color and font settings as a "theme" that you can share with others
+  * **[[~color_blending]]**: Options relating to the way different colors are combined (blended)
+  * **[[~directory_opus_colors]]**: Edit the colors used by the user interface except for controls
+  * **[[~windows_colors]]**: Edit the colors used Windows controls in Directory Opus
+  * **[[~images]]**: Set background images for various parts of the interface.
+  * **[[~fonts]]**: Edit the fonts used by the user interface

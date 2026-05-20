@@ -1,0 +1,68 @@
+~~Title: ScriptCommand ~~
+<pageheader/>
+
+In a script's **[[..:scripting_events:oninit|OnInit]]** method it can call the **[[scriptinitdata|ScriptInitData]].AddCommand** method to [[:scripting:example_scripts:adding_a_new_internal_command|add commands]] to the Opus internal command set. Each call to **AddCommand** returns a **ScriptCommand** object that the script needs to initialize.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ context_args
+$$ //string//
+$$ Lets you flag one or more command arguments as needing context-sensitive state. For example, you may want a toolbar button to appear highlighted, or disabled, in certain situations. The argument names (comma-separated) must correspond to arguments given by the //template// property.
+
+When your command is placed on a toolbar or menu with the appropriate arguments, your script's **[[..:scripting_events:onbuttoncontext|OnButtonContext]]** method will be called to update the button state. You can set this value to `*` to indicate that all arguments require context sensitivity.
+$$ desc
+$$ //string//
+$$ Use this to set a description for the command, that is displayed in the [[:customize|Customize]] dialog when the user selects the command from the [[:customize:the_customize_dialog:commands|Commands tab]].
+$$ dynamic_args
+$$ //string//
+$$ Lets you flag one or more command arguments as generating dynamic buttons. The argument names (comma-separated) must correspond to arguments given by the //template// property.
+
+When your command is placed on a toolbar or menu with the appropriate arguments, your script's **[[..:scripting_events:onaddbuttons|OnAddButtons]]** method will be called to generate one or more dynamic buttons. You can set this value to `*` to indicate that all arguments generate dynamic buttons.
+$$ flags
+$$ //string//
+$$ Specifies various flags which affect how your script command runs. If not provided, the default is "sd".
+
+|**s**|want source folder (will still run without one)|
+|**S**|need source folder (will not run without one)|
+|**d**|want destination folder|
+|**D**|need destination folder|
+|**L**|need Lister|
+|**f**|want selected files|
+|**F**|want selected folders|
+|**N**|need selected entries (either files/folders or both depending on other flags)|
+|**w**|don't swap source/destination folder if command is run against the destination|
+$$ fayt
+$$ //object://**[[scriptfaytcommand]]**
+$$ Returns a **[[scriptfaytcommand]]** object that you can use to initialise this command to [[:scripting:example_scripts:extending_the_fayt|extend the FAYT field]].
+$$ hide
+$$ //bool//
+$$ Set to **True** to hide this command from the drop-down command list shown in the [[:customize:creating_your_own_buttons:command_editor|command editor]]. This lets you add commands that can still be used in buttons and hotkeys but won't clutter up the command list.
+$$ icon
+$$ //string//
+$$ Use this property to assign a default icon to this command. You can specify the name of an internal icon (if you want to specify an icon from a particular set, use //setname:iconname -// use this if you have bundled your script in a [[:scripting:script_add-ins:script_package|script package]] with its own icon set) or the path of an external icon or image file. 
+$$ label
+$$ //string//
+$$ Use this to set a label for the command. This is displayed in the [[:customize:the_customize_dialog:commands|Commands tab]] of the [[:customize|Customize]] dialog (under the //Script Commands// category), and will form the default label of the button created if the user drags that command out to a toolbar.
+
+The actual name of the command (used to invoke the command) is assigned through the **name** property.
+$$ method
+$$ //string//
+$$ This is the name of the method that Opus will call in your script when the command is invoked. This would typically be set to //OnXXXXX// where //XXXXX// is the name of the command, however any method name can be used.
+
+When the method is invoked it is passed a single argument, a **[[scriptcommanddata|ScriptCommandData]]** object. Generically this method is referred to as **[[..:scripting_events:onscriptcommand|OnScriptCommand]]**.
+$$ name
+$$ //string//
+$$ This is the name of the command. This determines the name that will invoke the command when it is used in buttons and hotkeys.
+$$ noprogress
+$$ //bool//
+$$ Set to false if you don't want your command to display a progress indicator if more than one file is selected.
+$$ template
+$$ //string//
+$$ This lets you specify an optional command line template for the command. This is a string in the form //ARGNAME1/MOD,ARGNAME2/MOD,ARGNAME3/MOD//, etc, where ARGNAME is the name of the argument and /MOD are one or more [[..:..:command_reference:argument_types|modifiers used to indicate the argument type]]. The command line template can specify as many arguments as needed.
+
+When your command is invoked and its **[[..:scripting_events:onscriptcommand|OnScriptCommand ]]**event is triggered, any arguments supplied on the command line are parsed according to this template and provided via the **[[scriptcommanddata|ScriptCommandData]].[[func|func]].args** property.
+</commandtable>
+
+

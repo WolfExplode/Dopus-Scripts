@@ -1,0 +1,24 @@
+~~Title: SmartFavorite ~~
+<pageheader/>
+
+A **SmartFavorite** object represents an entry for a folder in the [[:basic_concepts:the_lister:navigation:smartfavorites|SmartFavorites]] table. It is retrieved by enumerating or indexing the **[[smartfavorites|SmartFavorites]]** object.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ path
+$$ //object://**[[path|Path]]** 
+$$ Returns the path this entry represents, as a **[[path|Path]]** object.
+$$ points
+$$ //int//
+$$ Returns the number of points this entry has as a source folder. The point score is used by Opus to determine which folders to display.
+$$ destpoints
+$$ //int//
+$$ Returns the number of points this entry has as a destination folder.
+</commandtable>
+
+
+
+

@@ -1,0 +1,21 @@
+~~Title: OnOpenLister ~~
+<pageheader/>
+
+The **OnOpenLister** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when a new Lister is opened. 
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnOpenLister
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:openlisterdata|OpenListerData]]** 
+$$ (#)**Return Type:**
+$$ //bool//
+$$ (#)**Description:**
+$$ The **OpenListerData.lister** property identifies the newly opened Lister.
+
+This event is initially called immediately after the Lister has been created, before any folders have been read or any tabs have been opened. If you return **True** from this event, it will be called again after all tabs have been created. You can use the OpenListerData.after property to distinguish between these calls.
+</commandtable>
+
+
+
+

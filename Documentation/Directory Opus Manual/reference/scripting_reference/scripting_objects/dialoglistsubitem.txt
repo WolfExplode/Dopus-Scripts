@@ -1,0 +1,25 @@
+~~Title: DialogListSubItem~~
+<pageheader/>
+
+The **DialogListSubItem** object represents a subitem of a **[[dialoglistitem|DialogListItem]]** in a //Details// mode //list view// control in a [[:scripting:script_dialogs|script dialog.]] Use the **[[dialoglistitem|DialogListItem]].subitems** property to obtain a **[[dialoglistsubitems|DialogListSubItems]]** object, and then enumerate it to obtain individual **DialogListSubItem** objects. 
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ //<default>//\\
+text
+$$ //string//
+$$ Returns or sets the subitem's text. You can use the default value (e.g. `subitems(0) = "blah"`) or the `text` property explicitly.
+$$ bg
+$$ //string//
+$$ Set or query the color used for the background (fill) of this subitem. This is in the format #RRGGBB (hexadecimal) or RRR,GGG,BBB (decimal).
+$$ fg
+$$ //string//
+$$ Set or query the color used for the text (foreground) of this subitem. This is in the format #RRGGBB (hexadecimal) or RRR,GGG,BBB (decimal).
+$$ styles
+$$ //string//
+$$ Returns or sets the text style this subitem will be displayed in. You should provide a string containing one or more of the following flags: "b" (bold), "i" (italics), "u" (underline).
+</commandtable>
+

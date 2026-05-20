@@ -1,0 +1,797 @@
+~~Title: Prefs ~~
+<pageheader/>
+
+The **Prefs** internal command can be used to:
+
+  * Display the [[:preferences|Preferences]] dialog which lets you change most configuration options 
+  * Display the [[:customize|Customize]] dialog to edit toolbars, menus and hotkeys 
+  * Display the [[:file_types|File Types]] dialog to configure context menus, double-click actions and other file-type specific settings 
+  * Display and edit the [[:ftp:ftp_address_book|FTP Address Book]] 
+  * [[:preferences:backing_up_and_restoring_preferences|Backup and restore]] your configuration 
+  * Load and save [[:basic_concepts:the_lister:layouts|Lister layouts]] 
+  * Update the [[:basic_concepts:the_lister:the_default_lister|Default Lister]] settings 
+  * Load and save [[:basic_concepts:the_lister:styles|Lister styles]] 
+  * Load and save [[:basic_concepts:the_lister:themes|Lister themes]] 
+  * Manage [[:preferences:preferences_categories:zip_and_other_archives:archive_and_vfs_plugins|VFS plugins]] 
+  * Install, manage and edit [[:scripting:script_add-ins]].
+
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ (#)//(no argument)//
+$$ -
+$$ -
+$$ Displays the **[[:preferences|Preferences]]** dialog.
+
+``Prefs``
+$$ ADDFTPSITE
+$$ /S
+$$ //(no value)//
+$$ Adds the currently connected FTP site as a new entry in the [[:ftp:ftp_address_book|FTP Address Book]]. If you are not currently viewing an FTP directory this command has no effect.
+
+``Prefs ADDFTPSITE``
+$$ BACKUP
+$$ /O
+$$ //(no value)//
+$$ Automates the configuration backup process. By default all your configuration settings, toolbars, menus and hotkeys are included in the backup, but extra data like images and sounds are not. The optional values for this argument can be used to control which extra data is included in the backup. Use the **TO** argument to specify the name of the backup file, and the **PASSWORD**, **DESC** and **QUIET** arguments provide additional control.
+
+``Prefs BACKUP TO="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **images**
+$$ When automating a configuration backup, includes image files in your backup (corresponds to the **Backup images** option in the //[[:preferences:backing_up_and_restoring_preferences|Backup and Restore Configuration]]// wizard).
+
+``Prefs BACKUP=images TO="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **sounds**
+$$ Includes sound files in the backup (corresponds to the **Backup sounds** option).
+
+``Prefs BACKUP=sounds TO="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **data**
+$$ Include miscellaneous data in the backup (corresponds to the **Backup miscellaneous data** option).
+
+``Prefs BACKUP=data TO="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **localstate**
+$$ Include local state data (corresponds to the **Backup local state data** option).
+
+``Prefs BACKUP=data,localstate TO="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **all**
+$$ Backup everything (equivalent to **BACKUP=images,sounds,data,localstate**).
+
+``Prefs BACKUP=all TO="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **notabs**
+$$ Exclude currently open windows and tabs from the backup. (Only relevant if local state is being backed up.)
+
+``Prefs BACKUP=all,notabs TO="/desktop/PrefsBackup"``
+$$ BACKUPRESTORE
+$$ /S
+$$ //(no value)//
+$$ Initiates the //[[:preferences:backing_up_and_restoring_preferences|Backup and Restore Configuration]]// wizard, which lets you backup and restore your configuration, as well as export Opus to a USB drive. You can use the **TO** argument to override the default backup name, and the **PASSWORD** or **DESC** arguments to pre-supply a default password or descriptions when creating a backup.
+
+``Prefs BACKUPRESTORE``\\
+``Prefs BACKUPRESTORE TO="/desktop\Backup for %username% on {date|yyyy-MM-dd}" PASSWORD="cat" DESC="Quick Backup."``
+
+If you wish to automate the backup or restore process, without showing the interactive wizard, use the separate **BACKUP** or **RESTORE** arguments.
+$$ COLLAPSEALL
+$$ /S
+$$ //(no value)//
+$$ Collapses all categories in the **[[:preferences|Preferences]]** dialog. Combine with the `PAGE` argument to show a new page and collapse all other categories.
+
+``Prefs PAGE=folderformats COLLAPSEALL``
+$$ CUSTOMIZE
+$$ /O
+$$ //(no value)//
+$$ Displays the **[[:customize|Customize]]** dialog. The dialog will open on the page that was last used.
+
+``Prefs CUSTOMIZE``
+$$ 
+$$ 
+$$ //<page>//
+$$ Displays the specified tab on the **Customize** dialog. Allowable values for this argument are **commands**, **toolbars**, **keys** and **menus**.
+
+``Prefs CUSTOMIZE=toolbars``
+$$ DESC
+$$ /K
+$$ //<description>//
+$$ Assign a description to a configuration backup (used with the **BACKUP** or **BACKUPRESTORE** argument). Remember that if the description string contains spaces you need to enclose it with quotes.
+
+``Prefs BACKUP TO="/desktop/PrefsBackup" DESC="My Opus Config"``
+$$ FILETYPES
+$$ /S
+$$ //(no value)//
+$$ Displays the **[[:file_types|File Types]]** dialog.
+
+``Prefs FILETYPES``
+$$ FROM
+$$ /K
+$$ //<backup file>//
+$$ Specifies the configuration backup file to restore (used with the **RESTORE** argument to automate the configuration restore process).
+
+``Prefs RESTORE FROM="/desktop/PrefsBackup"``
+$$ FTPSITES
+$$ /O
+$$ //(no value)//
+$$ Displays the **[[:ftp:ftp_address_book|FTP Address Book]]**.
+
+``Prefs FTPSITES``
+$$ 
+$$ 
+$$ //<site name>//
+$$ Displays the **[[:ftp:ftp_address_book|FTP Address Book]]** and automatically selects the named site. If the site is in a sub-folder in the address book you need to provide the full path of the site.
+
+``Prefs FTPSITES="WorkServers\Production"``
+$$ HEADING
+$$ /O
+$$ //(no value)//
+$$ When used with commands which generate a list of items (see [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic buttons]]), the **HEADING** argument adds a small heading at the start of the list. The heading will be hidden when the list is empty. Headings only happen for commands which potentially generate multiple items at the same level as the button itself.
+
+When **HEADING** is used by itself, without specifying a text value, the main button's label text is used for the heading.
+
+``Prefs LAYOUTLIST HEADING``
+$$ 
+$$ 
+$$ //<heading text>//
+$$ You can specify the heading text if you want it to be different to the button's label.
+
+``Prefs STYLELIST HEADING="Styles"``
+$$ KEYS
+$$ /S
+$$ //(no value)//
+$$ Displays the **Keys** page of the **Customize** dialog (equivalent to `Prefs CUSTOMIZE=keys`).
+
+``Prefs KEYS``
+$$ LAYOUT
+$$ /K
+$$ //<layout name>//
+$$ Loads the named [[:basic_concepts:the_lister:layouts|Lister layout]].
+
+``Prefs LAYOUT="Music Albums"``
+$$
+$$
+$$ **!lastclosed**
+$$ Loads the set of Listers that were saved when Opus last shut down.
+
+``Prefs LAYOUT=!lastused``
+$$ LAYOUTCLOSELISTERS
+$$ /K
+$$ **yes**
+$$ When loading a layout with the **LAYOUT** argument, this overrides the **Close all existing Listers when loading this layout** flag set for the layout, and forces all existing Listers to close. When saving a layout with the **LAYOUTSAVE** argument, it sets the state of that flag within the layout.
+
+``Prefs LAYOUT="FTP Sync" LAYOUTCLOSELISTERS=yes``
+$$ 
+$$ 
+$$ **no**
+$$ Does not close all existing Listers when loading a layout.
+
+``Prefs LAYOUT="Photo Album" LAYOUTCLOSELISTERS=no``
+$$
+$$
+$$ **current**
+$$ Only closes Listers on the current virtual desktop.
+
+``Prefs LAYOUT="Work" LAYOUTCLOSELISTERS=yes,current``
+$$
+$$
+$$ **all**
+$$ Closes Listers on all desktops.
+
+``Prefs LAYOUT="Photo Organising" LAYOUTCLOSELISTERS=yes,all``
+$$ LAYOUTEDIT
+$$ /S
+$$ //(no value)//
+$$ Opens the Preferences dialog and displays the **[[:preferences:preferences_categories:layouts_and_styles:layouts|Layouts and Styles / Layouts]]** page (equivalent to `Prefs PAGE=layouts`).
+
+``Prefs LAYOUTEDIT``
+$$ LAYOUTIGNOREFORMATS
+$$ /K
+$$ **yes**
+$$ When loading a layout with the **LAYOUT** argument, this overrides the **Ignore folder formats saved within this layout** flag set for the layout, and forces the layout's [[:basic_concepts:folder_options:folder_formats|folder formats]] to be ignored. When saving a layout with the **LAYOUTSAVE** argument, it sets the state of that flag within the layout.
+
+``Prefs LAYOUT="Photo Viewing" LAYOUTIGNOREFORMATS=yes``
+$$ 
+$$ 
+$$ **no**
+$$ Does not ignore the layout's folder formats.
+
+``Prefs LAYOUT="Photos" LAYOUTIGNOREFORMATS=no``
+$$ LAYOUTIGNORETOOLBARS
+$$ /K
+$$ **yes**
+$$ When loading a layout with the **LAYOUT** argument, this overrides the **Ignore toolbars saved within this layout** flag set for the layout, and forces the layout's toolbars to be ignored, and the default toolbar set to be used instead. When saving a layout with the **LAYOUTSAVE** argument, it sets the state of that flag within the layout.
+
+``Prefs LAYOUT="Photos" LAYOUTIGNORETOOLBARS=yes``
+$$ 
+$$ 
+$$ **no**
+$$ Does not ignore the layout's toolbars.
+
+``Prefs LAYOUT="Photos" LAYOUTIGNORETOOLBARS=no``
+$$ LAYOUTLIST
+$$ /S
+$$ //(no value)//
+$$ Displays a list of your saved [[:basic_concepts:the_lister:layouts|Lister layouts]] (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Selecting an item from the generated list loads the specified layout. The **LAYOUTCLOSELISTERS**, **LAYOUTIGNOREFORMATS** and **LAYOUTMOUSERELATIVE** flags can be used in conjunction with this argument to control the behaviour of the generated buttons.
+
+``Prefs LAYOUTLIST LAYOUTCLOSELISTERS=yes``
+$$ LAYOUTMOUSERELATIVE
+$$ /K
+$$ **yes**
+$$ When loading a layout with the **LAYOUT** argument, this overrides the **Open layout relative to the monitor the mouse is currently on** flag set for the layout, and forces the layout's position to be relative to the mouse. When saving a layout with the **LAYOUTSAVE** argument, it sets the state of that flag within the layout.
+
+``Prefs LAYOUT="Find" LAYOUTMOUSERELATIVE=yes``
+$$ 
+$$ 
+$$ **no**
+$$ Does not open the layout relative to the mouse pointer.
+
+``Prefs LAYOUT="BackupFiles" LAYOUTMOUSERELATIVE=no``
+$$ LAYOUTNAME
+$$ /K
+$$ //<layout name>//
+$$ Specifies a name when saving a [[:basic_concepts:the_lister:layouts|layout]] using the **LAYOUTSAVE** argument. If not provided Opus will prompt for a name for the new layout.
+
+``Prefs LAYOUTNAME="My Layout" LAYOUTSAVE``
+$$ LAYOUTNOVIRTDESKTOP
+$$ /K
+$$ **yes**
+$$ When loading a layout, prevents Listers being restored to their original virtual desktops (overrides the setting in the Layout).
+
+``Prefs LAYOUT="Find" LAYOUTNOVIRTDESKTOP=yes``
+$$
+$$
+$$ **no**
+$$ Allows Listers to be restored to their original virtual desktops.
+
+``Prefs LAYOUT="Find" LAYOUTNOVIRTDESKTOP=no``
+$$ LAYOUTSAVE
+$$ /O
+$$ //(no value)//
+$$ Saves the currently open Listers as a [[:basic_concepts:the_lister:layouts|layout]]. You can use the **LAYOUTNAME** argument to specify the layout name. You can also use the **LAYOUTCLOSELISTERS**, **LAYOUTIGNOREFORMATS** and **LAYOUTMOUSERELATIVE** arguments to control the state of those flags for the saved layout.
+
+``Prefs LAYOUTSAVE``
+$$ 
+$$ 
+$$ **single**
+$$ Saves only the active Lister as a layout. Any other currently open Listers are not included.
+
+``Prefs LAYOUTSAVE=single LAYOUTNAME="CurrentLister"``
+$$ 
+$$ 
+$$ **noupdatesettings**
+$$ If you do not use the **LAYOUTNAME** argument to provide a name for the layout, Opus will display a dialog prompting for the name - this dialog also contains various options for the layout (ignore formats, mouse relative, etc). Changes you make to those options will be saved as the default settings for the **LAYOUTSAVE** function unless you specify the **noupdatesettings** value.
+
+``Prefs LAYOUTSAVE=noupdatesettings LAYOUTMOUSERELATIVE=yes LAYOUTNAME="My Layout"`` 
+$$ 
+$$ 
+$$ **updatecurrent**
+$$ If the current lister is already part of a layout, that layout will be updated and you will not be prompted for a layout name or any further options.
+
+``Prefs LAYOUTSAVE=updatecurrent`` 
+$$ LAYOUTTHISLISTER
+$$ /O
+$$ //(no value)//
+$$ In conjunction with the **LAYOUT** argument, this applies the settings from the specified layout to the current Lister instead of opening a new Lister.
+
+If no value is given to the **LAYOUTTHISLISTER** argument, the layout's panels (e.g. viewer pane, dual file display, utility panel) are applied to the current lister but the window size and position, and current paths, are left unchanged.
+
+``Prefs LAYOUT="PhotoViewing" LAYOUTTHISLISTER``
+$$ 
+$$ 
+$$ **nopanels**
+$$ Do not apply the layout's panels (e.g. viewer pane, dual file display, utility panel) to the currernt window. (If none of the other values are specified, then nothing will be done at all.)
+
+``Prefs LAYOUT="SmallLister" LAYOUTTHISLISTER=nopanels,size``
+$$ 
+$$ 
+$$ **size**
+$$ Use the window size from the specified layout.
+
+``Prefs LAYOUT="SmallLister" LAYOUTTHISLISTER=size``
+$$ 
+$$ 
+$$ **pos**
+$$ Use the window position from the specified layout.
+
+``Prefs LAYOUT="NiceSizedLister" LAYOUTTHISLISTER=pos,size``
+$$ 
+$$ 
+$$ **paths**
+$$ Use the paths/tabs (and folder formats) from the specified layout.
+
+``Prefs LAYOUT="CurrentWork" LAYOUTTHISLISTER=pos,size,paths``
+
+You can also use **LAYOUTIGNOREFORMATS** in conjunction with **LAYOUTTHISLISTER=paths** to override whether or not the layout's folder formats are applied (which is normally determined by a flag you can set when saving and editing each layout).
+
+``Prefs LAYOUT="My Layout" LAYOUTTHISLISTER=paths LAYOUTIGNOREFORMATS=yes``
+$$
+$$
+$$ **noclose**
+$$ Loads tabs from the layout without closing existing ones.
+
+``Prefs LAYOUT="CurrentWork" LAYOUTTHISLISTER=paths,noclose``
+$$ LIMITPATH
+$$ /K/M
+$$ //<paths>//
+$$ When opening a new Layout with the **LAYOUT** argument, this lets you restrict the newly opened Listers to one or more paths  (and their descendants). Attempts to navigate outside of the allowed paths will display an error. 
+
+``Prefs LAYOUT="Focus On Work" LIMITPATH "C:\Work"``
+$$ 
+$$ 
+$$ **reset**
+$$ If a Layout was saved with restricted paths, this lets you override the restrictions when opening the Layout.
+
+``Prefs LAYOUT="LockedLister" LIMITPATH=reset``
+$$ MENUMARKERS
+$$ /S
+$$ //(no value)//
+$$ When used with **LAYOUTLIST**, if the generated list of layouts includes any submenus, the top-level buttons will display a glyph indicating a dropdown menu.
+
+``Prefs LAYOUTLIST MENUMARKERS``
+$$ MINIMIZE
+$$ /S
+$$ //(no value)//
+$$ When used with **CUSTOMIZE**, opens the Customize dialog minimized.
+
+``Prefs CUSTOMIZE MINIMIZE``
+$$ NOSCRIPT
+$$ /S
+$$ //(no value)//
+$$ Allows a [[:scripting|script]] to run the `Prefs LAYOUT` command without triggering other scripts (or itself). Adding the **NOSCRIPT** argument disables the **[[..:..:scripting_reference:scripting_events:onbeforefolderchange|OnBeforeFolderChange]]**, **[[..:..:scripting_reference:scripting_events:onafterfolderchange|OnAfterFolderChange]]**, **[[..:..:scripting_reference:scripting_events:onopentab|OnOpenTab]]** and **[[..:..:scripting_reference:scripting_events:onopenlister|OnOpenLister]]** events that would otherwise be triggered by opening a Lister layout.
+
+``Prefs LAYOUT="My Layout" NOSCRIPT``
+$$ PAGE
+$$ /K
+$$ //<prefs page>//
+$$ Opens the Preferences dialog to the specified page. If this argument is not supplied the Preferences dialog will open to the last-used page.
+
+Opus can work out the command for you if you open the Preferences dialog, go to the page you want, then select **File / Copy Page Shortcut To Clipboard** at the top of the window.
+
+Some pages allow data to be passed to them to indicate the item to edit. To do this, append a colon and the appropriate data to the page name. For example,
+
+  * **scripts** allows a script to be selected by name and its configuration dialog to be shown automatically.
+  * **evalgroups** lets the editor for a named group be automatically displayed
+  * **evalcolumns** lets the editor for a named column be automatically displayed
+
+``Prefs PAGE=transitionanimations``\\
+``Prefs PAGE=scripts:dopstack.js``
+$$ PASSWORD
+$$ /K
+$$ //<password>//
+$$ Encrypt a configuration backup (used with the **BACKUP** or **BACKUPRESTORE** argument). You will need to enter the password when you restore the backup.
+
+``Prefs BACKUP TO="/desktop/PrefsBackup" PASSWORD="abc123"``
+$$ POS
+$$ /K
+$$ //<x,y>//
+$$ Opens the Preferences, Customize or Scripts dialog at the specified coordinates, rather than at the coordinates the dialog had when it was previously closed.
+
+``Prefs POS=10,10``
+$$
+$$ 
+$$ **lister**
+$$ Opens the dialog centered over the current Lister.
+
+``Prefs CUSTOMIZE POS=lister``
+$$
+$$
+$$ **mouse**
+$$ Opens the dialog centered over the mouse cursor.
+
+``Prefs SCRIPTS POS=mouse``
+$$ QUIET
+$$ /S
+$$ //(no value)//
+$$ Prevents the **Backup and Restore Configuration** wizard from appearing when the backup or restore are automated (when used with the **BACKUP** and **RESTORE** arguments). If specified when restoring a configuration, Opus will be restarted automatically - you can use the **Close AUTOLISTER** command to control whether a new Lister is opened when Opus restarts this way.
+
+``Prefs RESTORE FROM="/desktop/PrefsBackup" QUIET``
+$$ RESTORE
+$$ /O
+$$ //(no value)//
+$$ Automates the configuration restore process. By default all the configuration settings, toolbars, menus and hotkeys from the backup will be restored, but extra data like images and sounds are not. The optional values for this argument can be used to control which extra data is included in the restore. Use the **FROM** argument to specify the name of the backup file. If the backup file was encrypted you can provide the password with the **PASSWORD** argument. The **QUIET** argument prevents any user interface from being displayed, and Opus will automatically restart when the restore is complete.
+
+``Prefs RESTORE FROM="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **images**
+$$ Restores images from the configuration backup (corresponds to the **Restore images** option in the //[[:preferences:backing_up_and_restoring_preferences|Backup and Restore Configuration]]// wizard).
+
+``Prefs RESTORE=images FROM="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **sounds**
+$$ Restores sounds from the configuration backup (corresponds to the **Restore sounds** option in the wizard).
+
+``Prefs RESTORE=images,sounds FROM="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **data**
+$$ Restores miscellaneous data (corresponds to the **Restore miscellaneous data** option in the wizard).
+
+``Prefs RESTORE=data FROM="/desktop/PrefsBackup" QUIET``
+$$ 
+$$ 
+$$ **localstate**
+$$ Restores local state data (corresponds to the **Restore local state data (window positions, etc)** option in the wizard).
+
+``Prefs RESTORE=data,localstate FROM="/desktop/PrefsBackup" QUIET``
+$$ 
+$$ 
+$$ **replace**
+$$ Replaces your existing configuration completely (corresponds to the similarly named option in the wizard). If you select this, your existing configuration is deleted before the restore is done. Without this option, the restored configuration files are written over the top of your existing configuration - but the effect of this is to merge things like toolbars and images with different names.
+
+``Prefs RESTORE=replace,images,sounds FROM="/desktop/PrefsBackup"``
+$$ 
+$$ 
+$$ **all**
+$$ Restores all items in the configuration backup (the equivalent of **RESTORE=images,sounds,data,localstate**).
+
+``Prefs RESTORE=replace,all FROM="/desktop/PrefsBackup"``
+$$ SCRIPTDISABLE
+$$ /O
+$$ //(no value)//
+$$ If no script name is given, the command toggles the global option to disable all script add-ins. This will disable any event scripts, command scripts and column scripts you have installed. This is typically used to test if problems are due to scripts or something else.
+
+The global option does not affect the enabled/disabled state of any individual script. In other words, if a script is disabled and you then disable scripting globally, then enable scripting globally again, the script will still be disabled. The other difference between the global setting and individually disabling all scripts is that the global setting will also affect scripts which are installed after the change.
+
+``Prefs SCRIPTDISABLE``
+$$ 
+$$ 
+$$ //<script name>//
+$$ Enable or disable the specified script or scripts. The script name should match the filename(s) of the script add-in(s) you wish to affect.
+
+If the global option to disable all script add-ins is in effect, no individual script can be enabled.
+
+The script name can use simple * wildcards to match multiple filenames. While this can be used to enable or disable multiple scripts at once, it is intended to avoid worrying about whether a script is installed with ".js" and ".vbs" or ".js.txt" and ".vbs.txt" style extensions.
+
+(As a special case, if the script name wildcard is literally "*" or "*.*", the command acts the same as if no script name was specified, and toggles the global option to disable all script add-ins.)
+
+If the script name is the only parameter, the script will be toggled (enabled if currently disabled; disabled if currently enabled). If multiple scripts match the pattern, they will all be set to the same state as the first match, and not toggled individually.
+
+``Prefs SCRIPTDISABLE="My Script.js*"``
+
+If a script is inside a Script Package (.osp file), the package must be included in the name:
+
+``Prefs SCRIPTDISABLE="My Package.osp\My Script.vbs"``
+
+Wildcards can make dealing with script packages easier, and can also handle script packages which contain multiple scripts, or where you distribute a script to people as a .osp but work on it privately as a text file:
+
+``Prefs SCRIPTDISABLE="My Package.osp*"``\\
+``Prefs SCRIPTDISABLE="*My Script.vbs*"``
+$$ 
+$$ 
+$$ **enable**
+$$ Enable the specified script(s), or all scripts if no script name is specified.
+
+``Prefs SCRIPTDISABLE="My Script.js*,enable"``\\
+``Prefs SCRIPTDISABLE=enable``
+$$ 
+$$ 
+$$ **disable**
+$$ Disable the specified script(s), or all scripts if no script name is specified.
+
+``Prefs SCRIPTDISABLE="My Script.js*,disable"``\\
+``Prefs SCRIPTDISABLE=disable``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggle the specified script(s), or all scripts if no script name is specified.
+
+(This is the default, if neither "enable" nor "disable" is specified, but you can include it if you wish to be more explicit.)
+
+``Prefs SCRIPTDISABLE="My Script.js*,toggle"``\\
+``Prefs SCRIPTDISABLE=toggle``
+
+Note that when a **SCRIPTDISABLE** button is a toggle, the button will appear active (e.g. checked or highlighted) when scripts are //disabled//. As with most commands, you can add **@toggle:invert** on a new line at the top of the command sequence to reverse this.
+
+//Example://
+<code>
+@toggle:invert
+Prefs SCRIPTDISABLE="Viewer Select.js,toggle"
+</code>
+$$ SCRIPTEDIT
+$$ /K
+$$ //<script name>//
+$$ Launches the [[::scripting:script_editor]] for the specified script. If you're working on a specific script this lets you edit it quickly without having to go via the [[:scripting:script_management]] interface.
+
+The script name can use simple * wildcards to avoid worrying about whether a script is installed with ".js" and ".vbs" or ".js.txt" and ".vbs.txt" style extensions.
+
+``Prefs SCRIPTEDIT="My Script.js*"``
+
+If a script is inside a Script Package (.osp file), the package must be included in the name:
+
+``Prefs SCRIPTEDIT="My Package.osp\My Script.vbs"``
+$$ SCRIPTINSTALL
+$$ /O
+$$ //(no value)//
+$$ Launches the [[:scripting:script_management:installer]] to install the currently selected script file.
+
+``Prefs SCRIPTINSTALL``
+$$
+$$
+$$ //<file path>//
+$$ Launches the Script Installer to install the specified script file.
+
+``Prefs SCRIPTINSTALL /downloads/CoolScript.osp``
+$$ SCRIPTS
+$$ /O
+$$ //(no value)//
+$$ Displays the [[:scripting:script_management]] dialog - the centralised hub for creating, editing, managing and sharing script add-ins.
+
+``Prefs SCRIPTS``
+$$ $$ $$ //<script name>//
+$$ Displays the Script Management dialog, selects the specified script in the list, and (if the script has configuration items) displays its configuration dialog. The script name should match the filename of the script add-in you wish to edit the configuration of.
+
+The script name can use simple * wildcards to avoid worrying about whether a script is installed with ".js" and ".vbs" or ".js.txt" and ".vbs.txt" style extensions.
+
+``Prefs SCRIPTS="My Script.js*"``
+
+If a script is inside a Script Package (.osp file), the package must be included in the name:
+
+``Prefs SCRIPTS="My Package.osp\My Script.vbs"``
+
+Wildcards can make dealing with script packages easier, and can also handle script packages which contain multiple scripts, or where you distribute a script to people as a .osp but work on it privately as a text file:
+
+``Prefs SCRIPTS="My Package.osp*"``\\
+``Prefs SCRIPTS="*My Script.vbs*"``
+$$ $$ $$ **!scriptlist**
+$$ Generates a list of all script add-ins (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]).
+
+Selecting an item from the generated list will display the Script Management dialog with that item selected (and displays its configuration dialog, if it has one).
+
+``Prefs SCRIPTS=!scriptlist``
+$$ SETLISTERDEFAULTS
+$$ /O
+$$ //(no value)//
+$$ Lets you select a Lister to save as the [[:basic_concepts:the_lister:the_default_lister|Default Lister]], or to set other default parameters.
+
+``Prefs SETLISTERDEFAULTS``
+$$ 
+$$ 
+$$ **force**
+$$ Suppress the confirmation and success prompts when setting the Default Lister manually.
+
+``Prefs SETLISTERDEFAULTS=force``
+$$ 
+$$ 
+$$ **quiet**
+$$ Suppress the success prompt when setting the Default Lister.
+
+``Prefs SETLISTERDEFAULTS=quiet``
+$$ 
+$$ 
+$$ **nodeflister**
+$$ Turns off saving of the //Default Lister// while still saving other default parameters.
+
+``Prefs SETLISTERDEFAULTS=quiet,nodeflister``
+$$ 
+$$ 
+$$ **toolbars**
+$$ Saves the default [[basic_concepts:the_lister:toolbars:toolbar_sets|toolbar set]] from the selected Lister.
+
+``Prefs SETLISTERDEFAULTS=toolbars,nodeflister``
+$$ 
+$$ 
+$$ **formats**
+$$ Saves the default [[basic_concepts:folder_options:folder_formats|folder format]] from the selected Lister.
+
+``Prefs SETLISTERDEFAULTS=force,quiet,formats,toolbars,nodeflister``
+$$ SHOWICONS
+$$ /S
+$$ //(no value)//
+$$ Displays icons for dynamic lists generated by the **LAYOUTLIST**, **STYLELIST** and **VFSPLUGINLIST** arguments.
+
+``Prefs LAYOUTLIST SHOWICONS``
+$$ STYLE
+$$ /K
+$$ //<style name>//
+$$ Applies the specified [[:basic_concepts:the_lister:styles|style]] to the current Lister.
+
+``Prefs STYLE="Dual Horizontal"``
+$$ 
+$$ 
+$$ **%%^%%prev**
+$$ This refers to the initial appearance of the Lister when it was opened, and lets you return to that state as if it were a normal style.
+
+``Prefs STYLE=^prev``
+$$ STYLEEDIT
+$$ /S
+$$ //(no value)//
+$$ Displays the **[[:preferences:preferences_categories:layouts_and_styles:styles|Layouts and Styles / Styles]]** page in Preferences (equivalent to `Prefs PAGE=styles`).
+
+``Prefs STYLEEDIT``
+$$ STYLELIST
+$$ /O
+$$ //(no value)//
+$$ Displays a list of your saved [[:basic_concepts:the_lister:styles|Lister styles]] (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Selecting an item from the generated list applies the specified style to the current Lister.
+
+``Prefs STYLELIST``
+$$ 
+$$ 
+$$ **showprevious**
+$$ Includes the special "Previous" style in the generated list. This refers to the initial appearance of the Lister when it was opened, and lets you return to that state as if it were a normal style.
+
+``Prefs STYLELIST=showprevious``
+$$ STYLESAVE
+$$ /O
+$$ //(no value)//
+$$ Saves the current appearance of the active Lister as a style.
+
+``Prefs STYLESAVE``
+$$ 
+$$ 
+$$ //<style name>//
+$$ Specifies the name for the style to create. Opus will prompt for a name if one is not provided.
+
+``Prefs STYLESAVE="My Style"``
+$$ THEMEIMPORT
+$$ /K
+$$ //<filename>//
+$$ Imports the specified theme by copying it to the configuration folder. The full pathname must be specified.
+
+``Prefs THEMEIMPORT "c:\mythemes\dark.dlt"``
+$$ THEMELOAD
+$$ /O
+$$ //(no value)//
+
+or
+
+**all**
+$$ All aspects of the theme specified by **THEMENAME** will be loaded.
+
+The two examples below do the same thing.
+
+``Prefs THEMENAME=!defaultdark THEMELOAD``\\
+``Prefs THEMENAME=!defaultdark THEMELOAD=all``
+
+Loading a theme will replace aspects of your configuration. Loading a theme via this command will **not** save a backup of your old settings; use the Preferences user interface instead if you need that.
+
+If you only want to load certain aspects of the theme, use one or more of the other values, below. Separate multiple values with a single comma and no spaces.
+
+``Prefs THEMENAME="Rainbow" THEMELOAD=colors,blending``
+$$ 
+$$ 
+$$ **blending**
+$$ Loads the theme's //Color Blending// data.
+
+``Prefs THEMENAME=!defaultlight THEMELOAD=blending``
+$$ 
+$$ 
+$$ **colors**
+$$ Loads the theme's //Directory Opus Colors// data.
+
+``Prefs THEMENAME="Cool" THEMELOAD=colors``
+$$ 
+$$ 
+$$ **fonts**
+$$ Loads the theme's //Fonts// data.
+
+``Prefs THEMENAME="Big Text" THEMELOAD=fonts``
+$$ 
+$$ 
+$$ **images**
+$$ Loads the theme's //Images// data.
+
+``Prefs THEMENAME="Cats" THEMELOAD=images,colors``
+$$ 
+$$ 
+$$ **wincolors**
+$$ Loads the theme's //Windows Colors// data.
+
+``Prefs THEMENAME="My Theme" THEMELOAD=wincolors``
+$$ THEMENAME
+$$ /K
+$$ //<theme file>//
+$$ Specifies the filename of the theme to load, when combined with the **THEMELOAD** argument.
+
+Must be the name of the **.dlt** theme file on disk. A theme's filename may differ from the name displayed in Preferences, but the UI can generate the whole command for you: Double-click a theme in Preferences, then open the //Apply// button's menu for an option that puts the command into the clipboard.
+
+The **.dlt** extension is optional and will be added automatically if omitted.
+
+You may specify the full path to a theme file anywhere on your system. If a full path is not given, the specified name (or relative path) is assumed to be relative to the Themes config folder.
+
+``Prefs THEMENAME="My Theme" THEMELOAD``
+$$ 
+$$ 
+$$ **!defaultdark**
+$$ Loads the internal //Default Dark// theme, effectively resetting some or all of your cosmetic settings.
+
+``Prefs THEMENAME="!defaultdark" THEMELOAD``
+$$ 
+$$ 
+$$ **!defaultlight**
+$$ Loads the internal //Default Light// theme, effectively resetting some or all of your cosmetic settings.
+
+``Prefs THEMENAME="!defaultlight" THEMELOAD``
+$$ TO
+$$ /K
+$$ //<backup file>//
+$$ Specifies the filename for the configuration backup (used with the **BACKUP** or **BACKUPRESTORE** argument).
+
+``Prefs BACKUP TO="/mydocuments/OpusPrefsBackup {date|yyyy-MM-dd}"``
+$$ TOOLBARS
+$$ /S
+$$ //(no value)//
+$$ Displays the **Toolbars** tab in the **Customize** dialog (equivalent to `Prefs CUSTOMIZE=toolbars`).
+
+``Prefs TOOLBARS``
+$$ VFSPLUGINABOUT
+$$ /K
+$$ //<plugin name>//
+$$ Displays the **About** dialog for the specified [[:preferences:preferences_categories:zip_and_other_archives:archive_and_vfs_plugins|VFS plugin]].
+
+``Prefs VFSPLUGINABOUT opus7zip.dll``
+$$ VFSPLUGINCONFIG
+$$ /K
+$$ //<plugin name>//
+$$ Displays the **Configuration** dialog for the specified VFS plugin.
+
+``Prefs VFSPLUGINCONFIG opus7zip.dll``
+
+A single VFS plugin DLL may present itself as multiple types. For example, the Archives plugin (opus7zip.dll) which comes with Opus has separate types for 7z, RAR, ISO, and so on. To display the config window for a particular type, add a ':' character and then the name of the type, as found in the Preferences VFS Plugins page.
+
+``Prefs VFSPLUGINCONFIG opus7zip.dll:7z``
+$$ VFSPLUGINDISABLE
+$$ /K
+$$ //<plugin name>//
+$$ Enable or disable the specified VFS plugin. If the plugin is currently enabled it will be disabled, and vice versa.
+
+``Prefs VFSPLUGINDISABLE opus7zip.dll``
+
+A single VFS plugin DLL may present itself as multiple types. For example, the Archives plugin (opus7zip.dll) which comes with Opus has separate types for 7z, RAR, ISO, and so on. If you specify just the name of the DLL, the entire plugin will be toggled. You can also toggle individual types (assuming the plugin as a whole is still enabled) by adding a ':' character after the DLL name and then the name of the type, as found in the Preferences VFS Plugins page.
+
+``Prefs VFSPLUGINDISABLE opus7zip.dll:rar``
+$$ 
+$$ 
+$$ **enable**
+$$ Enable the specified VFS plugin.
+
+``Prefs VFSPLUGINDISABLE opus7zip.dll,enable``
+$$ 
+$$ 
+$$ **disable**
+$$ Disable the specified VFS plugin.
+
+``Prefs VFSPLUGINDISABLE opus7zip.dll,disable``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggling is the default, if neither "enable" nor "disable" is specified, but you can specify "toggle" if you wish to be more explicit.
+
+Note that when a **VFSPLUGINDISABLE** button is a toggle, the button will appear active (e.g. checked or highlighted) when plugins are //disabled//. As with most commands, you can add **@toggle:invert** on a new line at the top of the command sequence to reverse this.
+
+//Example://
+<code>
+@toggle:invert
+Prefs VFSPLUGINDISABLE="opus7zip.dll,toggle"
+</code>
+$$ VFSPLUGINLIST
+$$ /S
+$$ //(no value)//
+$$ Displays a list of the installed VFS plugins (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Each plugin in the list has a sub-menu containing //about//, //configure//, and //enable/disable// commands.
+
+``Prefs VFSPLUGINLIST``
+$$ VFSPLUGINMANAGER
+$$ /S
+$$ //(no value)//
+$$ Displays the **[[:preferences:preferences_categories:zip_and_other_archives:archive_and_vfs_plugins|Zip & Other Archives / Archive and VFS Plugins]]** page in Preferences (equivalent to `Prefs PAGE=vfsplugins`).
+
+``Prefs VFSPLUGINMANAGER``
+</commandtable2>
+
+
+
+**Viewer Plugins:** See the separate **[[show|Show command]]** for managing Viewer Plugins.
+
+

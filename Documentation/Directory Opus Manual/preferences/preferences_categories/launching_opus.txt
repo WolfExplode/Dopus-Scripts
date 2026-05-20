@@ -1,0 +1,11 @@
+~~Title: Launching Opus ~~
+<pageheader/>
+
+This page contains options that control how Opus starts up, what it does when it starts up, and how you can open Listers from outside of Opus.
+
+  * **[[~explorer_replacement]]**: Lets you enable or disable [[:basic_concepts:explorer_replacement|Explorer Replacement]] mode. 
+  * **[[~launching_opus_from_the_desktop]]**: Lets you open a Lister or run another Opus command when you double-click on the Windows desktop. 
+  * **[[~launching_opus_from_the_taskbar_icon]]**: Lets you open a Lister or run another command when you double-click on the Opus icon in the taskbar (tray). 
+  * **[[~launching_opus_from_the_win-e_hotkey]]**: Lets you change what happens when the Win + E hotkey is pushed. 
+  * **[[~launching_opus_on_startup]]**: Contains options that control if and how Opus runs automatically on system startup. 
+  * **[[~shutdown|Shutdown]]**: Options relating to when Opus shuts down. 

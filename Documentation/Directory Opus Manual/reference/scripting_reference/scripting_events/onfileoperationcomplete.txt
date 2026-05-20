@@ -1,0 +1,43 @@
+~~Title: OnFileOperationComplete ~~
+<pageheader/>
+
+The **OnFileOperationComplete** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notifications when certain file operations complete. Currently the only type of operation that supports this is the **Rename** command, but others may be added in the future.
+
+
+
+Receiving notifications is a two-step process each time:
+
+  - <WRAP>When the operation starts, Opus will call your script with 
+**[[..:scripting_objects:fileoperationcompletedata|FileOperationCompleteData]].query** set to **True**.
+
+The script should return **True** if it is interested in the operation, and **False** otherwise.
+
+Notifications can incur a (usually small) memory and speed overhead, so scripts should avoid returning **True** when they won't really use the extra details. Similarly, scripts shouldn't do anything that would take a long time when deciding if they want a particular notification.
+</WRAP>
+  - <WRAP>If the script returned **True** the first time, Opus will call it some time later, when the operation completes. **[[..:scripting_objects:fileoperationcompletedata|FileOperationCompleteData]].query** will be set to **False** this time.
+
+The **[[..:scripting_objects:fileoperationcompletedata|FileOperationCompleteData]].data** object will provide details about what happened. For example, data for a **Rename** operation will tell you which files were renamed and their new names.
+</WRAP>
+
+Remember that operations can start and run in parallel. For example, the user may start a lengthy operation and then go to another tab and do some others there before the first one completes. Other scripts may also run operations in the background. Your scripts should be prepared to be queried about several operations in a row before their corresponding notifications come back.
+
+Unless specified otherwise, data about all files affected by an operation will be returned via a single notification at the end, rather than separate notifications for each file.
+
+Operations may be cancelled by the user (or pets, power cuts, etc.), so scripts shouldn't assume every positive query will result in a corresponding notification.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnFileOperationComplete
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:fileoperationcompletedata|FileOperationCompleteData]]** 
+$$ (#)**Return Type:**
+$$ When the **query** property is set to **True**, return **True** to indicate that you want to be notified for this operation.
+$$ (#)**Description:**
+$$ The first time this method is called, the **[[..:scripting_objects:fileoperationcompletedata|FileOperationCompleteData]].query** property will be set to **True**. You can look at the **action** and **cmdline** properties to decide if this is an operation you want a notification for. Return **True** if so, and **False** otherwise.
+
+If you return **True**, you'll be called again when the operation completes. When that happens, **query** will be **False** and the **data** property will provide details about what happened.
+</commandtable>
+
+
+
+

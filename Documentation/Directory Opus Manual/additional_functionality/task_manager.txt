@@ -1,0 +1,11 @@
+~~Title: Task Manager~~
+<pageheader/>
+
+The Task Manager window displays a list of various types of running Opus tasks. The list shows each task's state and how much runtime has elapsed in total since it was started.
+
+Tasks are displayed in three separate groups:
+  - Scripts: All running scripts. You can individually abort scripts, and temporarily disable all scripts.
+  - Evaluator: Any running evaluator clauses. While most evaluator clauses are very small and exit immediately, they do support loops and so it's possible they may run for longer (or forever!). Like scripts, you can abort individual evaluator clauses and also temporarily disable the evaluator from here.
+  - Background tasks: Tasks that run in the background that aren't explicitly started as a job by the user; for example, thumbnail generation and metadata extraction threads are shown here. These can't be aborted.
+
+To access the Task Manager, select the command from the default Help menu (or run the underlying `Help TASKMANAGER` command).

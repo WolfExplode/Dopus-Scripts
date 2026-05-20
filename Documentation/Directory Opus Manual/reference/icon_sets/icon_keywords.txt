@@ -1,0 +1,13 @@
+~~Title: Icon Keywords ~~
+<pageheader/>
+
+Individual icons can be given optional keywords to make it easier for the user to find them in your icon set. The keywords aren't displayed, but are used when the user searches for an icon by name. Individual keywords should be separated by semi-colons.
+
+<code>
+<set size="small" width="20" height="20" filename="UtilIcons.png">
+    <icon name="burncd" display_name="Burn To CD" row="2" col="8" category="Tools" keywords="write;compact;disc;dvd"/>
+</set></code>
+
+
+
+

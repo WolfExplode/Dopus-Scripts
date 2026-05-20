@@ -1,0 +1,23 @@
+~~Title: Root~~
+<evalcmd>
+Root && path && Root of specified path. &&
+path && path && File or folder path.
+</evalcmd>
+
+Returns the root of the specified path.
+
+On error, an empty string will be returned.
+
+If the path is already a root, it will be returned unchanged.
+
+//Example://
+<code>
+Output(Root("C:\one\two\file.jpg"));
+--> C:\
+</code>
+
+//See also://\\
+[[fileext]]\\
+[[filepart]]\\
+[[parent]]\\
+[[stem]]

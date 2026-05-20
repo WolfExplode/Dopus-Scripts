@@ -1,0 +1,26 @@
+~~Title: Script Dialogs ~~
+<pageheader/>
+
+Scripts are able to define free-form dialogs in much the same way that “proper” Windows software can, using many of the standard Windows controls.
+
+{{:media:image057.png?nolink|}}
+
+\\
+Above is an example of the type of dialog that scripts can create. Dialogs are defined as “resources” – XML formatted data that defines the dialog and control layout. Any script can have resources attached – either a script in a button, or one in the Script Add-Ins folder.
+
+
+A full GUI-based dialog editor is provided inside the script and function editors, which makes it very easy to design script dialogs.
+
+{{:media:image059.png?nolink|}}
+
+ 
+
+
+
+More:
+
+[[~creating_script_dialogs|Creating Script Dialogs]]\\
+[[.script_editor:editors:dialog_editor|Dialog Editor]]\\
+[[~the_dialog_message_loop|The Dialog Message Loop]]\\
+[[~reading_dialog_control_values|Reading Dialog Control Values]]\\
+[[~interacting_with_dialog_controls|Interacting with Dialog Controls]]\\

@@ -1,0 +1,30 @@
+~~Title: Examples~~
+<pageheader/>
+
+You can experiment with the evaluator using the [[:additional_functionality:cli]] tool.
+
+Open it via **Opus CLI / Ad-Hoc Script Editor** in the main window's **Tools** menu. At the bottom of the CLI, turn on **Script Interpreter** and use the drop-down to select **Evaluator** as the language.
+
+
+{{:evaluator:cli_evaluator.png?nolink|}}
+
+Here's the code in the screenshot in a format you can copy and paste:
+
+<code>
+str = "Text in a string";
+Output(Match(str, "^text.*string$", "r"));
+Output(Match(str, "^text.*str$", "r"));
+Output(" ");
+
+name = "Job-19230-20230605-XE.xlsx";
+Output(jobdate = RegEx(name, "Job-(.+)-(.+)-(..).xlsx", "\2"));
+Output(jobdate = Left(jobdate, 4) + "-" + Mid(jobdate, 4, 2) + "-" + Right(jobdate, 2));
+Output(jobdate As date);
+Output(" ");
+
+return "Hello World";
+</code>
+
+Real examples of Evaluator code can be found on our support forum:
+
+  * [[https://resource.dopus.com/tags/c/buttons-scripts/16/evaluator|Buttons & Scripts with Evaluator tag]]

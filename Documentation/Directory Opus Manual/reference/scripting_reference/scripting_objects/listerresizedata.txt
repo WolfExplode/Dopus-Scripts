@@ -1,0 +1,25 @@
+~~Title: ListerResizeData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onlisterresize|OnListerResize]]** event, the method receives a **ListerResizeData** object whenever a Lister window is resized.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ action
+$$ //string//
+$$ Returns a //string// indicating the resize action that occurred. This will be one of the following strings: //resize//, //minimize//, //maximize//, //restore.//
+$$ width
+$$ int
+$$ Returns the new width of the Lister in pixels.
+$$ height
+$$ int
+$$ Returns the new height of the Lister in pixels.
+$$ lister
+$$ //object://**[[lister|Lister]]** 
+$$ Returns a **[[lister|Lister]]** object representing the Lister that was resized.
+</commandtable>
+
+

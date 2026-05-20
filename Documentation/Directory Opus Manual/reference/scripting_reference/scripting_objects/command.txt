@@ -1,0 +1,225 @@
+~~Title: Command ~~
+<pageheader/>
+
+The **Command** object is used by a script to run Opus commands. Any command that you can run from a button or hotkey you can run from a script - a script can even run [[:scripting:example_scripts:adding_a_new_internal_command|commands added by other scripts]]. Fundamentally, using the **Command** object is similar to configuring an Opus button. You add one or more command lines to the object just the same as you add one or more command lines to a button's function. You can tell it which files and folders to act upon, and you can use the various methods and properties of the object to modify the behavior of the command. Once the object has been initialized you can use the **Run** or **RunCommand** methods to invoke the command.
+
+A **Command** object can be created by the **[[dopusfactory|DOpusFactory]].Command** method. By default, this object has no source, destination, files to operate on, etc. - you must use the appropriate methods to configure the command before running it. You can also retrieve a **Command** object from the **[[func|Func]].command** property, and in this case the source, destination, files to operate on and several other properties are pre-initialized for you.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ deselect
+$$ //bool//
+$$ Set this property to **False** to prevent files used by this command from being deselected, and **True** to deselect them once the function is finished. Note that files will only be deselected if they came from a **[[tab|Tab]]** object, and only then if the command is successful.
+$$ dest
+$$ //object://**[[path|Path]]** 
+$$ Returns a **[[path|Path]]** object that represents the destination folder of this command. If a destination tab is set, this will be the path in the tab. You can not set this property directly - instead, use either the **SetDest** or **SetDestTab** methods to change the destination folder.
+$$ desttab
+$$ //object://**[[tab|Tab]]** 
+$$ Returns a **[[tab|Tab]]** object that represents the destination tab for this command (if it has one - not all commands require a destination). You can not set this property directly - instead, use the **SetDestTab** method to change the destination tab.
+$$ filecount
+$$ //int//
+$$ Returns the number of items in the **files** object.
+$$ files
+$$ //object://**[[items|Items]]** 
+$$ Returns a **[[items|Items]]** object that represent the files and folders this command is to act upon. You can not modify this object directly - instead you can use the various methods (**ClearFiles**, **SetFiles**, **AddFile**, **RemoveFile**, etc.) to modify the list of items to act upon.
+$$ linecount
+$$ //int//
+$$ Returns the number of instruction lines added to the command.
+$$ logchanges
+$$ //bool//
+$$ Set to true if you want to be able to access a log of any file changes made by the command. Changes will be available via the `results` property once the command is complete.
+$$ progress
+$$ //object://**[[progress|Progress]]** 
+$$ Returns a **[[progress|Progress]]** object that you can use to display a progress indicator to the user.
+$$ results
+$$ //object://**[[results|Results]]** 
+$$ After every command that is run with this object, a **Results** object is available from this property. This provides information about the outcome of the command.
+$$ source
+$$ //object://**[[path|Path]]** 
+$$ Returns a **[[path|Path]]** object that represents the source folder of this command. If a source tab is set, this will be the path in the tab. You can not set this property directly - instead, use either the **SetSource** or **SetSourceTab** methods to change the source folder.
+$$ sourcetab
+$$ //object://**[[tab|Tab]]** 
+$$ Returns a **[[tab|Tab]]** object that represents the source tab for this command. You can not set this property directly - instead, use the **SetSourceTab** method to change the source tab.
+$$ vars
+$$ //object//:**[[vars|Vars]]** 
+$$ This **[[vars|Vars]]** object represents all defined variables with //command scope// (that are scoped to this function - e.g. that were set using the **@set** directive).
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddFile
+$$ <string:path>\\
+or <**[[path|Path:]]**path>\\
+or <**[[item|Item:]]**item>\\
+$$ //int//
+$$ Adds the specified item to the collection of items this command is to act upon. You can pass the item's path as either a //string// or a **[[path|Path]]** object, and you can also pass an **[[item|Item]]** object directly.
+
+This method returns the total number of items in the collection.
+$$ AddFiles
+$$ //object://**[[items|Items]]**\\
+or //**[[vector|Vector]]**://**[[item|Item]]**\\
+or //**[[vector|Vector]]**://**[[path|Path]]**\\
+or //**[[vector|Vector]]**:string//\\
+or //**[[stringset|StringSet]]**//\\
+or //**[[unorderedset|UnorderedSet]]**//
+$$ //int//
+$$ Adds the items in the specified collection to the list of items this command is to act upon. The return value is the new number of items in the collection.
+
+You can also pass a **[[vector|Vector]]** of **[[item|Item]]** or **[[path|Path]]** objects, or full path strings, instead of a collection. Or a **[[stringset|StringSet]]** or **[[unorderedset|UnorderedSet]]** of full path strings.
+$$ AddFilesFromClipboard
+$$ //none//
+$$ //int//
+$$ Adds the contents of the clipboard to the collection of items this command is to act upon. This method supports both files and file paths copied to the clipboard as text. The return value is the new number of items in the collection.
+$$ AddFilesFromFile
+$$ <string:path>\\
+<string:encoding>
+$$ //int//
+$$ Reads file paths from the contents of the specified file and adds them to the item collection. You can provide the file's path as either a //string// or a **[[path|Path]]** object. The file must consist of one absolute path per line.\\
+The encoding of the file is assumed to be ANSI, unless it has a BOM (byte-order-mark) at the start, or you specify the //encoding// argument. If you specify the encoding this must be a //string// equal to one of the following: **utf16be**, **utf16le**, **utf8**, **ansi** or **cp://XXXX//** where //XXXX// specifies the code page number).
+
+The return value is the new number of items in the collection.
+$$ AddFilesFromFolder
+$$ <string:path>
+$$ //int//
+$$ Adds the contents of the specified folder to the collection of items this command is to act upon. You can pass the folder's path as either a //string// or a **[[path|Path]]** object. You can also append a [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]] to the path to only add files matching the specified pattern.
+$$ AddLine
+$$ <string:instruction>
+$$ //none//
+$$ Adds the specified instruction line to the command that this object will run. The **AddLine** method lets you build up complicated multiple line commands - add each line in turn and then run the command using the **Run** method. For a single line command it is simpler to use the **RunCommand** method.
+$$ Clear
+$$ //none//
+$$ //none//
+$$ Clears all instruction lines from the command.
+$$ ClearFailed
+$$ //none//
+$$ //none//
+$$ Clears the failure flags from the **[[items|Items]]** collection. Any items that fail when a command is run will have their **failed** property set to **True**, and once this has happened the file will be skipped over by any subsequent commands. You can call this method to reset all the failure flags.
+$$ ClearFiles
+$$ //none//
+$$ //none//
+$$ Clears the collection of items this command is to act upon.
+$$ ClearFilter
+$$ //none//
+$$ //none//
+$$ Removes any filter associated with this command via the **SetFilter** method.
+$$ ClearModifier
+$$ <string:modifier>
+$$ //none//
+$$ Clears any modifiers that have been set for this command. The supported modifiers are a subset of the full list of [[..:..:command_reference:command_modifier_reference|command modifiers]] - see the **SetModifier** method for a list of these. You can also pass * to clear all modifiers that have been set.
+$$ CommandList
+$$ //none//\\
+or <string:types>
+$$ //object://**[[stringset|StringSet]]** 
+$$ Returns a **[[stringset|StringSet]]** containing the names of all the Opus commands. You can optionally filter this set by providing one or more of the following flags as an argument to the **CommandList** method:
+|**i**|internal (built-in) commands|
+|**s**|script commands|
+|**u**|user commands|
+$$ DivertClipboard
+$$ <string:varname>
+$$ //none//
+$$ Diverts any text that this function might put onto the clipboard into a named Opus variable. This lets you run a command like `Clipboard COPYCOLUMNS` from a script without affecting the clipboard contents.
+$$ Dlg
+$$ //none//
+$$ //object://**[[dialog|Dialog]]**
+$$ Creates a new **[[dialog|Dialog]]** object, that lets you display dialogs and popup menus. The dialog's **window** property will be automatically assigned to the source tab.
+$$ GetModifiers
+$$ //none//
+$$ //object://**[[map|Map]]** 
+$$ Returns a **[[map|Map ]]**of the modifiers that have been set for this command (either by the **SetModifier** method, or in the case of [[:scripting:script_add-ins|script add-ins]] any modifiers that were set on the button that invoked the script).
+$$ IsSet
+$$ <string:condition>\\
+[<string:command>]
+$$ //bool//
+$$ Returns **True** if the specified **[[..:..:command_reference:internal_commands:set|Set]]** command condition is true. This is the equivalent of the **@ifset** [[..:..:command_reference:command_modifier_reference|command modifiers.]] The optional second parameter lets you test a condition based on a command other than **Set** - for example, **IsSet("VIEWERCMD=mark", "Show")** in the viewer to test if the current image is marked.
+$$ RemoveFile
+$$ <string:path>\\
+or <**[[path|Path:]]**path>\\
+or <**[[item|Item]]**:item>\\
+or <int:index>
+$$ //int//
+$$ Removes the specified file from the **[[items|Items]]** collection. You can pass the file's path as either a //string// or a **[[path|Path]]** object. You can also pass the **[[item|Item]]** itself, or its index (starting from 0) within the collection. The return value is the new number of items in the collection.
+$$ Run
+$$ //none//
+$$ //int//
+$$ Runs the command that has been built up with this object. The return value indicates whether or not the command ran successfully. Zero indicates the command could not be run or was aborted; any other number indicates the command was run for at least some files. (Note that this is not the "exit code" for external commands. For external commands it only indicates whether or not Opus launched the command. If you need the exit code of an external command, use the WScript.Shell Run or Exec methods to run the command.) You can use the **Results** property to find out more information about the results of the command, and also discover which files (if any) failed using the **failed** property of each **[[item|Item]]** in the **files** collection.
+$$ RunAsync
+$$ //none//
+$$ //int//
+$$ Asynchronously runs the command that has been built up with this object, without waiting for it to return. The return value indicates whether or not the command was launched successfully, but no further information about the results of the command is available.
+$$ RunCommand
+$$ <string:instruction>
+$$ //int//
+$$ Runs the single line command given by the //instruction// argument. This lets you run a single command without needing to add it via the **AddLine** method first. Note that any lines which may have already been added to the command are ignored by this method - only the given single //instruction// line is run.
+$$ RunCommandAsync
+$$ <string:instruction>
+$$ //int//
+$$ Asynchronously runs the single line command given by the //instruction// argument, without waiting for it to return.
+$$ SetDest
+$$ <string:path>
+$$ //none//
+$$ Sets the command's destination to the specified path. You can provide the path as either a //string// or a **[[path|Path]]** object. Calling this method clears the destination tab property from the command.
+$$ SetDestTab
+$$ <**[[tab|Tab]]**:tab>
+$$ //none//
+$$ Sets the command's destination to the specified tab. The destination path will be initialized from the tab automatically (so you don't need to call **SetDest** as well as **SetDestTab**).
+$$ SetFiles
+$$ //object://**[[items|Items]]**\\
+or //**[[vector|Vector]]**://**[[item|Item]]**\\
+or //**[[vector|Vector]]**://**[[path|Path]]**\\
+or //**[[vector|Vector]]**:string//\\
+or //**[[stringset|StringSet]]**//\\
+or //**[[unorderedset|UnorderedSet]]**//
+$$ //none//
+$$ Configures the command to use the files in the specified **[[items|Items]]** collection as the items the command will act upon.
+
+You can also pass one of the other collection types, the same as with the **AddFiles** method.
+$$ SetFilter
+$$ <string:filter>\\
+//or//
+<**[[filter|Filter]]**:filter>
+$$ //none//
+$$ Associates a recursive filter with the command. You can provide either a wildcard pattern, or a **[[filter|Filter]]** object.
+$$ SetModifier
+$$ <string:modifier>\\
+<string:value>
+$$ //none//
+$$ Turns on a modifier for this command. The supported modifiers are a subset of the full list of [[..:..:command_reference:command_modifier_reference|command modifiers]]:\\
+**admin**, **async**, **codepage**, **externalonly**, **leavedoswindowopen**, **nodeselect**, **noexpandenv**, **nofilenamequoting**, **nolocalizefiles**, **noprogress**, **norunbatch**, **resolvelinks**, **runmode**.
+
+Using this method is the equivalent of using the **AddLine** method to add the modifier to the command as an instruction; e.g. **Command.SetModifier("admin")** is the same as **Command.AddLine("@admin")**. If the modifier requires a value it is passed as the second argument, e.g. **Command.SetModifier("runmode", "hide")**.
+$$ SetProgress
+$$ <**[[progress|Progress]]**:progress>
+$$ //none//
+$$ Lets you share the progress indicator from one command with another command. You can pass this method the value of **progress** property obtained from another **Command** object.
+$$ SetQualifiers
+$$ <string:qualifiers>
+$$ //none//
+$$ This method lets you control which qualifier keys the command run by this object will consider to have been pressed when it was invoked. For example, several internal commands change their behavior when certain qualifier keys are held down - calling this method allows you to set which keys they will see.
+
+The //qualifiers// argument must consist of one or more of the following strings (comma-separated): **none**, **shift**, **ctrl**, **alt**, **lwin**, **rwin**, **win**.
+$$ SetSource
+$$ <string:path>
+$$ //none//
+$$ Sets the command's source to the specified path. You can provide the path as either a //string// or a **[[path|Path]]** object. Calling this method clears the source tab property from the command.
+$$ SetSourceTab
+$$ <**[[tab|Tab]]**:tab>
+$$ //none//
+$$ Sets the command's source to the specified tab. The source path will be initialized from the tab automatically (so you don't need to call **SetSource** as well as **SetSourceTab**).
+$$ SetType
+$$ <string:type>
+$$ //none//
+$$ Sets the type of function that this command will run. This is equivalent to the drop-down control in the [[:customize:creating_your_own_buttons:command_editor:advanced_command_editor|Advanced Command Editor]]. The //type// argument must be one of the following strings: **std**, **msdos**, **script**, **wsl** and **eval**. Standard (**std**) is the default if the type is not specifically set.
+$$ UpdateToggle
+$$ //none//
+$$ //none//
+$$ This method can be used to update the appearance of toolbar buttons that use variables to determine their labels or states. For example, a button might use **[[..:..:command_reference:command_modifier_reference|@toggle:if]]** to set its selection state based on the existence of a //global-//, //tab-// or //Lister-scoped// variable. You would call this method if you have changed such a variable from a script to force buttons that use it to update.
+</commandtable>
+
+

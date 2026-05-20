@@ -1,0 +1,16 @@
+~~Title: ExeMeta ~~
+<pageheader/>
+
+The **ExeMeta** object is retrieved from the **[[metadata|Metadata]].exe** or **[[metadata|Metadata]].exe_text** properties. It provides access to metadata relating to executable (program) files.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<column keyword>//
+$$ //variant//
+$$ Returns the value of the specified column, as listed in the //Programs// section of the [[..:..:metadata_keywords:keywords_for_columns|Keywords for Columns]] page.
+</commandtable>
+
+Note that Signature (Authenticode) metadata is only present if the object was created in a context where the data was already known. (E.g. The [[item|Item]] object came from a file display which already had the corresponding columns turned on and populated.) In most cases, it is better to obtain that data via [[fsutil|FSUtil.GetSignature]].

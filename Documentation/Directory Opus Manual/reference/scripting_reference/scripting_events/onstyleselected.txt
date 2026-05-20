@@ -1,0 +1,20 @@
+~~Title: OnStyleSelected ~~
+<pageheader/>
+
+The **OnStyleSelected** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when the user selects a new [[:basic_concepts:the_lister:styles|Lister style]].
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnStyleSelected
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:styleselecteddata|StyleSelectedData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **StyleSelectedData.lister** property identifies the Lister, and the **style** property returns the name of the newly selected style.
+</commandtable>
+
+
+
+

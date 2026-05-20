@@ -1,0 +1,15 @@
+~~Title: Single Click~~
+<pageheader/>
+
+This page contains options relating to "single-click mode". In this mode, you select files by hovering over them with the mouse, and open files or folders by single-clicking them, like links on a web page. 
+
+Single-click mode applies to all file display modes except for Power mode.
+
+  * **Single click to open an item**: This option activates "single-click" mode. 
+  * **<kbd>Alt</kbd> + click to select without opening**: Instead of opening the file or folder, if you hold the <kbd>Alt</kbd> key down when you click it will only select the item.
+  * **Expand sub-folders on hover**: Sub-folders will be expanded if you hover over their expansion button. If turned off, you'll still need to click to expand.
+  * **Single click over icon only**: Lets you use the "best" of both worlds; single-click convenience when the mouse is over the file's icon, and normal click behavior when it's over the file's label.
+  * **Underline items on hover**: When single-click mode is active, this lets you control whether items you hover over with the mouse have their label underlined or not. 
+  * **Hover time to select**: Controls how long you need to hover the mouse over a file before it gets selected.
+  * **Hover time to expand**: Controls how long you need to hover over an expansion button before the folder expands.
+

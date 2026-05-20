@@ -1,0 +1,92 @@
+~~Title: Undo ~~
+<pageheader/>
+
+The **Undo** internal command can be used to:
+
+  * Undo the last undoable file operation (undo delete to recycle bin, etc) 
+  * Undo any one of the previous operations via a menu 
+  * Display a list of undoable operations and undo all or individual operations 
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ (#)//(no argument)//
+$$ -
+$$ -
+$$ Undoes the most recent undoable file operation. Not all file operations are undoable - for example, files deleted from network or removable drives can not be undone.
+
+``Undo``
+$$ HEADING
+$$ /O
+$$ //(no value)//
+$$ When used with commands which generate a list of items (see [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic buttons]]), the **HEADING** argument adds a small heading at the start of the list. The heading will be hidden when the list is empty. Headings only happen for commands which potentially generate multiple items at the same level as the button itself.
+
+When **HEADING** is used by itself, without specifying a text value, the main button's label text is used for the heading.
+
+``Undo LIST HEADING``
+$$ 
+$$ 
+$$ //<heading text>//
+$$ You can specify the heading text if you want it to be different to the button's label.
+
+``Undo LIST HEADING="Undo List"``
+$$ ITEM
+$$ /K
+$$ //<index>//
+$$ Undoes the specified action from the undo list. The //<index>// indicates the operation to undo, as displayed in the undo list.
+
+``Undo ITEM 3``
+$$ LIST
+$$ /O
+$$ //(no value)//
+$$ Displays a list of undoable actions (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Any operation from the list can be undone simply by selecting it from the list.
+
+``Undo LIST``
+$$ 
+$$ 
+$$ **nokeys**
+$$ Disables the automatically-assigned hotkeys that are normally added to the generated list.
+
+``Undo LIST=nokeys``
+$$ 
+$$ 
+$$ **menu**
+$$ Displays the undo list in a sub-menu.
+
+``Undo LIST=menu,nokeys``
+$$
+$$ 
+$$ **redo**
+$$ Displays the redo list (if enabled) rather than the undo list.
+
+``Undo LIST=redo,nokeys``
+$$
+$$
+$$ **both**
+$$ Displays both the undo and redo lists.
+
+``Undo LIST=menu,both``
+$$
+$$
+$$ **max:**<num>
+$$ Lets you control the maximum number of items listed. The default is 10.
+
+``Undo LIST=both,max:20``
+$$ PAGE
+$$ /S
+$$ //(no value)//
+$$ Displays the //Undo Log// page of the [[:basic_concepts:the_lister:utility_panel|utility panel]]. This displays a list of undoable actions, and lets you undo individual operations or all of them.
+
+``Undo PAGE``
+$$ REDO
+$$ /S
+$$ //(no value)//
+$$ If **Sequential undo** is enabled in [[:preferences:preferences_categories:file_operations:options|Preferences]], this command lets you redo an action you've just undone.
+
+``Undo REDO``.
+</commandtable2>
+
+

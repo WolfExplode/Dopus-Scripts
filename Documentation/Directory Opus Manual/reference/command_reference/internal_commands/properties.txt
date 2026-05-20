@@ -1,0 +1,296 @@
+~~Title: Properties ~~
+<pageheader/>
+
+The **Properties** internal command can be used to:
+
+  * Display the system //Properties// dialog for files and folders 
+  * Display the **[[:basic_concepts:folder_options|Folder Options]]** dialog for the current folder 
+  * Display the FTP [[:ftp:site_properties|Site Properties]] dialog for the currently connected FTP site 
+  * Assign a [[:file_operations:labels|label]] to selected files and folders 
+  * Set a selected image file as the system wallpaper image 
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ (#)//(no argument)//
+$$ -
+$$ -
+$$ Display the system //Properties// dialog for selected files and folders.
+
+``Properties``
+$$ ADDLABEL
+$$ /O
+$$ //(no value)//
+$$ In conjunction with the **SETLABEL** argument, this lets you add one or more labels without clearing any existing ones.
+
+``Properties SETLABEL=Green ADDLABEL``
+
+Can be combined with **SETLABELTOGGLE** to toggle a single label.
+
+``Properties SETLABEL=Bold ADDLABEL SETLABELTOGGLE``
+$$ 
+$$ 
+$$ **shift\\
+ctrl\\
+alt**
+$$ If a keyword is specified, the labels will only be added if the specified key is held down when the function is run - otherwise the **ADDLABEL** argument will be ignored and they will replace existing labels as normal.
+
+``Properties SETLABEL red ADDLABEL=ctrl``
+$$ FILE
+$$ 
+$$ //<filename>//
+$$ Specifies the filename rather than using selected files. Wildcards are supported in the last path component. This is the default argument for the **Properties** command so you do not need to specify the **FILE** keyword. If the filename includes spaces make sure you enclose it in quotes.
+
+``Properties "C:\Windows\System32\notepad.exe"``
+$$ FOLDERFORMAT
+$$ /S
+$$ //(no value)//
+$$ Display the **Folder Format** dialog for the current folder.
+
+``Properties FOLDERFORMAT``
+$$ FTPSITE
+$$ /S
+$$ //(no value)//
+$$ Display the FTP [[:ftp:site_properties|Site Properties]] dialog for the currently connected FTP site. If you are not currently viewing an FTP directory this command has no effect.
+
+``Properties FTPSITE``
+$$ HEADING
+$$ /O
+$$ //(no value)//
+$$ When used with commands which generate a list of items (see [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic buttons]]), the **HEADING** argument adds a small heading at the start of the list. The heading will be hidden when the list is empty. Headings only happen for commands which potentially generate multiple items at the same level as the button itself.
+
+When **HEADING** is used by itself, without specifying a text value, the main button's label text is used for the heading.
+
+``Properties SETLABEL HEADING``
+$$ 
+$$ 
+$$ //<heading text>//
+$$ You can specify the heading text if you want it to be different to the button's label.
+
+``Properties SETLABEL HEADING="Labels"``
+$$ LABELCATEGORY
+$$ /K
+$$ //<category>//
+$$ When used on a command that generates a list of labels (e.g. `Properties SETLABEL` or `Properties SETLABEL !menu`) this argument lets you filter the generated list by category. It accepts one or more comma-separated wildcard strings which let you match the name of categories to include.
+
+The specified categories will also be used when resetting labels using the `Properties SETLABEL !reset` command - if **LABELCATEGORY** is used as well, only labels in the specified categories will be cleared. This is used in the default **Properties** drop-down menu to provide a command that clears status icons without affecting other labels.
+
+You can match uncategorized labels using the pattern **~*** (which means "not anything").
+
+Special handling exists for the two predefined categories, //Status// and //Colors//; these can be referenced using the English names prefixed with **raw:** and will work in any language.
+
+``Properties SETLABEL !menu LABELCATEGORY raw:~(Status)``
+$$ LISTER
+$$ /S
+$$ //(no value)//
+$$ Displays the system //Properties// dialog for the folder currently displayed in the source file display.
+
+``Properties LISTER``
+$$ NOFROMFOCUS
+$$ /S
+$$ //(no value)//
+$$ The default behaviour for the **Properties** command is to operate on either the source file display, or the Folder Tree, depending on which one has the input focus. This lets you use the same command to access the //Properties// dialog for folders in the tree as well as files and folders in the file display. Specify this argument to force the command to always operate on the source file display and ignore the folder tree.
+
+``Properties NOFROMFOCUS``
+$$ POSITION
+$$ /K
+$$ //<x,y>//
+$$ Specify the position for the Properties dialog in screen coordinates. If no positioned specified, the dialog will open in a default position.
+
+``Properties POSITION=0,0``
+$$
+$$
+$$ **rel**
+$$ Indicates the coordinates are relative to the Lister launching the Properties function.
+
+``Properties POSITION=32,32,rel``
+$$
+$$
+$$ **center**
+$$ Center the properties dialog over the Lister that launched it.
+
+``Properties POSITION=center``
+$$ SETLABEL
+$$ /O
+$$ //(no value)//
+$$ Displays a generated list of your configured [[:file_operations:labels|labels]] (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Selecting a label from this list applies it to all selected files and folders.
+
+This command supports [[:customize:creating_your_own_buttons:embedded_functions|embedded functions ]]when it's used to generate dynamic  buttons.
+
+``Properties SETLABEL``
+$$ 
+$$ 
+$$ //<label>[,<label>,...]//
+$$ Applies the specified label or labels to all selected files and folders. Multiple label names must be comma-separated. Commas and back-slashes in label names must be escaped with a back-slash.
+
+You can combine this with the **ADDLABEL** argument to add labels to existing ones rather than replacing them. You can further combine it with **SETLABELTOGGLE** to toggle labels on and off.
+
+The keyword **stoponmatch** can be used to add the "stop on match" flag to a file, which prevents any wildcard or label filters from applying to the file.
+
+``Properties SETLABEL=Green,Blue``
+$$ 
+$$ 
+$$ **!menu**
+$$ Places the generated label list inside a menu.
+
+``Properties SETLABEL !menu``
+$$ 
+$$ 
+$$ **!submenu**
+$$ Generates submenus for each label category.
+
+``Properties SETLABEL !submenu``
+$$ 
+$$ 
+$$ **!submenu2** 
+$$ Generates submenus for each label category, and places labels without a category in an //Uncategorized// group.
+
+``Properties SETLABEL !menu,!submenu2``
+$$ 
+$$ 
+$$ **!nogroup**
+$$ Labels are grouped by category by default; specify **!nogroup** to ignore categories and generate a flat list of labels, sorted only by name, with labels from different categories intermingling.
+
+``Properties SETLABEL !menu,!nogroup``
+$$ 
+$$ 
+$$ **!noreset**
+$$ A //Reset// option is normally added after an automatically generated label list. You can prevent this by specifying **!noreset**.
+
+``Properties SETLABEL !noreset``
+$$ 
+$$ 
+$$ **!nostoponmatch**
+$$ A //Stop On Match// option is normally added after an automatically generated list of labels, if **Apply wildcard and filter labels to explicitly labelled files** is selected on the [[:preferences:preferences_categories:labels:options|Labels / Options]] Preferences page. You can prevent it being added by specifying **!nostoponmatch**.
+
+``Properties ADDLABEL SETLABELTOGGLE SETLABEL !nostoponmatch,!noreset LABELCATEGORY raw:Status``
+
+The example above would give you top-level buttons, directly on the toolbar, to toggle each of the Status labels, with no extra buttons cluttering up the toolbar.
+$$ 
+$$ 
+$$ **!compact**
+$$ Makes automatically generated label lists narrow and compact, where the button for each label only contains an icon or "Aa" label to show its effect. The full label names are not shown but can be revealed by hoving over each button. Intended for when you want a list of labels on a top-level toolbar without using much space.
+
+``Properties SETLABEL=!compact``
+$$ 
+$$ 
+$$ **!reset**
+$$ Removes the label from all selected items. You can combine this with the **LABELCATEGORY** argument to only remove labels in certain categories.
+
+``Properties SETLABEL=!reset``
+
+Note that **!reset** does not affect automatically generated label lists; a //Reset// option is added to those automatically unless **!noreset** is specified. Rather, **!reset** creates a single button which will remove any labels on the selected files.
+$$
+$$ 
+$$ **!lastused**
+$$ Applies the label that was last applied. A button with this command will automatically change its appearance to indicate the label that it will set.
+
+``Properties SETLABEL=!lastused``
+$$ SETLABELINFS
+$$ /K
+$$ **yes**
+$$ Specify in conjunction with the **SETLABEL** argument to override the state of the **Enable label storage in the filesystem** option on the [[:preferences:preferences_categories:labels:options|Labels / Options]] Preferences page. Labels will be stored in the file system even if that option is disabled.
+
+``Properties SETLABEL=Green SETLABELINFS=yes``
+$$ 
+$$ 
+$$ **no**
+$$ The labels will be stored in your Opus configuration.
+
+``Properties SETLABEL=Blue SETLABELINFS=no``
+$$ SETLABELREMOVE
+$$ /O
+$$ //(no value)//
+$$ Specify in conjunction with the **SETLABEL** argument to remove labels. If the targeted file or folder already has the specified label, the label will be removed. Otherwise nothing will happen.
+
+(Only affects labels explicitly applied to individual folders and files. Labels picked up via wildcards and filters can be overridden by more explicit labels but cannot be toggled on individual items.)
+
+``Properties SETLABEL=Bold SETLABELREMOVE``
+$$ 
+$$ 
+$$ **shift\\
+ctrl\\
+alt**
+$$ If specified, the **SETLABELREMOVE** argument will only apply if the specified key is held down when the function is run.
+
+``Properties SETLABEL=Bold SETLABELREMOVE=alt``
+$$ SETLABELTOGGLE
+$$ /O
+$$ //(no value)//
+$$ Specify in conjunction with the **SETLABEL** argument to toggle labels. If the targeted file or folder already has the specified label, the entire label will be cleared instead.
+
+(Only affects labels explicitly applied to individual folders and files. Labels picked up via wildcards and filters can be overridden by more explicit labels but cannot be toggled on individual items.)
+
+``Properties SETLABEL=Bold SETLABELTOGGLE``
+
+Combine with **ADDLABEL** to toggle only a single label, while leaving any other labels the file has alone.
+
+``Properties SETLABEL=Red SETLABELTOGGLE ADDLABEL``
+$$ 
+$$ 
+$$ **shift\\
+ctrl\\
+alt**
+$$ If specified, the **SETLABELTOGGLE** argument will only apply if the specified key is held down when the function is run. If the key isn't held down, the label will only be turned on - it won't be toggled off again.
+
+``Properties SETLABEL=Bold SETLABELTOGGLE=shift``
+$$ SETWALLPAPER
+$$ /O
+$$ //(no value)//
+$$ Sets the selected image file as the system wallpaper. Opus will make a copy of the selected image file (and convert its format if necessary) - you can change where the copy is stored with the **setwallpaper_file** option on the **[[:preferences:preferences_categories:miscellaneous:advanced_options|Miscellaneous / Advanced]]** page in Preferences.
+
+``Properties SETWALLPAPER`` 
+$$ 
+$$ 
+$$ **center**
+$$ The wallpaper mode will be set to center the image on screen.
+
+``Properties SETWALLPAPER=center``
+$$ 
+$$ 
+$$ **tile**
+$$ The image will be tiled across the screen.
+
+``Properties SETWALLPAPER=tile``
+$$ 
+$$ 
+$$ **stretch**
+$$ The image will be stretched (or shrunk) to fill the screen completely.
+
+``Properties SETWALLPAPER stretch``
+$$ 
+$$ 
+$$ **fit**
+$$ The image will be cropped if necessary to fill the screen. The aspect ratio of the image will be preserved. This is only available on Windows 7 and above.
+
+``Properties SETWALLPAPER=fit``
+$$ 
+$$ 
+$$ **fill**
+$$ The image will be stretched or shrunk to fill screen, but the aspect ratio will be preserved - and so black bars may be displayed on the sides or top and bottom of the image. This is only available on Windows 7 and above.
+
+``Properties SETWALLPAPER fill``
+$$ 
+$$ 
+$$ **span**
+$$ The image will be spanned across a multiple monitor desktop. This is only available on Windows 8 and above.
+
+``Properties SETWALLPAPER span``
+$$ 
+$$ 
+$$ **menu**
+$$ Displays a drop-down menu of the various wallpaper modes (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). Selecting a mode from this menu sets the selected image file as the wallpaper using that mode. This is useful when added to the context menu for the **Images** [[:file_types:file_type_groups|file type group]].
+
+``Properties SETWALLPAPER=menu``
+$$ SINGLE
+$$ /S
+$$ //(no value)//
+$$ Modifies the behaviour of the **Properties** command when more than one file or folder is selected. By default a combined //Properties// dialog is shown for all selected items, but if **SINGLE** is specified an individual //Properties// dialog is shown for each item.
+
+``Properties SINGLE``
+</commandtable2>
+
+

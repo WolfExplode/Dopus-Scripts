@@ -1,0 +1,152 @@
+~~Title: CreateFolder ~~
+<pageheader/>
+
+The **CreateFolder** internal command is used to:
+
+  * [[:file_operations:creating_folders|Create new folders]] (either via a dialog, an inline rename field in the file display, or with a pre-determined name) 
+  * [[:file_operations:creating_archives|Create new archive files]] 
+  * Create new [[:basic_concepts:virtual_file_system:libraries|libraries]], [[:basic_concepts:virtual_file_system:file_collections|collections]] and [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query collections]] 
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ ARCHIVE
+$$ /O
+$$ //(no value)//
+$$ Create a new archive file. The archive format will default to .zip but can be changed via the dialog.
+
+``CreateFolder ARCHIVE``
+$$ 
+$$ 
+$$ //<archive format>//
+$$ Create a new archive file of the specified format.
+
+``CreateFolder ARCHIVE=.7z``
+$$ ARCHIVEARGS
+$$ /K
+$$ //<archive arguments>//
+$$ Used to pass format-specific arguments when creating an archive. The format these arguments take is defined by the plugin and archive type in question - currently, none of the standard archive formats Opus supports make use of this.
+
+``CreateFolder ARCHIVE=.moo ARCHIVEARGS="/compression=1"``
+$$ ASK
+$$ /S
+$$ //(no value)//
+$$ If you specify a name with the **NAME** argument the //Create Folder// dialog does not normally display; instead the folder is created immediately. You can add the **ASK** argument to force the dialog to display, pre-populated with the specified name.
+
+``CreateFolder "My New Folder" ASK``
+
+If the specified name already exists before the prompt is displayed, it will have a number appended to it automatically so that is unique, similar to the way **CreateFolder** without any arguments will prompt to create //New Folder// and then //New Folder (2)//, //New Folder (3)//, and so on.
+$$ COLLQUERY
+$$ /S
+$$ //(no value)//
+$$ Creates a stored query collection rather than a regular file collection. This only has effect when actually creating a collection (because, for example, you are in the File Collections root folder at the time).
+
+``CreateFolder COLLQUERY``
+$$ FROMCLIPBOARD
+$$ /O
+$$ //(no value)//
+$$ Uses the text currently on the clipboard for the name of the new folder. Equivalent to <nobr>`CreateFolder "{clip}"`</nobr>.
+
+``CreateFolder FROMCLIPBOARD``
+$$ 
+$$ 
+$$ **multi**
+$$ Creates multiple folders from the clipboard contents, assuming the clipboard contains multiple lines of CR/LF separated text. Without this keyword only the first line would be used.
+
+``CreateFolder FROMCLIPBOARD=multi``
+$$ INLINE
+$$ /S
+$$ //(no value)//
+$$ Creates a new folder and lets you edit its name inline (in the file display) - equivalent to selecting //New -> Folder// from the context or File menu.
+
+``CreateFolder INLINE``
+$$ NAME
+$$ /M
+$$ //<folder name> ...//
+$$ Specify the name of the folder or archive to create. If this argument is supplied Opus will not prompt for a name (unless **ASK** is also specified). You can specify a full path, or just the folder name to create the folder in the current source directory. You can also specify multiple names to create more than one folder at once.
+
+This is the default argument for the **CreateFolder** command, so the keyword **NAME** does not need to be specified. However, if you need to create a folder whose name is one of the other argument names, you must use the more explicit **NAME="xyz"** form to avoid the //xyz// part being interpreted as an argument name instead of a folder name. If you need this while creating multiple folders, you can specify the **NAME** argument multiple times.
+
+``CreateFolder "Folder 1" "Folder 2" "Folder 3"``\\
+``CreateFolder "C:\Program Files\My New Program"``\\
+``CreateFolder NAME="Apple" NAME="Ask" NAME="Inline" ASK``
+$$ NOSEL
+$$ /S
+$$ //(no value)//
+$$ Normally when a folder is created in the currently displayed directory it is selected, and the display scrolled if necessary to make it visible. The **NOSEL** argument prevents this.
+
+``CreateFolder "New Folder" NOSEL``
+$$ NOUPDATESETTINGS
+$$ /S
+$$ //(no value)//
+$$ Prevents settings made by this command from becoming the new defaults. For example, if you specify the **READAUTO** argument, the value you provide will become the new default setting for the CreateFolder command unless you also specify **NOUPDATESETTINGS**.
+
+``CreateFolder "{date|yyyyMMdd}" READAUTO NOUPDATESETTINGS``
+$$ MULTI
+$$ /O
+$$ //(no value)//
+$$ Ensures the //Create Folder// is in multiple-folder mode if it opens.
+
+If **MULTI** is not specified at all, the dialog remembers its previous mode (subject to **NOUPDATESETTINGS**) when no folder names are specified on the command line, uses single-folder mode when one name is specified, and uses multi-folder mode when multiple names are specified.
+
+``CreateFolder "Backup on {date|yyyy_MM_dd}" ASK MULTI``
+$$ 
+$$ 
+$$ **no**
+$$ Ensures the //Create Folder// dialog is in single-folder mode if it opens.
+
+``CreateFolder MULTI=no``
+$$ READAUTO
+$$ /O
+$$ //(no value)//
+$$ Automatically read the newly created folder into the current source file display.
+
+``CreateFolder "New Folder" READAUTO``
+$$ 
+$$ 
+$$ **no**
+$$ Do not automatically read the newly created folder.
+
+``CreateFolder "New Folder" READAUTO=no``
+$$ 
+$$ 
+$$ **dual**
+$$ Read the newly created folder into the other file display. If the Lister is not currently in [[:basic_concepts:the_lister:dual_display|dual-display]] mode it will be placed in this mode first. You can combine this value with **tab** to open a new tab in the other file display.
+
+``CreateFolder "New Folder" READAUTO=dual``
+$$ 
+$$ 
+$$ **left**
+$$ Read the newly created folder into the left (or top) file display, regardless of which side is active. You can combine this value with **tab** to open a new tab.
+
+``CreateFolder "Stuff" READAUTO=left,tab``
+$$ 
+$$ 
+$$ **right**
+$$ Read the newly created folder into the right (or bottom) file display, regardless of which side is active. If the Lister is not currently in [[:basic_concepts:the_lister:dual_display|dual-display]] mode it will be placed in this mode first. You can combine this value with **tab** to open a new tab in the other file display.
+
+``CreateFolder "My Dir" READAUTO=right``
+$$ 
+$$ 
+$$ **tab**
+$$ Create a new tab for the newly created folder. The tab will be opened in the source file display unless **dual**, **left**, or **right** is also specified.
+
+``CreateFolder "New Folder" READAUTO=dual,tab``
+$$ 
+$$ 
+$$ **nofocus**
+$$ When opening a new tab, prevents that tab from being made the active one.
+
+``CreateFolder "New Folder" READAUTO=tab,nofocus``
+$$ ZIP
+$$ /S
+$$ //(no value)//
+$$ Create a new Zip file (equivalent to `CreateFolder ARCHIVE=.zip`).
+
+``CreateFolder ZIP``
+</commandtable2>
+
+

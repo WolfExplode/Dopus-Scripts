@@ -1,0 +1,69 @@
+~~Title: EverythingResult~~
+<pageheader/>
+
+Represents a single item returned in the result set from an Everything query. A [[vector|Vector]] of these objects is returned by a call to the **[[everythinginterface|EverythingInterface]].Query** method.
+
+When you send a query to everything you can tell it what information to return. Only information you request will appear in the result items, so e.g. if you want the file size, you must request it when you send the query.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ access\\
+access_utc
+$$ //date//
+$$ Returns the last access date (in local and UTC time) of the result item. The last access date must have been requested in the query.
+$$ create\\
+create_utc
+$$ //date//
+$$ Returns the creation date (in local and UTC time) of the result item. The creation date must have been requested in the query.
+$$ daterecentlychanged\\
+daterecentlychanged_utc
+$$ //date//
+$$ Returns the recently changed date (in local and UTC time) of the result item. The value must have been requested in the query.
+$$ daterun\\
+daterun_utc
+$$ //date//
+$$ Returns the last run date (in local and UTC time) of the result item. The value must have been requested in the query.
+$$ filelist_filename
+$$ //string//
+$$ Returns the file list filename of the result item. The value must have been requested in the query.
+$$ fullpath
+$$ //object//:**[[path|Path]]**
+$$ Returns the full path and name of the result item. The full path and name (or the path and name separately) must have been requested in the query.
+$$ highlighted_fullpath
+$$ //string//
+$$ Returns the highlighted full path and name of the result item, if the value was requested in the query.
+$$ highlighted_name
+$$ //string//
+$$ Returns the highlighted name of the result item, if the value was requested in the query.
+$$ highlighted_path
+$$ //string//
+$$ Returns the highlighted path of the result item, if the value was requested in the query.
+$$ name
+$$ //string//
+$$ Returns the name of the result item. The name (or full path and name) must have been requested in the query.
+$$ path
+$$ //object//:**[[path|Path]]**
+$$ Returns the path of the result item. The path (or full path and name) must have been requested in the query.
+$$ runcount
+$$ //int//
+$$ Returns the item's run count, if it was requested in the query.
+$$ size
+$$ //object//:**[[filesize|FileSize]]**
+$$ Returns the size of the result item, if it was requested in the query.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ GetItem
+$$ //none//
+$$ //object//:**[[item|Item]]**
+$$ Constructs an Opus [[item|Item]] object representing this result. The full path and filename must have been returned in the result set for this function to work.
+</commandtable>
+
+

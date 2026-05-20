@@ -1,0 +1,12 @@
+~~Title: Location Bar~~
+<pageheader/>
+
+This page contains options that affect the [[:basic_concepts:the_lister:navigation:file_display_border|location bar]] (the "title" bar of the file display).
+
+  * **[[~options]]**: General options.
+  * **[[~path_fields]]**: Contains options that control the path field within the default location bar.
+    * **[[~path_fields:appearance]]**: Options relating to path field appearance.
+    * **[[~path_fields:menus]]**: Controls path field popup menus.
+    * **[[~path_fields:path_completion]]**: How Opus auto-completes paths as you type them.
+  * **[[~toolbars]]**: Select the toolbars that comprise the location bar.
+

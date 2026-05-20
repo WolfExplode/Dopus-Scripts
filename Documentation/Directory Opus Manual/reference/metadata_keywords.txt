@@ -1,0 +1,16 @@
+~~Title: Metadata Keywords ~~
+<pageheader/>
+
+There are several functions that use keywords to represent certain metadata, or file information, elements - for example, file name, size, artist, bit rate, etc. There are two separate sets of metadata keywords, and although the two sets are similar, they are not identical.
+
+  * [[~keywords_for_setattr_meta|Keywords for SetAttr META]] are used to make [[:file_operations:editing_metadata:programmatic_setting_of_metadata|programmatic changes to file metadata]] using the **[[.command_reference:internal_commands:setattr|SetAttr]]** command 
+  * [[~keywords_for_columns|Keywords for Columns]] are used with the **[[.command_reference:internal_commands:set|Set]]** command to change the information columns that are displayed in the file display, and the **[[.command_reference:internal_commands:rename|Rename]]** command to rename files using metadata 
+
+
+
+
+
+More:
+
+[[~keywords_for_columns|Keywords for Columns]]\\
+[[~keywords_for_setattr_meta|Keywords for SetAttr META]]\\

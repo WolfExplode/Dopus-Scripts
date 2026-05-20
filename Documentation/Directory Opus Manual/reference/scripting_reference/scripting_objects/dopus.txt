@@ -1,0 +1,285 @@
+~~Title: DOpus ~~
+<pageheader/>
+
+The **DOpus** object is one of the two global script objects provided by Opus, and is available to //all// scripts. It provides various helper methods, and collections that let you access things like Listers and toolbars.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ aliases
+$$ //object://**[[aliases|Aliases]]**
+$$ The **[[aliases|Aliases ]]**object gives the script access to the defined [[:basic_concepts:the_lister:navigation:aliases|folder aliases]].
+$$ favoriteformats
+$$ //collection//:**[[format|Format]]** 
+$$ Returns a collection of **[[format|Format]]** objects representing the used-defined favorite formats.
+$$ favorites
+$$ //object://**[[favorites|Favorites]]**
+$$ Returns a **[[favorites|Favorites ]]**object which lets you query and modify the user-defined favorite folders.
+$$ filetypegroups
+$$ //object//:**[[filetypegroups|FiletypeGroups]]** 
+$$ Returns a **[[filetypegroups|FiletypeGroups]]** object which lets you enumerate and query the configured [[:file_types:file_type_groups|file type groups]].
+$$ filters
+$$ //object://**[[:basic_concepts:folder_options:folder_options_dialog:filters|GlobalFilters]]** 
+$$ Returns a **[[globalfilters|GlobalFilters]]** object which lets you access information about the global filter settings (configured on the **[[:preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences).
+$$ language
+$$ //string//
+$$ Returns a string representing the current user interface language.
+$$ listers
+$$ //object://**[[listers|Listers]]** 
+$$ Returns a **[[listers|Listers]]** object which represents any currently open Lister windows (each one is represented by a **[[lister|Lister]]** object). There is also a **GetListers** method, below, which is similar but allows the list to be filtered.
+$$ smartfavorites
+$$ //object://**[[smartfavorites|SmartFavorites]]**
+$$ Returns a **[[smartfavorites|SmartFavorites]]** object which lets you query the [[:basic_concepts:the_lister:navigation:smartfavorites|SmartFavorites ]]data.
+$$ spacingscheme
+$$ //string//
+$$ Returns the name of the current [[:preferences:preferences_categories:user_interface:spacing|UI spacing scheme]] (if any).
+$$ strings
+$$ //object://**[[scriptstrings|ScriptStrings]]** 
+$$ Returns a **[[scriptstrings|ScriptStrings]]** object which lets your script access any strings defined as [[:scripting:resources:string_resources|string resources]].
+$$ tabgroups
+$$ //object://**[[tabgroups|TabGroups]]** 
+$$ Returns a **[[tabgroups|TabGroups]]** object which lets your script access and manipulate the configured [[:basic_concepts:the_lister:tabs:tab_groups|folder tab groups]].
+$$ vars
+$$ //object://**[[vars|Vars]]** 
+$$ This **[[vars|Vars]]** object represents all defined variables with //global scope//.
+$$ version
+$$ //object://**[[version|Version]]** 
+$$ The **[[version|Version]]** object provides information about the current Opus program version.
+$$ viewers
+$$ //object://**[[viewers|Viewers]]** 
+$$ Returns a **Viewers** object which represents any currently open [[:additional_functionality:viewing_images|standalone image viewers]] (each one is represented by a **[[viewer|Viewer]]** object).
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddMarkupImage
+$$ <string:name>
+<object:[[image|Image]]>
+$$ //none//
+$$ Associates a name with an [[image|Image]] object, that lets you use the image in dialog markup text controls. The specified name can be used with the `<%cust:..>` tag to render the image in marked up text (e.g. `<%cust:test>`).
+$$ ClearOutput
+$$ //none//
+$$ //none//
+$$ Clears the script output log.
+$$ Create
+$$ //none//
+$$ //object://**[[dopusfactory|DOpusFactory]]** 
+$$ Creates and returns a new **[[dopusfactory|DOpusFactory]]** object, which can be used to create various lightweight helper objects like **[[blob|Blob]]**, **[[map|Map]]** and **[[vector|Vector]]**.
+$$ Delay
+$$ <int:time>
+$$ //none//
+$$ Delays for the specified number of milliseconds before returning.
+$$ Dlg
+$$ //none//
+$$ //object://**[[dialog|Dialog]]**
+$$ Creates a new **[[dialog|Dialog]]** object, that lets you display dialogs and popup menus.
+
+**Note:** Scripts should not usually use this when responding to events triggered by toolbars or folder tabs. The **Dialog** returned by **DOpus.Dlg** will not have its parent window configured. Most scripting events provide you an object which can either create a pre-configured **Dialog** or which includes a **SourceTab** property or similar which can do the same. In almost all situations you should use those instead.
+$$ DPI
+$$ //none//
+$$ //object://**[[dpi|DPI]]** 
+$$ Creates the **[[dpi|DPI]]** helper object which assists when dealing with different system scaling settings (e.g. high-DPI monitors).
+$$ FlushConfig
+$$ //none//
+$$ //none//
+$$ Forces Opus to write any configuration changes to disk immediately.
+$$ FromJson
+$$ <str:json>
+$$ //various//
+$$ Converts a JSON string to Opus objects like **[[map|Maps]]** and **[[vector|Vectors]]**.
+$$ FSUtil
+$$ //none//
+$$ //object://**[[fsutil|FSUtil]]** 
+$$ Creates a new **[[fsutil|FSUtil]]** object, that provides helper methods for accessing the file system.
+$$ GetClip
+$$ //none//\\
+or <string:type>
+$$ //string//\\
+or //object://**[[items|Items]]** 
+$$ Retrieves the current contents of the system clipboard, if it contains either text or files.
+
+You can control the returned type by passing either "**text**" or "**files**" for the //<type>// argument - Opus will convert to the requested type if possible.
+
+If //<type>// is not specified the contents will be returned in their native format.
+$$ GetClipFormat
+$$ //none// or <string:flags>
+$$ //string//
+$$ Returns a string indicating the native format of the clipboard contents.
+
+Optional flags:
+|**c**|Differentiate between cut and copied files|
+
+Possible return values:
+|**files**|Files, if **flags** omitted or doesn't include **c**|
+|**files_copy**|Files via Copy (Ctrl-C), if **flags** includes **c**|
+|**files_cut**|Files via Cut (Ctrl-X), if **flags** includes **c**|
+|**image**|Bitmap data|
+|**text**|Text data|
+|<empty string>|Empty clipboard, or any other type of data|
+$$ GetListers
+$$ //none//\\ or <string:flags>
+$$ //object://**[[listers|Listers]]** 
+$$ Returns a **[[listers|Listers]]** object which represents any currently open Lister windows (each one is represented by a **[[lister|Lister]]** object). This is the same as using the **listers** property, except that you can specify the optional flags:
+|**c**|Current desktop only. Only returns Listers from the current virtual desktop.|
+$$ GetQualifiers
+$$ //none//
+$$ //string//
+$$ Returns a string indicating which qualifier keys are currently held down. If none are held down, the string will be "**none**". Otherwise, the string can contain any or all of the following, separated by commas: "**shift**", "**ctrl**", "**alt**", "**lwin**", "**rwin**".
+
+Note that many events pass you a similar list of qualifiers. If you are passed a list of qualifiers, you should generally use that list rather than call DOpus.GetQualifiers.
+
+For example, script commands are passed a **[[func|Func]]** object with a //qualifiers// property. That property will tell you which keys were held down when the command was triggered, and that may be different to the keys held down a few seconds later. When the user clicks a button to run a command, they normally expect the command to use the keys they held when they clicked, not the keys they are touching later while waiting for it to finish.
+
+Similarly, events like **[[..:scripting_events:onbeforefolderchange|OnBeforeFolderChange]]** will often pass you an object like **[[beforefolderchangedata|BeforeFolderChangeData]]** containing a //qualifiers// property which indicates key state when the event was triggered. You should normally use that instead of calling DOpus.GetQualifiers.
+
+If you do call DOpus.GetQualifiers, you would normally want to call it as soon as possible and then store the result, so there is less time for the user to let go of a key after triggering your script.
+
+If you call DOpus.GetQualifiers more than once, you may get a different result each time, due to keys being pushed or released between calls. Call it once and store the result if you need to do multiple checks and need them to be consistent. This does not generally affect the //qualifiers// properties mentioned earlier, since they are usually stored snapshots of the key state.
+$$ KillTimer
+$$ <int:id>
+$$ //bool//
+$$ Kills a timer that was previous created with the **SetTimer** or **SetScheduledTimer** methods.
+$$ LoadImage
+$$ <string:filename> or <object:**[[blob|Blob]]**>\\
+[<string:typehint>]\\
+[<int:width>]\\
+[<int:height>]\\
+[<bool:alpha>]
+$$ object:**[[image|Image]]** 
+$$ Loads an image file from the specified file. You can optionally specify the desired size to load the image at, and whether the alpha channel (if any) should be loaded or not. Note that the //typehint// argument should only be provided if passing a **Blob**.
+
+You can load icons from the internal icon set using `#iconname`. E.g. `#copy` would load the copy image from the default set. By default the large size is returned; use `#0:iconname` for the small size. You can also specify a particular icon set using `#setname:iconname` or `#0:setname:iconname`.
+
+Images can be extracted from DLLs and EXEs by appending the icon index to the filename, e.g. `/system/zipfldr.dll,1`.
+
+You can also provide a **[[blob|Blob]]** object containing the image data instead of a filename. If you do this, the second parameter can be a //typehint// string to provide a type-hint for the data format (e.g. pass ".jpg" if you know it's JPEG data).
+
+The returned **[[image|Image]]** object can be given as the value of the **[[control|Control]].label** property for a static control in a [[:scripting:script_dialogs|script dialog]] (when that control is in "image" mode). You can also assign it as the **icon** property of a **[[dialog|Dialog]]** object to specify a custom window icon for your script dialog.
+
+If //width// and //height// are not provided, they default to 0, meaning the image is loaded at its native size. The //width// and //height// parameters only specify the desired size; the resultant image may be smaller or larger, and should be scaled after loading if you need it to be an exact size. The main purpose of the //width// and //height// parameters is to influence which image within an icon is loaded; most other image formats either ignore the parameters or only use them to speed things up, such as avoiding a full JPEG decode if a partial decode can satisfy the desired image size.
+
+Images are loaded transparently (with alpha) by default; set the //alpha// argument to **False** if you want to disable that.
+$$ LoadThumbnail
+$$ <string:filename>\\
+[<int:timeout>]\\
+[<int:width>]\\
+[<int:height>]\\
+[<string:flags>]
+$$ object:**[[image|Image]]**\\
+or\\
+//bool// (**False**)
+$$ Extracts a thumbnail from the specified external file. You can optionally specify a timeout (in milliseconds) and the desired size to load the thumbnail at.
+
+The optional **flags** value supports the following flags (supplied as a string):
+
+|**i**|prevents Opus from waiting for thumbnails that may take some time to generate, and instead returns a large icon if the thumbnail can't be generated immediately|
+|**c**|modifies the **i** flag to only apply to Cloud storage folders|
+
+If loading fails (or the timeout expires before the thumbnail could be generated) this method returns **False**.
+
+The returned **[[image|Image]]** object can be given as the value of the **[[control|Control]].label** property for a static control in a [[:scripting:script_dialogs|script dialog]] (when that control is in "image" mode). You can also assign as to the **icon** property of a **[[dialog|Dialog]]** object to specify a custom window icon for your script dialog.
+$$ MusicGenres
+$$ //none//
+$$ object:**[[vector|Vector]]**
+$$ Returns a [[vector|Vector]] of strings representing the music genres configured to be shown in the Genre field of the metadata panel.
+$$ Notify
+$$ <string:title>\\
+<string:message>\\
+[<string:flags>]
+$$ //none//
+$$ Displays a system notification (or in Windows 7, a balloon tooltip). This requires the Opus taskbar icon to be added to the taskbar notification area so if it's turned off in Preferences, it will be added temporarily and then removed again.
+
+The optional flags are:
+|**n**|No sound. Prevents the system from playing a sound when the notification is displayed.|
+$$ Output
+$$ <string:text>\\
+[<bool:error>]\\
+[<bool:timestamp>]
+$$ //none//
+$$ Prints the specified text string to the script output log (found in the [[:basic_concepts:the_lister:utility_panel|Utility Panel, ]] the [[:additional_functionality:cli|CLI]] in script mode, the //Rename// dialog and the //Command Editor// in script mode).
+
+If the second argument is provided and set to **True**, the message will be displayed as an error. This means the text will be displayed in red and if no log windows are currently open, a warning icon will flash in the Lister status bar to alert the user of an error condition.
+
+If the optional third argument is provided and set to **True** then the log message will have a timestamp prepended to it. Timestamps only appear in the utility panel, not in places like the Command Editor's output panel. Error messages always get timestamps so if the second argument is **True** then the third is ignored
+$$ ReloadScript
+$$ <string:file>
+$$ //none//
+$$ Causes Opus to reload and reinitialize the specified script. You must provide the full pathname of the script on disk (if a script add-in wants to reload itself you can pass the value of the **[[script|Script]].file** property).
+$$ Request
+$$ <str:message>\\
+<str:buttons>\\
+<str:title>\\
+<object:window>\\
+<str:icon>
+$$ //int//
+$$ Displays a dialog with one or more buttons. The optional parameters are:
+
+  * //message// - specify message string in the dialog
+  * //buttons// - specify button labels (in the same format as the **buttons** property described above)
+  * //title// - specify dialog window title
+  * //window// - specify parent window for the dialog (a **[[lister|Lister]]** or a **[[tab|Tab]]**).
+  * //icon// - displays a standard icon in the dialog. Valid values are "w", "i", "q" or "e" for warning/info/question/error.
+
+The return value is the index of the button selected by the user, and this is also available in the **result** property once the method returns. The left-most button is index **1**, the next button is index **2**, and so on. If a dialog has more than one button then by definition the last (right-most) button is the "cancel" button and so this will return index **0**.
+$$ SendCustomMsg
+$$ <string:msg>\\
+[<int:data> or\\
+<object:data>]
+$$ //bool//
+$$ Sends a named message to any existing script dialogs that have registered to receive that message via **[[dialog|Dialog]].AddCustomMsg**.
+
+Any dialogs that have registered for the message will receive a "custom" **[[msg|Msg]]** in their message loop, with the message name in the `name` property.
+
+You can optionally pass a single numeric value, or a container object (e.g. a **[[map|Map]]**) along with the message, which will be received by the dialog in either the `data` or `object` property of the **Msg**.
+$$ SendKey
+$$ <string:key>
+$$ //bool//
+$$ Sends the specified keystroke to the system. The key will be routed to whichever window currently has focus. For example, `DOpus.SendKey("win+v");` sends the <kbd>Win</kbd>+<kbd>V</kbd> key to the system, which opens the Windows clipboard viewer.
+
+Supported qualifier keys are `shift`, `ctrl`, `alt` and `win`.
+
+As well as letters and numbers, the following named keys are also supported: `backspace`, `capslock`, `delete`, `down`, `end`, `enter`, `escape`, `home`, `insert`, `left`, `numlock`, `pagedown`, `pageup`, `pause`, `printscr`, `right`, `scrlock`, `space`, `tab`, `up`.
+$$ SetClip
+$$ <string:text>\\
+or //object://**[[items|Items]]**\\
+or //none//
+$$ //none//
+$$ Places the specified text, or **[[items|Items]]** object (or similar, see below) on the system clipboard. If called with no arguments the clipboard will be cleared.
+
+When passing a file list, you can also give a **[[vector|Vector]]** of **[[item|Item]]** or **[[path|Path]]** objects, or full path strings, instead of a collection. Or a **[[stringset|StringSet]]** or **[[unorderedset|UnorderedSet]]** of full path strings.
+$$ SetScheduledTimer
+$$ <int:id>\\
+<date:expirydate>
+$$ //bool//
+$$ For a script that implements the **[[..:scripting_events:onscheduledtimer|OnScheduledTimer]]** event, this creates a (or modifies an existing) timer that will call your method when the specified date/time is reached. The //id// argument specifies an integer ID that identifies the timer, and the //expirydate// specifies the expiry date of the timer - either as a string or as a **[[date|Date]]** object. The method returns **true** if the timer was successfully scheduled.
+
+Note that you can't schedule a timer more than (approximately) 25 days in advance.
+$$ SetTimer
+$$ <int:id>\\
+<int:interval>
+$$ //bool//
+$$ For a script that implements the **[[..:scripting_events:onperiodictimer|OnPeriodicTimer]]** event, this creates a (or modifies an existing) timer that will call your method at regular intervals. The //id// argument specifies an integer ID that identifies the timer, and the //interval// specifies the timer interval in milliseconds. Use **KillTimer** to kill an established timer.
+$$ ToJson
+$$ //various//\\
+<int:indent>
+$$ //string//
+$$ Converts an object to a JSON string. Supports Opus objects like like **[[map|Maps]]** and **[[vector|Vectors]]**. The optional //indent// argument lets you control the number of spaces each level of JSON is indented to.
+$$ Toolbars
+$$ <string:type>
+$$ object:**[[toolbars|Toolbars]] **
+$$ Returns a **[[toolbars|Toolbars]]** object which lets you enumerate all defined toolbars (whether they are currently open or not).
+
+You can restrict this object to only return in-use toolbars by specifying the optional //type// parameter - specify **"listers"** to only return toolbars currently turned on in a Lister, and **"docks"** to only return toolbars that are currently floating.
+$$ TypeOf
+$$ //any//
+$$ //string//
+$$ Returns a string indicating the type of an object or variable.
+</commandtable>
+
+

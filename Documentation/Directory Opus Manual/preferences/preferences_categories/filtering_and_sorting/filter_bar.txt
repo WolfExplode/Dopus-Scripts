@@ -1,0 +1,34 @@
+~~Title: Filter Bar~~
+<pageheader/>
+
+These options affect the [[:basic_concepts:searching_and_filtering:filter_bar|Filter Bar]], the bar that can be displayed at the bottom of a file display to filter the displayed contents of the current folder.
+
+  * **Display Filter Bar**: Lets you choose when the Filter Bar displayed. 
+    * **Always**: The bar is always displayed, whether a filter is active or not. 
+    * **Whenever a filter is set**: The bar is displayed when a filter is active, and hidden otherwise. 
+    * **Only when editing the filter**: The bar will only be displayed when you activate it to edit the filter - it will close again when you finish editing, whether a filter is active or not.
+
+  * **Automatically type <kbd>*</kbd> when activating the filter bar**: When turned on, a <kbd>*</kbd> will be typed into the filter bar if the activation key is pushed and no filter is currently set. Since the activation key is usually <kbd>*</kbd> this means you can type things like `*.txt` directly into the file display to do common filters on suffixes. With the option turned off, you would have to type `**.txt` instead. (One <kbd>*</kbd> to activate the filter bar, another to type the wildcard.) This option is particularly useful when **Partial matching** is turned off.
+
+  * **Clear the filter automatically when changing folders**: If this option is turned on, any filter you assign via the filter bar will be cleared when you change to another folder. When off, the filter will remain until you clear it explicitly. This also affects refreshing the current folder, although you can override that via the [[reference:command_reference:internal_commands:go|Go REFRESH command]].
+
+  * **Real-time filtering**: When turned on, the file display will be filtered in real-time, as you edit the filter. If turned off, you must press the <kbd>Enter</kbd> key to activate the filter you have typed.
+
+  * **Select first matching item**: The first item that matches the filter will be automatically selected. 
+
+==Default settings==
+
+The following options adjust the default filter settings of the filter bar. You can use the {{:media:13:button_edit.png?nolink|}} button on the filter bar itself to change these options on-the-fly.
+
+  * **Ignore diacritics**: Diacritics, or accent symbols, will be ignored when filtering. So for example a plain `e` would be treated the same as `é`.
+
+  * **Ignore file extensions**: Ignores filename extensions when filtering. For example, "z" would not match "test.zip" if extensions are ignored.
+ 
+  * **Match any word:** This option treats all words you enter as separate patterns. For example, you can type `moo cow` and it would automatically match a file called "moo" or a file called "cow". This saves you having to build up complex //OR// wildcards (the equivalent wildcard would be `(moo|cow)`). You can also use `+` and `-` to specifically include or exclude words - see the page on the [[:basic_concepts:searching_and_filtering:filter_bar|filter bar]] for more details.
+
+  * **Partial matching**: When turned on, the filtering will automatically match on sub-strings, so typing `og` would match any file containing those letters, e.g. "dog.txt" or "google.png". When off, the pattern you enter must match exactly - so you would need to type `*og*` for the same effect. Note that if you explicitly add a `*` at the start or end of the pattern then Opus will assume you do not wish to use partial matching even if it is switched on. This allows you the convenience of partial matching most of the time while still being able to filter by the start or end of things when you need to.
+
+  * **Use regular expression**: When turned on, the pattern you enter into the will be treated as a [[:reference:wildcard_reference:regular_expression_syntax|regular expression]] rather than a simple wildcard. 
+
+  * **Evaluator**: In evaluator mode, the quick filter expression is passed to the [[:evaluator|Evaluator]] for each item in the list. The expression should return **true** if the item should be shown, or **false** if it should be hidden. You can use evaluator code directly, and you can also invoke a pre-defined [[:file_operations:filtered_operations|filter]] using `?filtername`. If the pre-defined filter also uses evaluator code, arguments can be passed through to it following the name. For example, `?bigfiles:5` would invoke a pre-defined filter called "bigfiles" and pass the value "5" to it as a variable. See [[:evaluator:applicable_contexts:filters_and_find|evaluator filters and find]] for more information.
+

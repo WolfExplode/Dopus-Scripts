@@ -1,0 +1,15 @@
+~~Title: File Display Modes ~~
+<pageheader/>
+
+This category contains options that relate to the various display modes that File Displays can use.
+
+  * **[[~details_mode]]**: Options specific to Details mode displays 
+  * **[[~power_mode]]**: Options specific to Power mode displays 
+    * **[[~power_mode:appearance]]**: Controls the appearance of Power mode displays
+    * **[[~power_mode:buttons]]**: Options specific to mouse button behaviour in Power mode displays 
+  * **[[~thumbnails_mode]]**: Options specific to Thumbnails mode 
+    * **[[~thumbnails_mode:folders]]**: Options for folder thumbnails
+    * **[[~thumbnails_mode:performance]]**: Options relating to thumbnail generation
+    * **[[~thumbnails_mode:styles]]**: Custom rendering styles for folder thumbnails
+  * **[[~tiles_mode|Tiles]]**: Options specific to Tiles Mode displays 
+

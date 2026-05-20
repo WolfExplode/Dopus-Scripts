@@ -1,0 +1,52 @@
+~~Title: Favorite ~~
+<pageheader/>
+
+A **Favorite** object represents a [[:basic_concepts:the_lister:navigation:favorites|favorite folder]]. It is retrieved by enumerating or indexing the [[favorites|Favorites ]]object.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //string//
+$$ Returns the name of the favorite folder or sub-folder.
+$$ folder
+$$ //bool//
+$$ Returns **True** if this is a sub-folder, **False** if it's a favorite folder or separator.
+
+If this object is a sub-folder it also behaves like a **[[favorites|Favorites]]** object as well as a **Favorite** object, and can be enumerated and have elements added and removed from it.
+$$ separator
+$$ //bool//
+$$ Returns **True** if this is a separator.
+$$ path
+$$ //object://**[[path|Path]]** 
+$$ Returns the path this favorite folder refers to as a **[[path|Path]]** object.
+</commandtable>
+
+
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method(#)// Name//
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ SetHeading
+$$ <string:heading>
+$$ //none//
+$$ If this is a separator (i.e. the **separator** property returns **True**) this lets you make the separator into a heading, or change the heading text.
+
+Note that changes you make to the list are not saved until you call the **[[favorites|Favorites]].Save** method. 
+$$ SetName
+$$ <string:name>
+$$ //none//
+$$ Changes the name of this favorite folder. Note that changes you make to the list are not saved until you call the **[[favorites|Favorites]].Save** method. 
+$$ SetPath
+$$ <string:path> or\\
+<object:**[[path|Path]]**>
+$$ //none//
+$$ Changes the path this favorite folder refers to. Note that changes you make to the list are not saved until you call the **[[favorites|Favorites]].Save** method.
+</commandtable>
+
+

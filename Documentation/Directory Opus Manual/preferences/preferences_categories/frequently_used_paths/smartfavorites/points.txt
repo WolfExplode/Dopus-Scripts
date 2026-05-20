@@ -1,0 +1,4 @@
+~~Title: SmartFavorites Points~~
+<pageheader/>
+
+This page lets you configure the points assigned to each action that the [[:preferences:preferences_categories:frequently_used_paths:smartfavorites|SmartFavorites]] system tracks. Folders with the highest point score are shown in your SmartFavorites list.

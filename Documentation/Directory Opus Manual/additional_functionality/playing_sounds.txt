@@ -1,0 +1,22 @@
+~~Title: Playing Sounds ~~
+<pageheader/>
+
+Opus includes a simple audio player that lets you quickly play sound files from within Directory Opus. The only sound format that Opus supports natively is **.wav**, although formats like **.mp3** can also be played if you have a suitable codec installed in Windows.
+
+{{:media:play.png?nolink|}} 
+
+The **Play** dialog displays some basic information about the sound file - name, format, data rate, etc. The available controls are:
+
+  * {{:media:rewind.png?nolink|}}: Restart. This rewinds the sound file to the beginning. 
+  * {{:media:stop.png?nolink|}}: Stop. This stops the current sound file from playing. 
+  * {{:media:play_button.png?nolink|}}: Play. If the sound file is stopped, this starts it playing. 
+  * **Position**: The slider indicates the current play position within the sound file. If the file allows it you can drag the slider to change the playback position. 
+  * **Close Play window when finished**: If this option is on the Play dialog will automatically close when the final sound finishes playing. If turned off the dialog will wait for you to close it. 
+
+
+
+The internal sound player is accessed using the internal **[[:reference:command_reference:internal_commands:play|Play]]** command. Because of its rather limited nature, and because these days all computers have media playing software as standard, it is not provided on the default toolbars. However, you can access it in two ways:
+
+  * On the [[:customize|Customize]] dialog (select the **Settings / Customize Toolbars** command), use the filter at the bottom of the **[[:customize:the_customize_dialog:commands|Commands]]** page to locate the **Play** command, and drag it to your toolbar or menu. You can then select one or more sound files and click the **Play** button to play them in sequence. 
+  * Turn on the **Use internal sound player for WAV** files option on the Preferences **[[:preferences:preferences_categories:file_operations:double-click_files|File Operations / Double-click on Files]]** page. If this option is on, double-clicking on a **.wav** file in Opus will automatically play it in the internal sound player. 
+

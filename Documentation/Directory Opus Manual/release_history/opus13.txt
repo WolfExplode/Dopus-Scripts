@@ -1,0 +1,57 @@
+~~Title: Directory Opus 13 - Highlights~~
+<pageheader/>
+
+{{:media:13:logo_opus13.png?nolink|}}
+
+=== Highlights Video ===
+
+If you prefer watching to reading, a video version of these highlights can be found here:
+
+[[https://www.youtube.com/watch?v=K57m_Ogy8Lg|{{:release_history:do13_highlights_video_thumb.jpg|}}]]
+
+____
+
+=== Table of contents ===
+\\
+[[release_history:opus13:page1|Highlights - Page 1]]
+  * Dark Mode and Themes
+  * Fonts
+  * File Copying
+  * Everything (Indexed Search)
+\\
+[[release_history:opus13:page2|Highlights - Page 2]]
+  * Expandable Folders
+  * Favorites Bar
+  * Automatic Formats
+  * Paired Folders
+  * Selection Summaries
+  * Lister Defaults
+\\
+[[release_history:opus13:page3|Highlights - Page 3]]
+  * Folder Tree
+  * Thumbnails
+  * Folder Tabs
+  * Find As You Type (FAYT)
+\\
+[[release_history:opus13:page4|Highlights - Page 4]]
+  * Viewer
+  * Image Converter
+  * Metadata Display
+  * Metadata Editing
+\\
+[[release_history:opus13:page5|Highlights - Page 5]]
+  * Rename
+  * Find Files
+  * Duplicate Files Finder
+  * Synchronize
+\\
+[[release_history:opus13:page6|Highlights - Page 6]]
+  * Columns
+  * Preferences
+  * Customize
+  * Script IDE
+  * More!
+\\
+----
+
+Next: [[release_history:opus13:page1|Highlights - Page 1]]

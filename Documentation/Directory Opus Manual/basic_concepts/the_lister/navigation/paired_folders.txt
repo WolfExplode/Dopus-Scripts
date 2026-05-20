@@ -1,0 +1,49 @@
+~~Title: Paired Folders~~
+<pageheader/>
+
+Paired folders let you associate two folders or folder hierarchies, primarily to allow you to more easily work on them side-by-side in [[..:dual_display|dual-display]] windows. Of course, you can also manually navigate to each side, or use saved [[..:layouts|Layouts]] or [[..:tabs:tab_groups|Folder Tab Groups]] to open multiple saved paths at once, but paired folders provide another way to streamline the process.
+
+To use paired folders, you must first go to [[preferences:preferences_categories:frequently_used_paths:paired_folders|Preferences / Frequently Used Paths / Paired Folders]] and define at least one pair.
+
+Pairs can associate two folders either at a single level only, or including all sub-folders as well.
+
+Pairs built using regular expressions allow you to find and replace parts of one path to make the other. For example, if you have various "Production" and "Staging" folder hierarchies in different places, you can set up a single rule that lets you open `...\Staging\...` on one side if `...\Production\...` is on the other.
+
+Paired folders can be used in a few different ways:
+
+  * <WRAP>Paired folders don't normally affect what happens when you simply navigate to a folder. However, you can install the [[https://resource.dopus.com/t/autoopenpairedfolder-add-in/46353|AutoOpenPairedFolder]] add-in for that.
+
+We feel an explicit action to open the pair is best, as there will be times you want to navigate to a one folder without being forced to have the dual file display showing the other.</WRAP>
+
+  * <WRAP>If **default dual-display folder** is on for a pair, and you are in a single-display window, navigating to one half of the pair and then opening the dual file display will automatically send the new display to the other folder in the pair.
+
+A small notification will appear at the top of the file display so you know you've been diverted from the path you configured the dual display to open with normally.
+
+Optionally, [[..:dual_display:navigation_lock|Navigation Lock]] can be turned on automatically when opening the dual file display for a pair in this way.</WRAP>
+
+  * <WRAP>If **default Navigation Lock target** is on for a pair, and you are currently viewing one half of a folder pair, you can click the [[..:dual_display:navigation_lock|Navigation Lock]] button to open the other half in the other side of the window. This will also turn on Navigation Lock, of course. This works from both single-display and dual-display windows, turning on the second file display if needed.
+
+The Navigation Lock button is normally disabled when in a single-display window, but will be enabled if the current folder matches a pair with **default Navigation Lock target** on.
+
+When Navigation Lock is on, going into a sub-folder on one side will attempt to go into the same folder on the other side automatically. Going up a level will go up on both sides at once, and so on.</WRAP>
+
+  * <WRAP>If **default Synchronize target** is on for a pair, opening the [[file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|Synchronize tool]] while displaying one half of the pair will automatically select the other half as the sync target.</WRAP>
+
+  * <WRAP>When displaying a path that matches a pair, commands can reference the other path in the pair using `{sourcepath|pair}`.
+
+For example, `Go {sourcepath|pair} OPENINDUAL` will open the other path in the other file display, also opening the other file display if needed.
+
+Additional modifiers can be used to override a pair's "If non-existent..." setting:
+
+  * `{sourcepath|pair|pairgotoparent}` keeps going up a level until it finds a folder that exists. Acts like `pairignorepair` if no parent is found.
+  * `{sourcepath|pair|pairignorepair}` ignores the pair if the folder doesn't exist, instead checking for other applicable pairs. (Useful with regex rules that might overlap each other.)
+  * `{sourcepath|pair|pairuseanyway}` returns the non-existent path as is. (Useful if the intent is to create the corresponding folder.)
+    
+For example, if you're in or below a pair folder, you can click this button to create the same folder relative to the other half of the pair (even if several path levels are currently missing on the other side):
+
+`CreateFolder {sourcepath|pair|pairuseanyway}`</WRAP>
+
+  * <WRAP>From scripting, [[reference:scripting_reference:scripting_objects:fsutil|FSUtil.GetFolderPair]] lets scripts look up a path's pair, with options for how to handle paths that don't exist.
+
+The returned object provides details of the pair and how it was configured in Preferences.</WRAP>
+

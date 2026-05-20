@@ -1,0 +1,9 @@
+~~Title: Licenses~~
+<pageheader/>
+
+There are two different Directory Opus 13 licenses:
+
+  * For home users and small businesses (maximum of ten installations per license), see the [[~end_user]].
+  * For corporations and academic bulk purchases, see the [[~golp]].
+
+Please note that the Directory Opus Light license is no longer available.

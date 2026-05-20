@@ -1,0 +1,24 @@
+~~Title: Alias ~~
+<pageheader/>
+
+An **Alias** object represents a defined [[:basic_concepts:the_lister:navigation:aliases|folder alias]]. It is retrieved by enumerating or indexing the **[[aliases|Aliases]]** object.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //string//
+$$ Returns the name of the alias.
+$$ path
+$$ //object://**[[path|Path]]** 
+$$ Returns the target of the alias as a **[[path|Path]]** object.
+$$ system
+$$ //bool//
+$$ **True** if the object is a system-defined alias, **False** if it is user defined.
+</commandtable>
+
+
+
+

@@ -1,0 +1,66 @@
+~~Title: TabGroupTabList ~~
+<pageheader/>
+
+The **TabGroupTabList** object represents a list of folders that will open as [[:basic_concepts:the_lister:tabs|file display tabs]] when the parent [[:basic_concepts:the_lister:tabs:tab_groups|tab group]] is opened. You can obtain this object from the **tabs**, **lefttabs** and **righttabs** properties of the **[[tabgroup|TabGroup]]** object.
+
+
+
+The **TabGroupsTabList** object is a collection of **[[tabgrouptabentry|TabGroupTabEntry]]** objects; you can enumerate it to discover each folder tab.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ active
+$$ object:**[[tabgrouptabentry|TabGroupTabEntry]]**
+$$ Returns a **[[tabgrouptabentry|TabGroupTabEntry]]** object representing the active (default) folder tab in this tab list.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddTab
+$$ //<object://**[[tabgrouptabentry|TabGroupTabEntry]]**//>// \\
+ \\
+or
+
+<string:path>\\
+<string:name>
+$$ object:**[[tabgrouptabentry|TabGroupTabEntry]]**
+$$ Adds a folder tab entry to this list. You can provide a \\
+**[[tabgrouptabentry|TabGroupTabEntry ]]**object, or the //path// and optional //name// of the new folder tab.
+$$ DeleteTab
+$$ //<object://**[[tabgrouptabentry|TabGroupTabEntry]]**//>//
+
+or
+
+<int:index>
+$$ //none//
+$$ Deletes a folder tab entry from this list. You can provide a \\
+**[[tabgrouptabentry|TabGroupTabEntry ]]**object, or the index of the tab entry to delete. If you specify the index as **-1** then all tab entries will be deleted.
+$$ InsertTabAt
+$$ //<object://**[[tabgrouptabentry|TabGroupTabEntry]]**//>// \\
+//\\// or
+
+<string:path>\\
+<string:name>
+
+<int:index>
+$$ object:**[[tabgrouptabentry|TabGroupTabEntry]]**
+$$ Inserts a folder tab entry to this list. You can provide a \\
+**[[tabgrouptabentry|TabGroupTabEntry ]]**object, or the //path// and optional //name// of the new folder tab. The final parameter must be the index indicating the desired insertion position.
+$$ MoveTabTo
+$$ //<object://**[[tabgrouptabentry|TabGroupTabEntry]]**//>\\
+<object://**TabGroupTabList**//>//\\
+<int:index>
+$$ //none//
+$$ Moves the specified tab entry to a new position, and optionally a new tab list. If the second parameter is a **TabGroupTabList** object then the tab entry will be moved to that list. The final parameter must be the index indicating the desired insertion position.
+</commandtable>
+
+
+
+

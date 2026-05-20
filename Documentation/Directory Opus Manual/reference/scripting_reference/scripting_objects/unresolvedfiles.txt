@@ -1,0 +1,42 @@
+~~Title: UnresolvedFiles~~
+<pageheader/>
+
+The **UnresolvedFiles** object contains a subset of the items in a **[[tab|Tab]]** object relating to file and folder lists. It is obtained from a **Tab** object and provides the same set of files in an //unresolved// state. This is mostly useful with file collections which normally return the resolved path - accessing through the unresolved objects will return the native coll:%%//%% paths instead.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ all
+$$ //object://**[[items|Items]]** 
+$$ Returns an **[[items|Items]]** object that represents all the files and folders currently displayed in this tab.
+
+Note: The first time a script accesses this property (and all the other properties that return an **[[items|Items]]** object), a snapshot is taken of all the appropriate items. If the script then makes changes to those items (e.g. by creating a new file, modifying the selection, etc), these changes will not be reflected by the collection. To re-synchronize the collection call the **Update** method on the object.
+$$ dirs
+$$ //object://**[[items|Items]]** 
+$$ Returns an **[[items|Items]]** object that represents all the folders currently displayed in this tab.
+$$ files
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** object that represents all the files currently displayed in this tab.
+$$ hidden
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** object that represents all the files and folders currently hidden from this tab.
+$$ hidden_dirs
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** object that represents all the folders currently hidden from this tab.
+$$ hidden_files
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** object that represents all the files currently hidden from this tab
+$$ highlighted
+$$ //object://**[[items|Items]]** 
+$$ Returns an **[[items|Items]]** object that represents all the files and folders currently displayed in this tab that have one or more cells [[:basic_concepts:selecting_files:selecting_cells|highlighted]].
+$$ selected
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** object that represents all the selected files and folders currently displayed in this tab. Note that if [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|checkbox mode]] is turned on in the tab, this will be a collection of checked items rather than selected.
+$$ selected_dirs
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** object that represents all the selected folders currently displayed in this tab.
+$$ selected_files
+$$ //object://**[[items|Items]]**
+$$ Returns an **[[items|Items]]** objects that represents all the selected files currently displayed in this tab
+</commandtable>

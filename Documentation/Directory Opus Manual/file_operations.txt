@@ -1,0 +1,26 @@
+~~Title: File Operations ~~
+<pageheader/>
+
+While Opus has a lot of features, its file management functions are the most important (it is a file manager, after all!). Please see the following sections on the core file management functions:
+
+  * **[[~copying_moving_and_deleting_files|Copying, Moving and Deleting Files]]**: Probably the most fundamental file management functions, this includes information on using [[~copying_moving_and_deleting_files:copy_and_paste|copy-and-paste]], [[~copying_moving_and_deleting_files:drag_and_drop|drag-and-drop]] and the [[.basic_concepts:source_and_destination|source and destination]] concept to move files around. 
+  * **[[~renaming_files|Renaming Files]]**: Opus supports quick renaming of files by editing their names directly, and can also perform complicated wildcard and scripted renames. 
+  * **[[~creating_folders|Creating Folders]]** and **[[~creating_archives|Creating Archives]]**: Information on how to make new folders and archive files. 
+  * **[[~changing_attributes|Changing Attributes]]**: Opus makes it easy to modify file and folder attributes and timestamps. 
+  * **[[~labels|Labels]]**, **[[~editing_metadata|Metadata]]** and **[[~file_descriptions|Descriptions]]**: Describes the ways Opus can help you categorize and keep track of your files. 
+  * **[[~uac_and_administrator_mode|UAC and Administrator Mode]]**: Opus provides full support for UAC in Windows Vista and later. 
+
+
+
+More:
+
+[[~copying_moving_and_deleting_files|Copying, Moving and Deleting Files]]\\
+[[~renaming_files|Renaming Files]]\\
+[[~creating_folders|Creating Folders]]\\
+[[~creating_archives|Creating Archives]]\\
+[[~tracking_and_undoing_file_operations|Tracking and Undoing File Operations]]\\
+[[~changing_attributes|Changing Attributes]]\\
+[[~labels|Labels]]\\
+[[~editing_metadata|Editing Metadata]]\\
+[[~file_descriptions|File Descriptions]]\\
+[[~uac_and_administrator_mode|UAC and Administrator Mode]]\\

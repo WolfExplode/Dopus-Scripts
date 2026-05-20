@@ -1,0 +1,17 @@
+~~Title: GetItems~~
+<evalcmd>
+GetItems && array && Array of file and folder paths. &&
+[flags] && string && Flags.
+</evalcmd>
+
+Returns an array of files and folders from the specified tab.
+
+By default all items are returned from the source file display.
+
+The optional //flags// argument should be a string containing one or more of the following flags:
+|l|Get items from left file display.|
+|r|Get items from right file display.|
+|d|Get items from destination file display.|
+|f|Only files are returned.|
+|i|Only folders are returned.|
+|s|Only selected items are returned.|

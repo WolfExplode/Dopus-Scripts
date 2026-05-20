@@ -1,0 +1,15 @@
+~~Title: Buttons and Functions~~
+<pageheader/>
+
+Functions (such as those you add to toolbar buttons or hotkeys) can use the evaluator in a number of ways:
+
+  * The [[~labels|label]] can be dynamically generated using the **@label** modifier.
+  * The [[~icons|icon]] can be dynamically modified using the **@icon** and related modifiers.
+  * The button [[~tooltips|tooltip]] can be generated using an evaluation expression.
+  * Button [[~dynamic_state|states]] like enabled/disabled, hidden/shown and checked/unchecked can be modified using the evaluator.
+  * [[~conditional_behavior|Conditional behavior]] in buttons using **@if** and **@ifset** can be performed using the evaluator.
+  * The **[[~evaluation_clauses|@eval]]** modifier lets you run a line of evaluator code as part of a function.
+  * The return value of an evaluator expression can be [[~insertion_code|inserted]] into a command line using the `{= ... =}` code.
+  * The evaluator can be used to generate a [[~commands|command line]] that's then executed as if it were part of the function.
+  * The evaluator can override the [[~usequalkeys|default behaviour]] of the `Go USEQUALKEYS` command.
+  * A function can be completely written using the [[~functions|evaluator]] if desired.

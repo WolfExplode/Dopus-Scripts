@@ -1,0 +1,23 @@
+~~Title: RunResults~~
+<pageheader/>
+
+This object represents the results of a command run via the `FSUtil.Run` method when told to wait for the command to finish. It allows you to capture the console output of an external command.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ exitcode
+$$ //int//
+$$ Returns the exit code of the process.
+$$ stdout
+$$ //string//
+$$ Returns any data the command wrote to //stdout//.
+$$ stderr
+$$ //string//
+$$ Returns any data the command wrote to //stderr//.
+</commandtable>
+
+
+
+

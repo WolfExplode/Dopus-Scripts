@@ -1,0 +1,26 @@
+~~Title: Explode~~
+<evalcmd>
+Explode && array && Array of split strings. &&
+string && string && Input string. &&
+[separators] && string && Separators to split on. (Space by default.) &&
+[limit] && int && Maximum number of strings to split. (Specify `0` for no limit.) &&
+[flags] && string && Flags.
+</evalcmd>
+
+Splits an input string into an array of smaller strings.
+
+If //separators// aren't specified it will split on spaces by default.
+The optional //limit// argument specifies the maximum number of strings to add to the array. Specify `0` for no limit.
+
+The optional //flags// are:
+|q|Handle quoted strings. Spaces will be ignored within quotes.|
+|Q|Handle quoted strings, and remove quotes in the ouptut array.|
+
+//Example://
+<code>
+Output(Explode("The quick brown fox"));
+--> {"The", "quick", "brown", "fox"}
+</code>
+
+//See also:// [[implode|Implode]]
+

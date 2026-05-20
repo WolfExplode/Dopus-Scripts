@@ -1,0 +1,12 @@
+~~Title: Frequently Used Paths~~
+<pageheader/>
+
+This category contains options relating to favorite folders or folders that are otherwise important to you. You can add folders to your favorites list, assign aliases for quick access, and set up pairs of folders you frequently work with at the same time.
+
+  * **[[~favorites_list]]**: Create and maintain a list of your favorite folders that can be easily accessed from the Favorites menu in a Lister. 
+  * **[[~folder_aliases]]**: Assign aliases to important folders to make them easier to access throughout Opus. 
+  * **[[~home_folder]]**: Configure the folder that clicking the {{:media:13:home_button.png?nolink|}} **Home** button takes you to.
+  * **[[~paired_folders]]**: Configure pairs of folders that you work frequently use together.
+  * **[[~recent_list]]**: Control the behavior of the "recent list", a list of your most recently visited folders. 
+  * **[[~smartfavorites]]**: Control the Directory Opus "SmartFavorites" system, that attempts to learn your most used folders automatically. 
+    * **[[~smartfavorites:points|Points]]**: Lets you change the points awarded to each activity that SmartFavorites tracks.

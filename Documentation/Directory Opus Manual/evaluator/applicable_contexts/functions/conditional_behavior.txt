@@ -1,0 +1,11 @@
+~~Title: Evaluator Conditional Button Behavior~~
+<pageheader/>
+
+You can use the evaluator with the various **@if** and **@ifset** [[:reference:command_reference:command_modifier_reference|command modifiers]] to introduce simple conditional behavior in functions.
+
+Note that these modifiers can also be used [[:reference:command_reference:command_modifier_reference#@icon|without the evaluator]], so to use the evaluator you must begin the expression with a `=` character.
+
+{{page>standard_variables&nodate&nouser&nofooter}}
+
+The return value from the evaluation expression will be used to determine the result of the condition. Return **true** if the lines following the modifier should be executed, or **false** to skip to the next **@if** / **@ifset** modifier.
+

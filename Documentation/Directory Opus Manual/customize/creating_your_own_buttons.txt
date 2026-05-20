@@ -1,0 +1,44 @@
+~~Title: Creating your own buttons ~~
+<pageheader/>
+
+One of the unique features of Opus is that the toolbars are completely configurable. All toolbar (and menu) buttons are built up from one or more commands, consisting of either:
+
+  * The [[:reference:command_reference:internal_commands|internal commands]], which give access to the internal features of Opus. All the internal commands have a set of [[~internal_command_arguments|arguments]] that can be used to modify their behavior to produce different results (e.g. to move a file instead of copy it). 
+  * External commands, which let you run third-party programs from within Opus. Using [[~passing_files_to_external_programs|special codes]] you can pass information like the names of selected files to external programs, integrating them more fully into your Opus configuration. 
+
+
+
+Toolbar buttons can also be written as a script using an ActiveX scripting language like VBScript or JScript. See the page on [[:scripting|Scripting]] for more detail on script buttons.
+
+
+
+A few points which may not be immediately apparent:
+
+  * Toolbar buttons and drop-down menus are the same thing. A drop-down menu is really just vertical toolbar. 
+  * All the toolbar buttons and menus that come with Opus can be changed. You can edit the supplied buttons (move them around, delete them, modify their function, etc), and add your own buttons (either to the standard toolbars, or to toolbars that you create). You can even turn off the standard toolbars altogether. 
+
+  * If you ever want to return to the default toolbars, just right-click any toolbar and choose the Reset to Defaults command. 
+
+And the most important thing to remember about Opus is:
+
+//**If you don't like something, you can probably change it!**//
+
+
+
+There are many aspects to button and toolbar editing, explained in detail in the pages within this section. To get started, see the list below, or expand this section within the Contents tab on the left.
+
+
+
+More:
+
+[[~editing_the_toolbar|Editing the Toolbar]]\\
+[[~command_editor|Command Editor]]\\
+[[~user-defined_commands|User-defined commands]]\\
+[[~synchronous_and_asynchronous_functions|Synchronous and Asynchronous functions]]\\
+[[~internal_command_arguments|Internal Command Arguments]]\\
+[[~passing_files_to_external_programs|Passing files to external programs]]\\
+[[~command_modifiers|Command modifiers]]\\
+[[~ms-dos_batch_commands|MS-DOS Batch commands]]\\
+[[~embedding_rename_scripts|Embedding Rename Scripts]]\\
+[[~dde_functions|DDE Functions]]\\
+[[~embedded_functions|Embedded functions]]\\

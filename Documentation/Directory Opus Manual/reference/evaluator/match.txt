@@ -1,0 +1,35 @@
+~~Title: Match~~
+<evalcmd>
+Match && bool, int or string && For strings, returns **True** if //string// matches the //pattern//. For arrays, returns either the matching index or string, or -1 for no match. &&
+string/array && string/array && String or array to compare. &&
+pattern && string && Pattern to compare against. &&
+[flags] && string && Optional flags are:
+
+|**c**|consider case when performing the operation|
+|**x**|simple matching against multiple file extensions|
+|**d**|support DOS wildcard characters only|
+|**r**|use regular expression|
+|**h**|easy handling for file paths (\ and / are considered the same)|
+|**a**|"any word" mode|
+|**i**|ignore diacritics|
+|**f**|support filetype groups|
+|**p**|partial matching|
+|**n**|force partial match on for regular expression (see below)|
+
+When matching an array the additional flags are:
+|**g**|return the string that matched rather than the index|
+|**y**|return an array of all matches rather than the first one|
+</evalcmd>
+
+For strings, returns **True** if the input //string// matches the specified wildcard //pattern//.
+For arrays, returns the first index that matched or **-1** for no match.
+
+By default this uses [[..:wildcard_reference:pattern_matching_syntax|standard pattern matching]] - specify the **r** flag to use [[..:wildcard_reference:regular_expression_syntax|regular expressions]] instead.
+
+For regular expression, partial match is automatically disabled if the pattern begins or ends with a `.*` sequence. To prevent this, specify the **n** flag. This forces partial match (as the "normal" regex behaviour), but you can perform a non-partial match by adding `^^` to the start and `$` to the end of the pattern.
+
+//Example://
+<code>
+if (Match(name, "*.txt")) { ... } // does file have a .txt extension?
+</code>
+

@@ -1,0 +1,16 @@
+~~Title: Wildcard Reference ~~
+<pageheader/>
+
+There are two types of wildcard (pattern matching) systems used in Opus.
+
+  * [[~pattern_matching_syntax|Standard pattern matching]] syntax is a simple wildcard system - if you're familiar with typing ***.doc** to mean all document files, you should start with this. 
+  * [[~regular_expression_syntax|Regular expressions]] are a more powerful but also more complicated system that let you match much more complex patterns. They also let you perform search and replace operations, which lets you perform complex batch renames via the **[[:file_operations:renaming_files:advanced_rename|Advanced Rename]]** function. 
+
+
+
+
+
+More:
+
+[[~pattern_matching_syntax|Pattern Matching Syntax]]\\
+[[~regular_expression_syntax|Regular Expression Syntax]]\\

@@ -1,0 +1,21 @@
+~~Title: CloseTabData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onclosetab|OnCloseTab]]** event, the method receives a **CloseTabData** object when a tab is closed.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the event was triggered.\\
+The string can contain any or all of the following: //shift// //ctrl//, //alt//, //lwin//, //rwin//\\
+If no qualifiers were down, the string will be: //none//
+$$ tab
+$$ //object://**[[tab|Tab]]** 
+$$ Returns a **[[tab|Tab]]** object representing the tab that is closing.
+</commandtable>
+
+

@@ -1,0 +1,8 @@
+~~Title: Layouts and Styles ~~
+<pageheader/>
+
+This category contains the pages that let you configure the [[:basic_concepts:the_lister:layouts|Lister Layouts]] and [[:basic_concepts:the_lister:styles|Styles]] systems.
+
+  * **[[~default_lister]]**: Contains options that affect the behavior of the [[:basic_concepts:the_lister:the_default_lister|Default Lister]]. 
+  * **[[~layouts]]**: Control your saved Lister Layouts. 
+  * **[[~styles]]**: Create and edit Lister Styles. 

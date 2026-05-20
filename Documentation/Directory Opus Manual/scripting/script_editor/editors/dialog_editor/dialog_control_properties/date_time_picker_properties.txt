@@ -1,0 +1,12 @@
+~~Title: Date/Time Picker Properties ~~
+<pageheader/>
+
+The specific properties applicable to the //Date/Time Picker// control are:
+
+  * **Date Format**: Four types are supported - short date (e.g. "22/09/24"), short date with century (e.g. "22/09/2024"), long date (e.g. "Sunday, 22 September 2024") and time (e.g. "10:30:54"). The actual formats used depends upon your system locale settings - in particular, short date and short date with century may be the same.
+  * **Right Align**: Right-align the date in the control.
+  * **Show None**: Displays a checkbox in the control, allowing it to be turned off. When turned off, the control will report "none" as the date rather than an actual date or time.
+  * **Up/Down Control**: Displays an up/down (spin) control instead of a calendar drop-down.
+
+
+

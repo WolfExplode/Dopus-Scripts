@@ -1,0 +1,37 @@
+~~Title: ScriptStrings ~~
+<pageheader/>
+
+The **ScriptStrings** object is returned by the **[[dopus|DOpus]].strings** property. It lets you access any strings defined via [[:scripting:resources:string_resources|string resources]].\\
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ langs
+$$ //object://**[[vector|Vector]]** 
+$$ Returns a **[[vector|Vector]]** of strings representing the languages that strings have been defined for.\\
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Get
+$$ <string:name>\\
+<string:language>
+$$ //string//
+$$ Returns the text of a string specified by name. The name must match the name used in the string resources.\\
+Optionally you can provide a language name as the second parameter, to retrieve a string from a particular language. Otherwise, the string is returned in the current language.
+$$ GetEscaped
+$$ <string:name>\\
+<string:language>
+$$ //string//
+$$ Returns the text of a string specified by name. This works the same as the **Get** method but interprets Javascript-style embedded escape characters in the string. E.g. `\n` in the string is converted to a new line.
+$$ HasLanguage
+$$ <string:language>
+$$ //bool//
+$$ Returns **True** if strings in the specified language are defined in the resources.
+</commandtable>
+
+

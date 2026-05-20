@@ -1,0 +1,188 @@
+~~Title: Date ~~
+<pageheader/>
+
+The **Date** object is provided to make it easier to deal with variables representing dates. It converts automatically to an ActiveX //VT_DATE// value and so can function as a drop-in replacement for a scripting language's native date variables. The main advantage is that it retains milliseconds, unlike //VT_DATE// which has a one second resolution. It also provides some utility methods to manipulate dates. The **[[item|Item]]** object** **has a number of properties that returns **Date** objects.
+
+You can create a new **Date** object using the **[[dopusfactory|DOpusFactory]].Date** method.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //date//
+$$ Returns a //VT_DATE// representing the value of this **Date** object (excluding the milliseconds).
+$$ day
+$$ //int//
+$$ Get or set the //day// value of the date.
+$$ hour
+$$ //int//
+$$ Get or set the //hour// value of the date.
+$$ min 
+$$ //int//
+$$ Get or set the //minute// value of the date.
+$$ month
+$$ //int//
+$$ Get or set the //month// value of the date.
+$$ ms
+$$ //int//
+$$ Get or set the //milliseconds// value of the date.
+$$ sec
+$$ //int//
+$$ Get or set the //seconds// value of the date.
+$$ wday 
+$$ //int//
+$$ Get the //day-of-the-week// value of the date. 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
+$$ year
+$$ //int//
+$$ Get or set the //year// value of the date.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Add
+$$ <int:value>\\
+<string:type>
+$$ //none//
+$$ Adds the specified value to the date. The interpretation of the specified value is controlled by the //type// string:
+|**l**|milliseconds|
+|**s**|seconds|
+|**m**|minutes|
+|**h**|hours|
+|**d**|days|
+|**w**|weeks|
+|**M**|months|
+|**y**|years|
+$$ Adjust
+$$ <string:tzinput>\\
+<string:tzoutput>
+$$ //bool//
+$$ Adjusts this date from one timezone to another.
+
+Timezones can be specified as a positive or negative number of minutes, relative to UTC.
+For example, a value of **60** represents GMT+1.
+
+Timezones can also be referred to by their name in the system registry or IANA name.
+For example, **"AUS Eastern Standard Time"** or **"Australia/Sydney"**.
+You can also specify **"UTC"** for UTC and **"local"** for the local timezone.
+
+Returns **false** if invalid timezones are specified.
+$$ Clone
+$$ //none//
+$$ //object://**Date**
+$$ Returns a new **Date** object set to the same date as this one.
+$$ Compare
+$$ <date:other>\\
+[<string:type>]\\
+[<int:tolerance>]
+$$ //int//
+$$ Compares this date against the //other// date. The return value will be **0** (equal), **1** (greater) or **-1** (less).
+
+The optional //type// string controls how the comparison is performed:
+
+|**s**|ignore seconds. If specified, the optional //tolerance// argument specifies the comparison tolerance in seconds.|
+|**sD**|ignore seconds, and compensate automatically for daylight savings.|
+|**t**|compare times only|
+|**d**|compare dates only|
+$$ Format
+$$ [<string:format>]\\
+[<string:flags>]
+$$ //string//
+$$ Returns a formatted date or time string. The //format// and //flags// arguments are both optional.
+
+If you do not give a //format//, the result will include both date and time, formatted the same as date-time columns in the file display.
+
+If you give a //format// of just **"d"** or **"t"** then the result will be just the date or time part, formatted the same as date or time columns in the file display.
+
+The file display's formats depend on the user's locale and Windows settings. You should use those options if you wish to present a date/time to the user in the way they expect them to look, but not if you need to store them in a specific format.
+
+When using the file display's format (that is, the //format// argument is empty, **"d"** or **"t"**), you can optionally pass one or more case-sensitive flags in the second //flags// argument to override a few settings:
+|**N**|Force day names on in dates within the last week. "Today", "Monday", etc. |
+|**n**|Force day names off. |
+|**S**|Force seconds on in times. |
+|**s**|Force seconds off. |
+|**M**|Force milliseconds on in times. (Milliseconds will be zero if the stored time does not have millisecond accuracy.) |
+|**m**|Force milliseconds off. |
+|**P**|Force time hours to be padded to two digits. |
+|**p**|Do not force time hours to be padded.|
+
+For example, to get just the date, using the user's locale, but with day names forced off:
+<code>
+myDate.Format("d","n")
+</code>
+
+To get the date and time, using the user's locale, but with day names forced on and seconds forced off:
+<code>
+myDate.Format("","Ns")
+</code>
+
+The //format// can also use the syntax shown in [[..:..:command_reference:external_control_codes:codes_for_date_and_time|Codes for date and time]], allowing for arbitrary formats. For example,
+
+<code>myDate.Format("D#yyyy-MM-dd T#HH:mm:ss")</code>
+
+This would return a string like **2023-07-28 15:45:26**.
+
+When explicitly specifying a format, the //flags// argument should not be used and will be ignored.
+$$ FromUTC
+$$ //none//
+$$ //object://**Date**
+$$ Returns a new **Date** object with the date converted from UTC (based on the local time zone).
+$$ GetTime
+$$ //none//
+$$ //int//
+$$ Returns the value of this **Date** object as milliseconds since the epoch of 1/1/1970. This is the equivalent of the JScript Date.GetTime method.
+$$ Parse
+$$ <string:datetime>\\
+[<string:format>]
+$$ //bool//
+$$ Parses a date/time string to a date value, with controllable formatting.
+
+If the //format// argument is a string, it must be a valid date/time [[:reference:command_reference:external_control_codes:codes_for_date_and_time|picture string]] (e.g. "dd/MM/yyyy").
+Otherwise, //format// should be the sum of one or more of the following flag values:
+|1|Use system locale format|
+|2|Use ISO 8601 format|
+|4|Short date format|
+|8|Long date format|
+|16|No date (time only)|
+|32|Short time format|
+|64|Long time format|
+|128|No time (date only)|
+
+If locale flags are not specified, the default is to use the current user's locale date/time format.
+If individual date/time flags are not specified, the function will identify the format type automatically.
+However this is less efficient so if you know the date/time format type it's better to specify them.
+$$ Reset
+$$ //none//
+$$ //none//
+$$ Resets the date to the current local date/time.
+$$ Set
+$$ <date:newdate>
+$$ bool
+$$ Sets the value of this **Date** object to the supplied date. //newdate// can be:
+  * Another **Date** object
+  * A string in the form "yyyymmdd"
+  * A string in the form "yyyy-mm-dd hh:mm:ss.mmm" (or part thereof)
+  * A JScript **Date** object
+  * The string "now" (sets to the current time)
+This method returns **false** if a string was provided that could not be succesfully parsed.
+$$ SetTime
+$$ <int:epochtime>
+$$ //none//
+$$ Sets the value of this **Date** object to the supplied epoch time (milliseconds since 1/1/1970). This is the equivalent of the JScript Date.SetTime method.
+$$ Sub
+$$ <int:value>\\
+<string:type>
+$$ //none//
+$$ Subtracts the specified value from the date. The parameters are the same as for the **Add** method.
+$$ ToUTC
+$$ //none//
+$$ //object://**Date**
+$$ Returns a new **Date** object with the date converted to UTC (based on the local time zone).
+</commandtable>
+
+

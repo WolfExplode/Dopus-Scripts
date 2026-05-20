@@ -1,0 +1,20 @@
+~~Title: Run~~
+<evalcmd>
+Run && bool or int or string && Success/failure, result code or captured output. &&
+[command] && string && Command line to run. &&
+[flags] && string && Flags. &&
+[files] && array && Files to pass to the command.
+</evalcmd>
+
+Runs a command. The //command// string can be any internal Opus command or external program, and and can consist of multiple lines (separated by CR/LF).
+
+The optional //flags// argument should be a string containing one or more of the following flags:
+|a|Asynchronous. Does not wait for the command to finish.|
+|d|MS-DOS mode. Runs the command as a DOS process.|
+|e|Elevate. Runs the command as an administrator (external only).|
+|o|Capture output from the command (implies **d**).|
+|s|Script. Runs the command as a script. Language must be set with a **@language** directive at the top of the //command// string.|
+|w|WSL. Runs the command as a WSL function.|
+
+If asynchronous, the return value is either true or false.
+If synchronous, the return value is either the exit code of the command or process, or the captured output text as a string.

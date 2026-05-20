@@ -1,0 +1,14 @@
+~~Title: FileSize~~
+<evalcmd>
+FileSize && int && The size of the specified file. &&
+path && path && Path of the file. &&
+</evalcmd>
+
+Returns the size of the specified file, in bytes.
+
+//Example://
+<code>
+FileSize("C:\Windows\Notepad.exe")
+--> 360448
+</code>
+

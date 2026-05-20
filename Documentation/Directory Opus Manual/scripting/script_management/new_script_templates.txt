@@ -1,0 +1,100 @@
+~~Title: New Script Templates~~
+<pageheader/>
+
+You can create your own templates for new scripts in other languages if desired.
+
+Templates should be stored in the `/dopusdata/Script AddIns/Templates` folder (create this if it doesn't already exist). Each template file should be named after the language with an appropriate extension for scripts in that language. For example, `Python.py`.
+
+Below is an example template for new Python scripts.
+
+<code>
+[language]
+comment = # 
+true = True
+false = False
+    
+[AddColumnIntro]
+    %object%._FlagAsMethod('AddColumn')
+
+[AddColumn]
+    col = %object%.AddColumn()
+    col.name = "%column%"
+    col.method = "On%column%"
+    col.label = "%column%"
+    col.justify = "left"
+    col.autogroup = True
+
+[AddCommandIntro]
+    %object%._FlagAsMethod('AddCommand')
+
+[AddCommand]
+    col = %object%.AddCommand()
+    col.name = "%command%"
+    col.method = "On%command%"
+    cmd.desc = ""
+    col.label = "%command%"
+    col.template = ""
+    cmd.hide = False
+    cmd.icon = "script"
+
+[OnInit]
+def OnInit(initData):
+    initData.name = "%script%"
+    initData.version = "1.0"
+    initData.copyright = "%copyright%"
+#   initData.url = "https://resource.dopus.com/c/buttons-scripts/16"
+    initData.default_enable = True
+    initData.min_version = "%minver%"
+%commands_and_columns%
+
+[OnInitIncludeFile]
+def OnInitIncludeFile(initData):
+    initData.name = "%script%"
+    initData.version = "1.0"
+    initData.copyright = "%copyright%"
+#   initData.url = "https://resource.dopus.com/c/buttons-scripts/16"
+    initData.default_enable = True
+    initData.min_version = "%minver%"
+    initData.shared = %shared%
+
+[OnAboutScript]
+def OnAboutScript(aboutData):
+    DOpus._FlagAsMethod('Dlg')
+    dlg = DOpus.Dlg()
+    dlg.window = aboutData.window
+    dlg.message = "%script%\r\n%desc%\r\n%copyright%\r\n"
+    dlg.title = "About %script%"
+    dlg.buttons = "OK"
+    dlg.icon = "info"
+    dlg._FlagAsMethod('Show')
+    dlg.Show()
+    
+[%event%]
+def %event%(%data%):
+%content%
+</code>
+
+The template file is structured like a .ini file, with individual sections controlling how to generate the template code for individual [[:reference:scripting_reference:scripting_events|script events]]. You can specify each script event individually if desired, or - more commonly - specify the code for certain functions and then provide boilerplate code for all other functions.
+
+The sections of the template file that don't correspond directly to a script event are:
+
+|**language**|Specify basic information about the language, including how comments are defined and the symbols that represent true and false.|
+|**AddColumnIntro**|Code that will be output once before any defined script columns.|
+|**AddColumn**|Code that will be output multiple times, once for each script column.|
+|**AddCommandIntro**|Code that will be output once before any defined script commands.|
+|**AddCommand**|Code that will be output multiple times, once for each script command.|
+|**%event%**|Boilerplate code for any script events that aren't defined explicitly.|
+
+Various tokens can be used in the template code for certain functions:
+
+|**%object%**|When defining columns and commands, this provides the name of the object that's passed to the `OnAddColumns` and `OnAddCommands` events.|
+|**%column%**|The name of the script column (AddColumn).|
+|**%command%**|The name of the script command (AddCommand).|
+|**%script%**|The name of the script (OnInit/OnInitIncludeFile/OnAboutScript).|
+|**%copyright%**|The copyright text for the script (OnInit/OnInitIncludeFile/OnAboutScript).|
+|**%minver%**|The minimum version required by the script (OnInit/OnInitIncludeFile).|
+|**%shared%**|Shared include file true or false (OnInitIncludeFile).|
+|**%desc%**|Script description text (OnAboutScript).|
+|**%commands_and_columns%**|If using the "old style" for columns/commands, this specifies where in the OnInit method the code to add them should be inserted.|
+|**%data%**|The name of the data object passed to the script event (only used for generic **%event%** boilerplate text).|
+|**%content%**|The content of the function if any (only used for generic **%event%** boilerplate text).|

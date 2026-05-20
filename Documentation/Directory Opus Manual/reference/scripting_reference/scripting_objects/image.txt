@@ -1,0 +1,40 @@
+~~Title: Image ~~
+<pageheader/>
+
+The **Image** object represents an image file or icon to be displayed in a [[:scripting:script_dialogs|script dialog]]. You can load an image or icon using the **[[dopus|DOpus]].LoadImage** or **[[script|Script]].LoadImage **methods. It can be displayed using a static control, a button control, assigned as the dialog's icon, or used as the icon for a listview item.
+
+You can also assign a name to an image using the **[[dopus|DOpus]].AddMarkupImage** method, which allows you to use it in markup text.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ bitcount
+$$ //int//
+$$ Returns the bit count of the loaded image.
+$$ height
+$$ //int//
+$$ Returns the height of the loaded image.
+$$ type
+$$ //string//
+$$ Returns the type of file the image was loaded or created from (if known).
+$$ width
+$$ //int//
+$$ Returns the width of the loaded image.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ SetClip
+$$ //none//
+$$ //bool//
+$$ Copies the image's bitmap data into the Windows clipboard. Returns boolean success.
+</commandtable>
+
+
+
+

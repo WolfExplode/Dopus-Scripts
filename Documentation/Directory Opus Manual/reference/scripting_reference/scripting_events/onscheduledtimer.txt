@@ -1,0 +1,16 @@
+~~Title: OnScheduledTimer~~
+<pageheader/>
+
+The **OnScheduledTimer** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to have Opus call your script at when a specific date/time is reached. The **[[..:scripting_objects:dopus|DOpus]].SetScheduledTimer** method can be used to create timers, and your **OnScheduledTimer** method will be called at most one time for each timer you create.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnScheduledTimer
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:scheduledtimerdata|ScheduledTimerData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **id** property indicates which timer your method is being called for.
+</commandtable>
+

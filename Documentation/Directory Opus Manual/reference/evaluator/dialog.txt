@@ -1,0 +1,89 @@
+~~Title: Dialog~~
+
+Lets you display various types of dialog to the user and retrieve the selection or entered text.
+
+==Request dialog==
+
+<evalcmd>
+Dialog && int && ID of the chosen button. &&
+dlgtype && string && Type of dialog ("r"). &&
+message && string && Message to display. &&
+[buttons] && string && Buttons to show to the user. &&
+[title] && string && Dialog title.
+</evalcmd>
+
+Shows a request dialog with one or more buttons. Returns the ID of the chosen button.
+
+The //buttons// string can separate multiple buttons with a `|` symbol. If //buttons// is not provided the default value is `OK|Cancel`.
+
+The last button (i.e. Cancel) always has ID `0`. Other buttons are numbered from left-to-right beginning with `1`.
+
+==String dialog==
+
+<evalcmd>
+Dialog && map && Button choice and entered string. &&
+dlgtype && string && Type of dialog ("s", "sa" or "sp"). &&
+message && string && Message to display. &&
+[default] && string && Default input string. &&
+[max] && int && Maximum length of input string. &&
+[buttons] && string && Buttons to show to the user. &&
+[title] && string && Dialog title.
+</evalcmd>
+
+Shows a string dialog with one or more buttons. The user can enter a string up to the specified maximum.
+
+Set the //dlgtype// argument to "s" for a standard string dialog, or "sp" for a password dialog. Add "a" to have the default value automatically selected (e.g. "sa").
+
+The //buttons// string can separate multiple buttons with a `|` symbol. If //buttons// is not provided the default value is `OK|Cancel`.
+
+The return value is a //map// with two members; **choice** provides the selected button ID and **text** provides the string the user entered.
+
+==Choice dialog==
+
+<evalcmd>
+Dialog && string && Selected option. &&
+dlgtype && string && Type of dialog ("c" or "cs"). &&
+message && string && Message to display. &&
+options && string && List of options to display. &&
+[title] && string && Dialog title.
+</evalcmd>
+
+Shows a dialog with a drop-down list of choices.
+
+Set the //dlgtype// argument to "c" for a standard choice dialog, or "cs" for a sorted choice dialog.
+
+The //options// string should contain one or more choices in the following format: `<option 1>[=<value 1>][+<option 2>[=<value 2>]...]`.
+
+  * //<option 1>// is the text displayed for the first option in the drop-down list, //<option 2>// is the second option, and so on. Multiple options are separated with a `+` sign.
+  * //<value 1>// is an optional value associated with the first option. If provided, the option is displayed in the drop-down list, and the value is what is returned from the **Dialog** function. If values aren't provided, the option text is used for both.
+  * You can specify the option which is selected by default by adding `default:` before it; otherwise, the first option (after sorting) will be the initial selection. You can also use the `notdefault:` prefix, which will simply be removed, if you need to use `default:` or `notdefault:` as a literal prefix.
+
+==File dialog==
+
+<evalcmd>
+Dialog && path or array && Selected file or files. &&
+dlgtype && string && Type of dialog ("f", "fm" or "fv"). &&
+[title] && string && Dialog title. &&
+[default] && string && Default filename. &&
+[type] && string && Filetype mask.
+</evalcmd>
+
+Shows a file "open" or file "save" dialog.
+
+Set the //dlgtype// argument to "f" for a file open dialog, "fm" for a multiple file open dialog, or "fv" for a file save dialog.
+
+The optional //type// argument lets you provide a filetype mask. For example, `*.jpg;*.bmp;*.gif` would filter the dialog for JPG, BMP and GIF files. You can also specify file extensions and descriptions separately if desired; for example, `Text Files!*.txt!Doc Files!*.doc`. Add `#` to the beginning of the //type// string to add "All Files" automatically.
+
+For a multiple file open dialog the return value is an array containing all selected files. Otherwise, the return value is a path containing the selected file.
+
+==Folder dialog==
+
+<evalcmd>
+Dialog && path && Selected folder. &&
+dlgtype && string && Type of dialog ("d"). &&
+[title] && string && Dialog title. &&
+[default] && string && Default folder. &&
+[expand] && bool && Expand the default folder.
+</evalcmd>
+
+Shows a folder selection dialog.

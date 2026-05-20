@@ -1,0 +1,16 @@
+~~Title: DeleteScriptData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] implements the **[[..:scripting_events:ondeletescript|OnDeleteScript]]** event, the method receives a **DeleteScriptData** object when the script is deleted by the user.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ file
+$$ //string//
+$$ Returns the full pathname of the script file being deleted.
+</commandtable>
+
+

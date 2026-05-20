@@ -1,0 +1,31 @@
+~~Title: ArrayErase~~
+<evalcmd>
+ArrayErase && int && New size of the array. &&
+array && array && Array to erase elements from. &&
+[index1] && int && Start of range of elements to erase. &&
+[index2] && int && End of range of elements to erase.
+</evalcmd>
+
+Erases the specified range of values from the array.
+
+If neither index is provided all values are erased.
+If //index2// isn't provided all values from the specified index to the end of the array are erased.
+
+//Examples://
+<code>
+arr = ArrayCreate(1,2,3,5,8,13,21);
+ArrayErase(arr, 2, 4);
+Output(arr);
+-> {1, 2, 13, 21}
+</code>
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

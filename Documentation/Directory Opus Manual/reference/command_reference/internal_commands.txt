@@ -1,0 +1,37 @@
+~~Title: Internal Commands ~~
+<pageheader/>
+
+The internal command set consists of the following commands. Most commands perform multiple functions that can be selected or modified by the various arguments, however the primary purpose for each command is as follows. See the documentation for each command for a full list of its arguments and the functions that it can perform.
+
+
+
+  * **[[~cli|CLI]]**: Displays the CLI window letting you enter commands via the keyboard. 
+  * **[[~clipboard|Clipboard]]**: Copy and paste files between folders. 
+  * **[[~close|Close]]**: Close Listers and the whole program. 
+  * **[[~contextmenu|ContextMenu]]**: Display and access context menu commands. 
+  * **[[~copy|Copy]]**: Copy and move files and folders. 
+  * **[[~createfolder|CreateFolder]]**: Create new folders. 
+  * **[[~delete|Delete]]**: Delete files and folders. 
+  * **[[~favorites|Favorites]]**: Display and manipulate your favorite folder list. 
+  * **[[~filetype|FileType]]**: Trigger filetype-specific commands and events. 
+  * **[[~find|Find]]**: Search for files and folders. 
+  * **[[~getsizes|GetSizes]]**: Calculate the size of folders. 
+  * **[[~go|Go]]**: Navigate to another location in the Lister. 
+  * **[[~help|Help]]**: Display the help file. 
+  * **[[~image|Image]]**: Perform simple image manipulation. 
+  * **[[~join|Join]]**: Join files together. 
+  * **[[~marker|Marker]]**: Display commands provided by third-party namespace extensions. 
+  * **[[~play|Play]]**: Play sound files. 
+  * **[[~prefs|Prefs]]**: Access the Preferences system. 
+  * **[[~print|Print]]**: Print files and folder listings. 
+  * **[[~properties|Properties]]**: Display the system Properties for files and folders. 
+  * **[[~recent|Recent]]**: Access the recent folder list. 
+  * **[[~rename|Rename]]**: Rename files and folders. 
+  * **[[~select|Select]]**: Perform wildcard selection of files. 
+  * **[[~set|Set]]**: Modify various Lister settings. 
+  * **[[~setattr|SetAttr]]**: Change file attributes and timestamps. 
+  * **[[~show|Show]]**: Display images. 
+  * **[[~split|Split]]**: Split files into parts. 
+  * **[[~toolbar|Toolbar]]**: Open and close different toolbars. 
+  * **[[~undo|Undo]]**: Undo actions like delete to recycle bin. 
+

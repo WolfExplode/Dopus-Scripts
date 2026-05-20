@@ -1,0 +1,46 @@
+~~Title: Listers ~~
+<pageheader/>
+
+The **Listers** object is a collection of all currently open [[:basic_concepts:the_lister|Listers]]. It can be obtained via the **[[dopus|DOpus]].listers** property. 
+
+**Note:** If you are looking for a window to use as the parent for a **Dialog**, you are probably looking in the wrong place. Scripts should not assume that **DOpus.listers(0)** or **DOpus.listers.lastactive** are the lister which launched them. Most scripting events provide you an object which can either create a pre-configured **Dialog** for you or which includes a **SourceTab** property or similar which can do the same. In almost all situations you should use those instead.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //collection://**[[lister|Lister]]**
+$$ Lets you enumerate the currently open Listers.
+
+Do not assume that **DOpus.listers(0)** is the window which launched your script. See the note near the top of the page.
+$$ lastactive
+$$ //object://**[[lister|Lister]]**
+$$ Returns a **[[lister|Lister ]]**object representing the most recently active Lister window.
+
+Do not assume that **DOpus.listers.lastactive** is the window which launched your script. See the note near the top of the page.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Exists
+$$ //object://**[[lister|Lister]]**\\
+or\\
+//int://index
+$$ bool
+$$ Returns **true** if the specified Lister still exists, or **false** if not. You can pass either a **[[lister|Lister]]** object or an index.
+$$ ToFront
+$$ <lister>\\ [<lister>...]
+$$ //none//
+$$ Moves one or more Lister windows to the front. This method accepts one or more arguments; each argument can either be a **[[lister|Lister]]** object or a **[[vector|Vector]]** of **[[lister]]** objects. The last window will placed on top, and all others will be below that in reverse order.
+$$ Update
+$$ //none//
+$$ //none//
+$$ The first time a script accesses the **DOpus.listers** property, a snapshot is taken of all currently open Listers. If the script then opens or closes Listers itself, these changes will not be reflected by this collection. To re-synchronize the collection, call the **Update** method.\\
+</commandtable>
+
+

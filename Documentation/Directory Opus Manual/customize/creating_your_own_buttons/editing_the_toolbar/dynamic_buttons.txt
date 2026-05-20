@@ -1,0 +1,23 @@
+~~Title: Dynamic Buttons ~~
+<pageheader/>
+
+Dynamic buttons are a special type of button in Opus toolbars that behave differently in and out of Customize mode. In Customize mode they appear like any other button, and can be edited as normal - but in normal operation, the button itself disappears and is replaced by a dynamic list of items. For example, the Drive Buttons command on the supplied Drives toolbar is a normal button in Customize mode:
+
+{{:media:dynamic_buttons_-_customize.png?nolink|}} 
+
+\\
+But once the Customize dialog has been closed, we can see that the two buttons have disappeared, to be replaced with one button for each of the drives in the system:
+
+{{:media:dynamic_buttons_-_no_customize.png?nolink|}} 
+
+When out of Customize mode the generated buttons behave like normal ones, but the advantage is that you only need a single button to generate them - instead of having to define a button for each drive.
+
+
+
+Dynamic buttons are also used for things like displaying your Favorite folders, your FTP sites, and Lister [[:basic_concepts:the_lister:layouts|layouts]] and [[:basic_concepts:the_lister:styles|styles]].
+
+
+
+More:
+
+[[~drive_buttons_configuration|Drive Buttons Configuration]]\\

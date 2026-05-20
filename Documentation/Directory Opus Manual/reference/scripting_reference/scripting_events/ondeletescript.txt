@@ -1,0 +1,18 @@
+~~Title: OnDeleteScript ~~
+<pageheader/>
+
+The **OnDeleteScript** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when (if) it's deleted by the user via the Scripts management user interface. You might want to use this to cleanup any data files your script has created.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnDeleteScript
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:deletescriptdata|DeleteScriptData]]** 
+$$ (#)**Return Type:**
+$$ //<none>//
+$$ (#)**Description:**
+$$ The **DeleteScriptData.file** property contains the full pathname of the script that's being deleted.
+</commandtable>
+
+

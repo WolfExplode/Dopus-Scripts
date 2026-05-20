@@ -1,0 +1,16 @@
+~~Title: Chr~~
+<evalcmd>
+Chr && string && Character equivalent of the specified code. &&
+code && int && ANSI/Unicode character code
+</evalcmd>
+
+Returns a string containing the character equivalent of the specified //code//.
+
+//Example://
+<code>
+Output( Chr(65) );
+--> A
+</code>
+
+//See also:// [[asc]]
+

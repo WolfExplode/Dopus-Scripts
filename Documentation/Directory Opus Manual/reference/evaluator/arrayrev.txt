@@ -1,0 +1,18 @@
+~~Title: ArrayRev~~
+<evalcmd>
+ArrayRev && none && &&
+array && array && Array to reverse.
+</evalcmd>
+
+Reverse the order of the elements in the specified array.
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

@@ -1,0 +1,49 @@
+~~Title: FiletypeGroups ~~
+<pageheader/>
+
+The **FileTypeGroups** object represents a collection of **[[filetypegroup|FiletypeGroup]]** objects. The object can be enumerated to retrieve the groups it represents.
+
+
+
+You can obtain an object representing all the configured [[:file_types:file_type_groups|file type groups]] from the **[[dopus|DOpus]].filetypegroups** property. The **[[item|Item]].groupsobject** property returns a **FiletypeGroups** object restricted to just the groups the **[[item|Item ]]**is a member of.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //collection://**[[filetypegroup|FiletypeGroup]]** 
+$$ Lets you enumerate the file type groups represented by this object.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ GetGroup
+$$ <string:group>
+$$ //object://**[[filetypegroup|FiletypeGroup]]**\\
+or\\
+//bool (//**False**//)//
+$$ Searches the file type group collection for the named group.\\
+If Opus is not running in English, the translated name is compared first; if not found, it will search for the native English name for the built-in groups.\\
+Returns a **[[filetypegroup|FiletypeGroup]]** object or **False** if not found.\\
+$$ MatchExt
+$$ <string:filename>\\
+$$ //object://**FiletypeGroups**
+$$ Returns a new **FiletypeGroups **object containing the subset of groups that the specified filename (or file extension) is a member of. You would normally only call this method on the object returned by the **[[dopus|DOpus]].filetypegroups** property.\\
+$$ Translate
+$$ <string:group>
+$$ //string// 
+$$ Returns the translated name of the named built-in file type group.\\
+If not found, or no translation exists, the input string is returned.
+
+For example, when running in French, calling this method with "Movies" as the input string would return "Vidéos".
+</commandtable>
+
+
+
+

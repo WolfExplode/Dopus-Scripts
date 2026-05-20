@@ -1,0 +1,13 @@
+~~Title: Components~~
+<pageheader/>
+
+These options control the presence and appearance of certain components on the breadcrumbs path field.
+
+  * **Show drive labels as**: Controls how drive labels appear when the current path is on a physical drive.
+  * **Insert Cloud Storage component before cloud paths**: A separate component representing the Cloud Storage root folder will be inserted before any recognised cloud storage paths.
+  * **Insert Network component before UNC paths**: Inserts the //Network// branch before network shares. So you'd see //Desktop -> Network -> \\SERVER -> Share// instead of //Desktop -> \\SERVER -> Share//.
+    * **Display as small icon**: Shows the //Network// branch as an icon instead of a label.
+  * **Insert This PC Component before drives**: Inserts the //This PC// branch before drive letters. So for example, you'd see the breadcrumbs trail //Desktop -> Computer -> C: -> Program Files//, instead of //Desktop -> C: -> Program Files//.
+    * **Display as small icon**: Displays the //This PC// branch as an icon instead of a label.
+  * **Show FTP address book names**: For an FTP site from the address book, this will show the name of the address book entry (site name) rather than URL/IL address of the site.
+    * **Show host details as well**: The host details (IP address and port) will be displayed as well as the site name.

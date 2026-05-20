@@ -1,0 +1,60 @@
+~~Title: Adding Dialog Controls ~~
+<pageheader/>
+
+To add a control to your dialog, simply click it in the control palette, and then click again on the dialog to place it. You can also drag-and-drop directly from the control palette to the workspace.
+
+You can also make copies of existing controls using the clipboard (e.g. <kbd>Ctrl-C</kbd>, <kbd>Ctrl-V</kbd>).
+
+Script dialogs support a number of the standard Windows control types (other types may be added in the future):
+
+==Static Text==
+{{:media:image110.png?nolink|}}\\ 
+Displays a static text string. The control type is used for labels and instructions.
+
+==Markup Text==
+Like a static text string, except it supports simple HTML markup, including clickable links.
+
+==Edit Control==
+{{:media:image111.png?nolink|}}\\ 
+A field that you can enter text into. Supports various sub-types including single line, multiple line, password and number.
+
+==Button==
+{{:media:image113.png?nolink|}}\\ 
+A push button that you can click to trigger an action.
+
+==Check Box==
+{{:media:image115.png?nolink|}}\\ 
+A checkbox button; can be on or off (or optionally, a third “indeterminate” state).
+
+==Radio Button==
+{{:media:image116.png?nolink|}}\\ 
+A radio button; can be on or off. Provides mutual exclusion with other radio buttons in the same logical group.
+
+==Combo Box==
+{{:media:image118.png?nolink|}}\\ 
+Provides a drop-down list in its default mode. Can also provide an edit field combined with a drop-down list, or an edit field combined with a flat list.
+
+==List Box==
+{{:media:image120.png?nolink|}}\\ 
+Provides a flat list that the user can select one or more strings from.
+
+==List View==
+{{:media:lvimage.png?nolink|}}\\ 
+Similar to a List Box, but offers multiple columns and alternate display modes.
+
+==List Edit==
+A control that allows lists of paths or arbitrary strings to be edited by the user. Unlike a list view or list box the control handles almost everything itself - a script simply initialises it with a list of paths/strings (if applicable), and then retrieves the new list when it wants to update its configuration.
+
+==Tab Control==
+{{:media:image121.png?nolink|}}\\ 
+A control that can host other dialogs. Each sub-dialog appears as a tab.
+
+==Group Box==
+{{:media:image123.png?nolink|}}\\ 
+Used to draw a box around other controls, or as a header to divide two sections of a dialog.
+
+==Palette==
+A palette control that pops open a color selection palette when clicked.
+
+==Date/Time Picker==
+Allows the user to enter a date or time value.

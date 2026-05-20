@@ -1,0 +1,12 @@
+~~Title: Folder Tree ~~
+<pageheader/>
+
+This category contains options that affect the appearance and behavior of Lister folder trees.
+
+  * **[[~appearance]]**: Options that affect the appearance of the tree. 
+  * **[[~contents]]**: Options that control which items are displayed in the tree. 
+  * **[[~expand_collapse]]**: Options relating to expanding and collapsing of branches.
+    * **[[~expand_collapse:pins]]**: Options related to pinned branches (kept open permanently).
+  * **[[~options]]**: Options that affect the behavior and operation of the tree. 
+  * **[[~selection_events]]**: Lets you override the default behavior for mouse clicks on tree items. 
+  * **[[~sorting|Sorting]]**: Contains options that control how folders are sorted in the tree.

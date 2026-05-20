@@ -1,0 +1,33 @@
+~~Title: Swap~~
+
+== Swapping two variables ==
+
+<evalcmd>
+Swap && none && &&
+value1 && var && First variable. &&
+value2 && var && Second variable.
+</evalcmd>
+
+Swaps the values of the two variables.
+
+//Example://
+<code>
+i = "World";
+j = "Hello";
+Swap(i, j);
+Output( i + " " + j );
+--> Hello World
+</code>
+
+== Swapping two array elements ==
+
+<evalcmd>
+Swap && none && &&
+array && arr && Array &&
+index1 && int && First index. &&
+index2 && int && Second index.
+</evalcmd>
+
+Swaps the values of two array elements.
+
+

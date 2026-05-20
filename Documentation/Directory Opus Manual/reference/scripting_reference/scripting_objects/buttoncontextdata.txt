@@ -1,0 +1,31 @@
+~~Title: ButtonContextData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] adds commands that require context-sensitive state information via the the **[[..:scripting_events:onaddbuttons|OnButtonContext]]** event, the method receives a **ButtonContextData** object whenever it needs to supply state information for a button.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ args
+$$ [[args|Args]]
+$$ Returns an **Args** object representing the function's parsed arguments.
+$$ cmdline
+$$ //string//
+$$ Provides the command line that triggered the request for context-sensitive state.
+$$ ctx
+$$ [[buttoncontext|ButtonContext]]
+$$ Returns a **ButtonContext** object that is used to change the button's state.
+$$ method
+$$ //string//
+$$ Provides the command method name.
+$$ lister
+$$ [[lister|Lister]]
+$$ Lister whose toolbar the button is visible on (`0` if not applicable).
+$$ viewer
+$$ [[viewer|Viewer]]
+$$ Viewer whose toolbar the button is visible on (`0` if not applicable).
+</commandtable>
+
+

@@ -1,0 +1,8 @@
+~~Title: Internet ~~
+<pageheader/>
+
+The Internet category contains options that control how Opus uses the Internet.
+
+  * **[[~email]]**: Lets you control how Opus sends email (which can be used to send files via email without needing to use a separate email client) 
+  * **[[~updates]]**: Controls the automatic update checker - how often it checks and how it alerts you. 
+

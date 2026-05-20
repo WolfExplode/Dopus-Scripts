@@ -1,0 +1,16 @@
+~~Title: OnPowerEvent~~
+<pageheader/>
+
+The **OnPowerEvent** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to have Opus notify your script whenever certain system power-related events occur.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnPowerEvent
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:powereventdata|PowerEventData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **type** property indicates the event that occurred.
+</commandtable>
+

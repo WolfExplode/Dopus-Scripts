@@ -1,0 +1,39 @@
+~~Title: FileChange~~
+<pageheader/>
+
+The **FileChange** object provides information about a file changed by a command. If you set the **[[command|Command]].logchanges** property to true, a collection of any file changes can be obtained from the **Command.results** property once the command is complete.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ action
+$$ //string//
+$$ Returns a string indicating the type of file change:
+|**create**|A file was created.|
+|**createunknown**|A file or directory was created.|
+|**change**|A file was modified.|
+|**changewrite**|A file was written to.|
+|**delfile**|A file was deleted.|
+|**deldir**|A directory was deleted.|
+|**delunknown**|A file or directory was deleted.|
+|**makedir**|A directory was created.|
+|**rename**|A file or folder was renamed.|
+$$ file
+$$ //string//
+$$ The name of the file or folder that changed.
+$$ file2
+$$ //string//
+$$ The secondary name, if any.
+$$ path
+$$ **[[path|Path]]**
+$$ The path the change occurred in.
+$$ path2
+$$ **[[path|Path]]**
+$$ The secondary path, if any.
+</commandtable>
+
+
+
+

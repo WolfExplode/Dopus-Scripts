@@ -1,0 +1,26 @@
+~~Title: Locked Tabs~~
+<pageheader/>
+
+==Locked tabs==
+
+Folder tabs can be locked in a number of different ways. Primarily, when a tab is locked, it always displays the same folder. It can also be prevented from closing, although this is optional.
+
+To lock a tab, right-click on it and choose a command from the context menu's **Lock Tab** menu. You can also hold <kbd>Alt</kbd> and click a tab to cycle through its lock modes.
+ 
+The different ways a tab can be locked are:
+
+  * **{{:media:13:tab_unlocked.png?nolink|}} Unlocked**: The tab is not  locked, meaning you can freely navigate away from the initial folder.   
+  * **{{:media:13:tab_-_locked.png?nolink|}} Locked**: The tab is locked.  Attempts to navigate away from the initial folder (that is, the folder that  was displayed when you locked the tab) will cause a new tab to open, leaving  the original tab unchanged.  
+  * **{{:media:13:tab_-_allow.png?nolink|}} Locked (allow folder changes)**:  The tab is locked, but you can navigate away from the initial folder. If you  click on the tab when it is already the active tab, the original folder will  be restored. You can have the original folder restored as soon as you change  to another tab via a setting in [[:preferences:preferences_categories:folder_tabs:locking|Folder Tab / Locking]]. (You can also run  `Go TABSELECT=home` to restore the folder via button or  hotkey.)  
+  * **{{:media:13:tab_-_reuse.png?nolink|}} Locked (reuse unlocked tab)**: The  tab is locked. Attempts to navigate away from the initial folder will reuse an  existing unlocked tab if one exists, otherwise a new tab will be opened. 
+
+Locked tabs may be protected against accidental closure via a setting in [[:preferences:preferences_categories:folder_tabs:locking|Folder Tab / Locking]]. 
+
+This will block most methods of closing individual locked tabs, and also hides their close buttons. This does not generally affect things which close multiple tabs, such as closing the entire window, closing the dual file display, or loading a new tab group, unless otherwise noted.
+
+You can also use the lock commands to lock or unlock multiple tabs at once; select the commands from the menu while holding down the following keys:
+
+  * <kbd>Shift</kbd>: Lock or unlock all tabs  
+  * <kbd>Ctrl</kbd>: Lock or unlock the active tab and all other tabs to  the right  
+  * <kbd>Ctrl+Shift</kbd>: Lock or unlock the active tab and all tabs  to the left 
+

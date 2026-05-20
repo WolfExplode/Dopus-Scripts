@@ -1,0 +1,85 @@
+~~Title: Rename Control Keys~~
+<pageheader/>
+
+The [[:preferences:preferences_categories:file_operations:renaming_files:control_keys]] Preferences page lets you define <kbd>Ctrl</kbd> key sequences for [[:file_operations:renaming_files:inline_rename|inline rename]] that use the evaluator to select, replace or delete text, or to move the cursor.
+
+The evaluation expression is called every time its defined key is pressed. 
+
+In this evaluation context, the following variables are available:
+
+<commandtable columns="3">
+$$ Variable
+$$ Type
+$$ Description
+$$ dir
+$$ //bool//
+$$ **True** if the item being renamed is a directory, **false** for a file.
+$$ exthidden
+$$ //bool//
+$$ **True** if the filename extension is currently hidden.
+$$ fullpath
+$$ //fullpath//
+$$ Full path to the file, including the filename (see //path// for the parent path).
+$$ is_dir
+$$ //bool//
+$$ **True** if the item being renamed is a directory, **false** for a file (same as //dir//).
+$$ file_name
+$$ //str//
+$$ Original name of the file (same as //name//).
+$$ name
+$$ //str//
+$$ Original name of the file (same as //file_name//).
+$$ nameext
+$$ //str//
+$$ Original filename extension of the file.
+$$ namestem
+$$ //str//
+$$ Original filename stem (i.e. without the extension).
+$$ path
+$$ //path//
+$$ Path the file is located in (does not include the filename; see //fullpath// for that).
+$$ selend
+$$ //int//
+$$ Current selection range end position.
+$$ selstart
+$$ //int//
+$$ Current selection range start position.
+$$ valext
+$$ //str//
+$$ Filename extension of the current value in the edit field.
+$$ valstem
+$$ //str//
+$$ Filename stem of the current value in the edit field.
+$$ valleft
+$$ //str//
+$$ The part of the current value to the left of the current selection range.
+$$ valright
+$$ //str//
+$$ The part of the current value to the right of the current selection range.
+$$ valsel
+$$ //str//
+$$ The part of the current value that is currently selected.
+$$ value
+$$ //str//
+$$ The current value in the edit field.
+</commandtable>
+
+The evaluation expression can return a string to update the value in the edit field.
+
+It can also modify the selection range by changing the values of the `selstart` and `selend` variables.
+
+To update the selection range without changing the contents of the string, simply return `true` instead of a string.
+
+It can also return `false` if it doesn't want to make any changes to the value or selection.
+
+==Context-specific functions==
+
+The evaluator has two functions that are specific to this context.
+
+**RestoreExt**
+
+The expression can call the `RestoreExt()` function to reveal the filename extension if its currently hidden from the edit field (i.e. if `exthidden` is **true**).
+
+**ShowTips**
+
+The expression can call the `ShowTips()` function to show a tooltip as a "cheatsheat" of all rename control keys. By default the rename field shows this if you hold down the <kbd>Ctrl</kbd> key - this function lets you assign your own key sequence to display the tooltip.

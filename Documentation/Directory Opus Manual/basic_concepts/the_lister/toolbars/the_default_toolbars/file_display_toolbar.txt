@@ -1,0 +1,18 @@
+~~Title: File Display Toolbar ~~
+<pageheader/>
+
+This toolbar is displayed at the top of each file display (assuming the option to use a toolbar for the [[..:..:navigation:file_display_border|Location Bar]] is turned on in Preferences on the [[:preferences:preferences_categories:location_bar:toolbars|Location Bar / Toolbar]] page).
+
+{{:media:13:file_display_toolbar.png?nolink|}}
+
+The buttons on this toolbar are:
+
+  * {{:media:13:location_toolbar_-_back.png?nolink|}} **Back**: Navigates back to the previously displayed folder. Right-click (or click and hold with the left button) the button to display a list of all prior folders.
+  * {{:media:13:location_toolbar_-_forward.png?nolink|}} **Forward**: Navigates forward in the history (once you have moved back, you can go forward again). Right-click (or click and hold with the left button) the button to display a list of any folders forward of the current position.
+  * {{:media:13:location_toolbar_-_up.png?nolink|}} **Up**: Navigates up to the parent of the current folder. Right-click to show a drop-down menu. See the **[[..:..:navigation:up_forwards_back|Up, Forwards, Back]]** page for more information on these three concepts.
+  * {{:media:13:location_toolbar_-_refresh.png?nolink|}} **Refresh**: Refresh the current folder (both file display and tree are refreshed by default).
+  * {{:media:13:location_toolbar_-_home.png?nolink|}} **Home**: Go to your [[..:..:navigation:home_folder|home folder]]. Right-click to show a drop-down menu.
+
+After those buttons is the [[..:..:navigation:breadcrumbs_location_field|"breadcrumbs" path field]] that displays your current location.
+
+The remaining elements are not actually part of the toolbar - they are part of the underlying [[..:..:navigation:file_display_border|File Display border]].

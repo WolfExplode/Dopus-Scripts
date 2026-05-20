@@ -1,0 +1,19 @@
+~~Title: OnFilesystemChange~~
+<pageheader/>
+
+The **OnFilesystemChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when monitored files or folders change. Monitoring is established by calling the **[[..:scripting_objects:fsutil|FSUtil]].WatchChanges** method.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnFilesystemChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:filesystemchangedata|FilesystemChangeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **id** property indicates which watcher detected a change. Note that you aren't told what changed, only that something meeting the specified conditions did change.
+</commandtable>
+
+
+
+

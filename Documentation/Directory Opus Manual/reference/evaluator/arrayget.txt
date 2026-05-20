@@ -1,0 +1,19 @@
+~~Title: ArrayGet~~
+<evalcmd>
+ArrayGet && anything && Specified element value. &&
+array && array && Array to retrieve element from. &&
+index && int && Index of element to retrieve.
+</evalcmd>
+
+Returns the value of the element at the specified index.
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

@@ -1,0 +1,16 @@
+~~Title: Floating Toolbars~~
+<pageheader/>
+
+This page contains options that affect the behavior of floating toolbars.
+
+  * **Allow floating toolbars to be docked with the edge of the screen**: Floating toolbars (those that aren't embedded in a Lister) can optionally be docked with an edge of the screen to turn them into "app-bars", kind of like the task bar. If this option is on you can dock toolbars by dragging them near one of the edges of the screen. Holding the <kbd>Shift</kbd> key down when dragging will override the docking process, which lets you position a toolbar close to the edge of the screen without docking it. 
+  * **Save state of floating toolbars automatically on exit**: Normally you have to use the **Save Floating Toolbars** command in the [[:customize:the_customize_dialog:toolbars|Customize / Toolbars]] page (on the File menu) to save the position and state of toolbars you have floated. If you don't save the state then the next time Opus runs, toolbars you floated, or floating toolbars you repositioned in the previous session will not be remembered. If you turn on the **Save state** option then when Opus shuts down it will automatically remember which toolbars are floating and where you have positioned them. 
+  * **Slide auto-hide floating toolbars when hiding and revealing**: When a floating toolbar is docked to the edge of the screen it can be set to auto-hide - it will move itself off-screen so as to take up as little screen real estate as possible, and reappear automatically when you move the mouse over it. If this option is on, the toolbar will use a slide effect when it moves in and out of view, instead of appearing or disappearing immediately. 
+
+==Reveal/hide times==
+
+  * **Reveal delay**: Specifies a delay before the toolbar starts to appear. For example, if this is set to 250 milliseconds (250 ms) then the toolbar will only start to appear if the mouse is over it for a quarter of a second, helping to avoid triggering it accidentally when moving the mouse nearby. 
+  * **Hide delay**: Specifies a delay before the toolbar starts to hide. For example, if this is set to 500 milliseconds (500 ms) then the toolbar will not start to hide until half a second after the mouse has left it. 
+  * **Reveal time**: Specifies how quickly the toolbar slides when appearing. For example, if this is set to 100 milliseconds (100 ms) then the toolbar will slide in quickly, taking only one tenth of a second to do so. 
+  * **Hide time**: Specifies how quickly the toolbar slides when hiding. For example, if this is set to 2000 milliseconds (2000 ms) then the toolbar will slide away very slowly, taking two seconds to do so. 
+

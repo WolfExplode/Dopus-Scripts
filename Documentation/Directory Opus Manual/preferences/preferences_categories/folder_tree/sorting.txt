@@ -1,0 +1,10 @@
+~~Title: Sorting~~
+<pageheader/>
+
+This page contains options related to how folders are sorted in the folder tree.
+
+  * **Mirror sort order from file display**: With this turned on, the sort order of folders in the tree will update to match the order in the file display whenever possible.
+  * **Numeric order sorting**: Detect numbers in folder names and sort based on their numeric rather than lexical value.
+  * **Use global ignore prefix**: Ignore the prefixes configured in [[:preferences:preferences_categories:filtering_and_sorting:sorting|Filtering and Sorting / Sorting]] in the tree as well as in the file display.
+  * **Word sort**: Special handling for hyphens and other punctuation characters when sorting folder names.
+

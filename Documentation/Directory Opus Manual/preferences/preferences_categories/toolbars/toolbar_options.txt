@@ -1,0 +1,24 @@
+~~Title: Options ~~
+<pageheader/>
+
+This page contains options that affect the behavior of toolbars and menus.
+
+  * **Allow default toolbars to be edited**: If turned off, this option prevents the default toolbar set from being edited (and always shows the defaults), meaning you never need to update your toolbars to see changes to the defaults.
+  * **<kbd>Alt</kbd> key activates toolbar keyboard modes**: Normal toolbar behavior is for pressing the <kbd>Alt</kbd> key by itself to enter a "keyboard" mode where you can open submenus and select commands using the cursor keys.
+  * <WRAP>**<kbd>Alt</kbd> + left-click to edit toolbar buttons**: Lets you enter [[:customize|Customize]] mode and bring up the [[:customize:creating_your_own_buttons:command_editor|Function Editor]] for a button in one single action, by holding the <kbd>Alt</kbd> key down and clicking the button with the mouse.
+
+Having this option on means you can't use the <kbd>Alt</kbd> key with any buttons that use qualifier keys to change their behavior. If you want to keep the normal <kbd>Alt</kbd> behavior and create an alternative hotkey, see the [[reference:command_reference:internal_commands:toolbar|Toolbar CLICKTOEDIT]] command.</WRAP>
+  * <WRAP>**Minimize Customize dialog opened via <kbd>Alt</kbd> + left-click or Toolbar CLICKTOEDIT**: Minimize the Customize dialog automatically when opened via the above option or the [[reference:command_reference:internal_commands:toolbar|Toolbar CLICKTOEDIT]] command.
+
+Makes it so only the Function Editor for the button you clicked is shown. If you click **OK** or **Cancel** in the function editor, and you have not edited another button or activated the Customize dialog, the Customize dialog will automatically close when the function editor closes. This lets you make quick changes to existing buttons without the Customize dialog getting in the way.
+
+Related: The [[reference:command_reference:internal_commands:prefs|Prefs CUSTOMIZE MINIMIZE]] command can be used to open Customize mode with the dialog minimized, without having to open a button editor at the same time.</WRAP>
+  * **Animate menus**: Drop-down and pop-up menus will animate as they open. If turned off, they will appear immediately. 
+    * **Use system setting**: When Animate menus is turned on, this option causes Opus to use the current Windows setting for drop-down menu animation. When turned off, Opus always uses a fade effect for drop-down menus. 
+  * **Display popup help text**: This causes tooltips to be displayed when the mouse hovers over toolbar buttons or items in drop-down menus. The tooltips display the configured description for the button in question - if the button has [[:customize:creating_your_own_buttons:editing_the_toolbar:multiple_function_buttons|multiple mouse button functions]] defined, these will be listed separately within the tooltip. 
+    * **Only with key held down**: Tooltips won't appear unless the specified qualifier key is held down when you mouseover the button.
+    * **Show shortcut keys in help text**: When tooltips are displayed for toolbar buttons, this option causes the button's hotkey (if any) to also be displayed in the tooltip text.
+  * **Lock Toolbars**: Toolbars in the Lister will be locked to prevent them from being dragged (repositioned) or accidentally floated. You can also lock or unlock them from the toolbar context menu (right-click on an empty area of any toolbar). 
+  * **Move top-row toolbars into the window title bar**: Toolbars positioned on the top row will be displayed as a custom window title bar, rather than appearing below the standard title bar. Any blank spaces in the toolbars (e.g. Spacer buttons) can be used to drag the window. The window icon (top-left) can also be used to move the window if <kbd>Shift</kbd> or <kbd>Ctrl</kbd> are held down (in case there's nowhere on the toolbar that can do it).
+  * **Simulate middle mouse click with <kbd>Ctrl</kbd> + left click**: Opus lets you assign [[:customize:creating_your_own_buttons:editing_the_toolbar:multiple_function_buttons|three completely separate functions]] to toolbar buttons that can be accessed with the left, right and middle mouse buttons. If your mouse doesn't have a middle button, you can use this option to still take advantage of this functionality - holding the <kbd>Ctrl</kbd> key down when you left-click a toolbar button will be treated as a middle-click instead. 
+

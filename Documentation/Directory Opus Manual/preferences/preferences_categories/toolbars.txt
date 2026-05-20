@@ -1,0 +1,12 @@
+~~Title: Toolbars ~~
+<pageheader/>
+
+This category contains options that let you control the appearance and behavior of toolbars and menus.
+
+  * **[[~toolbar_appearance]]**: Options that affect the appearance of toolbars. 
+  * **[[~folder_toolbars]]**: Configure toolbars to appear when inside certain folders or types of folders.
+  * **[[~toolbar_icons]]**: Lets you change the icons used by toolbar buttons. 
+  * **[[~toolbar_options]]**: Options that control aspects of toolbar behavior. 
+  * **[[~toolbar_sets]]**: Lets you manage Toolbar Sets for switching between multiple toolbars. 
+  * **[[~view_mode_toolbars]]**: Options for turning on extra toolbars in specific display modes.
+

@@ -1,0 +1,18 @@
+~~Title: Tab Switcher~~
+<pageheader/>
+
+By default, holding <kbd>Ctrl+Tab</kbd> displays the Tab Switcher over the middle of the Lister window:
+
+{{:media:13:tab_switcher.png?nolink|}}
+
+The Tab Switcher is similar to <kbd>Alt+Tab</kbd> in Windows, or <kbd>Ctrl+Tab</kbd> in Visual Studio and other editors, but switches between tabs in the current window.
+
+The switcher is for when you have lots of tabs open and want to select one from a list.
+
+(In other situations, it's often easier to click a tab directly on the Tab Bar, or use <kbd>Ctrl+Page Up</kbd> and <kbd>Ctrl+Page Down</kbd> to cycle through tabs on the current side and <kbd>Tab</kbd> to change sides.)
+
+How the <kbd>Tab</kbd> key behaves, and whether it shows the Tab Switcher for <kbd>Ctrl+Tab</kbd>, can be configured via [[preferences:preferences_categories:file_displays:options:tab_key|Preferences / File Displays / Options / Tab Key]].
+
+Tabs remember the order they were last activated. The default selection in the switcher is the previously selected tab. This lets you switch between two tabs by repeatedly pressing and releasing <kbd>Ctrl+Tab</kbd>, similar to <kbd>Alt+Tab</kbd> in Windows.
+
+The switcher stays open as long as one of the qualifier keys (e.g. <kbd>Ctrl</kbd>) that triggered it is held down. While open, pushing <kbd>Tab</kbd> or the cursor keys moves the selection. When the qualifier is released, or return is pressed, the highlighted tab will be activated and set as the source, and the switcher will close. You can also push <kbd>Space</kbd> to activate the selected tab without closing the switcher, which can be useful if you want to change tabs on both sides of a [[basic_concepts:the_lister:dual_display|dual-display]] window. Alternatively, push <kbd>Esc</kbd> or click outside the switcher to cancel it without changing tabs.

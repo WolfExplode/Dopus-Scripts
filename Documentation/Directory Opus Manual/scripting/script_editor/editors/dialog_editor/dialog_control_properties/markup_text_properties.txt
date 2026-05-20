@@ -1,0 +1,9 @@
+~~Title: Markup Text Properties ~~
+<pageheader/>
+
+The specific properties applicable to the //Markup Text// control are:
+
+  * **Change Link Color**: Any links in the text will be displayed in a different color.
+  * **Scrollbar**: If the text is too large for the control, a vertical scrollbar will be shown to allow the text to be scrolled.
+  * **Icon**: Displays an icon to the left of the text. Icon types are //info//, //help//, //warning// and //link//.
+  * **Tooltips**: Turn this on to enable tooltip support for text within the control. Tooltips can then be added around text or graphical elements using the `<tip text="xxx">...</tip>` tag. The `<a>` tag also supports the "text" attribute and will display the specified text on mouse hover.

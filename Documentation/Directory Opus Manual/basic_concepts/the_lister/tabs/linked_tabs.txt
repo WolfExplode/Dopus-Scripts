@@ -1,0 +1,21 @@
+~~Title: Linked Tabs~~
+<pageheader/>
+
+==Linked tabs==
+
+In a dual-display Lister, a folder tab on one side of the Lister can be linked with a tab on the other side. When two tabs are linked, selecting one in 
+the Lister to make it active automatically activates the linked tab too. Linked tabs are displayed in different colors from unlinked tabs, and you can configure 
+these colors from the **[[:preferences:preferences_categories:colors_and_fonts:directory_opus_colors|Directory Opus Colors]]** page in preferences.
+
+You can hold various qualifier keys down to modify the linked state of a tab when you click it:
+
+  * <kbd>Ctrl</kbd>-click a tab to link it with the active tab in the  other file display (or, if already linked, unlink it).  
+  * <kbd>Ctrl+Shift</kbd>-click a tab to toggle navigation lock mode  on or off (see below).  
+  * <kbd>Shift</kbd>-click a tab to override the normal behavior when clicking linked tabs (e.g., its partner tab will not come to the front as  normal). 
+
+==Navigation Lock tabs==
+
+You can also place linked tabs into Navigation Lock mode, using the **Navigation Lock **option in the context menu. When linked tabs are in this mode the destination tab will always follow the source tab whenever the folder changes, in a similar manner to **[[basic_concepts:the_lister:dual_display:navigation_lock|Navigation Lock]]**.
+
+Navigation Lock is not to be confused with [[locked_tabs|Locked Tabs]].
+

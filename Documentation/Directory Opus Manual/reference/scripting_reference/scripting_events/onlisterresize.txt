@@ -1,0 +1,20 @@
+~~Title: OnListerResize ~~
+<pageheader/>
+
+The **OnListerResize** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification whenever a Lister window is resized.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnListerResize
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:listerresizedata|ListerResizeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **ListerResizeData.lister** property identifies the Lister, and the **action** property is a //string// indicating the element that resize action taken. Use the **width** and **height** properties to determine the new window size.
+</commandtable>
+
+
+
+

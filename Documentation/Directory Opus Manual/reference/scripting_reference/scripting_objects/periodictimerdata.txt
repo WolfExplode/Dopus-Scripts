@@ -1,0 +1,17 @@
+~~Title: PeriodicTimerData~~
+<pageheader/>
+
+A [[:scripting:script_add-ins|script add-in]] can use the **[[..:scripting_objects:dopus|DOpus]].SetTimer** method to create timers, which will call your **[[..:scripting_events:onperiodictimer|OnPeriodicTimer]]** method at the rate you specify.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ id
+$$ //string//
+$$ Returns the ID of the timer that your method is being called for.
+</commandtable>
+
+
+
+

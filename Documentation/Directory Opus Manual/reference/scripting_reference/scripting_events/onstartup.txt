@@ -1,0 +1,20 @@
+~~Title: OnStartup ~~
+<pageheader/>
+
+The **OnStartup** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when Opus starts up.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnStartup
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:startupdata|StartupData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ This event is only triggered when Opus starts up, therefore only script add-ins that are already installed will receive it. If a script is installed when Opus is already running it won't receive **OnStartup** until the next time Opus is started.
+</commandtable>
+
+
+
+

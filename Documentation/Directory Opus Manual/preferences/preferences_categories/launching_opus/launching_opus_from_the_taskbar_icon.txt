@@ -1,0 +1,14 @@
+~~Title: From the Taskbar Icon ~~
+<pageheader/>
+
+Opus can add an icon to the taskbar notification area (also called the "tray" or "systray" icon), and you can configure what happens when you double-click it. You can also edit the [[:customize:the_customize_dialog:context_menus|context menu]] that's shown when you right-click it.
+
+Note that Windows will probably hide the icon and move it to the overflow area by default. If you want the icon to always be visible (which makes the double-click options on this page more useful) you will need to tell Windows to show it all the time.
+
+  * **Add icon to taskbar notification area**: Enables the taskbar icon.
+  * **Do nothing on double-click**: Nothing will happen if you double-click the icon - but you can right-click it to use the context menu.
+  * **Bring the last active Lister to the front**: If there are one or more Listers already open, a double-click on the icon will bring to the front the one you used most recently. If no Listers are open, a new one is opened using the [[preferences:preferences_categories:layouts_and_styles:default_lister|Default Lister]] settings. If you are using the Windows //virtual desktops// feature, the Default Lister settings also determine whether other desktops will be searched or just the current one.
+  * **Open the Default Lister**: Opens a new Lister using the settings for the [[:basic_concepts:the_lister:the_default_lister|Default Lister]]. 
+  * **Open a saved Lister layout**: Opens a saved [[:basic_concepts:the_lister:layouts|Lister layout]]. If you turn on the **Close existing Listers** option then any existing Listers will be closed before opening the layout - if this is off, existing Listers will be unaffected. The related **Close Listers on all virtual desktops** checkbox defines if windows on other //virtual desktops// are closed.
+  * **Run a command**: Lets you enter a command to be run whenever the desktop is double-clicked. This can be used to perform more complex actions including running external programs. This must be a command that would make sense on a button or hotkey. You can use [[:customize:creating_your_own_buttons:internal_command_arguments|Opus internal commands]] or external programs (passing arguments to them using the [[:customize:creating_your_own_buttons:passing_files_to_external_programs|standard control codes]]). If you want to run more than a simple single-line command, you can create a more complicated [[:customize:creating_your_own_buttons:user-defined_commands|user-defined command]] and then specify the name of the user command here.
+

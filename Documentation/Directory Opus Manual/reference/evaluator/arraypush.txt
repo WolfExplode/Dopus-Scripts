@@ -1,0 +1,19 @@
+~~Title: ArrayPush~~
+<evalcmd>
+ArrayPush && int && New size of the array. &&
+array && array && Array to add element to. &&
+value && anything && Value to add to the array.
+</evalcmd>
+
+Adds (pushes) the specified value onto the end of the array.
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

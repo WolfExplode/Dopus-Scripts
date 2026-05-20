@@ -1,0 +1,28 @@
+~~Title: Rename Modes ~~
+<pageheader/>
+
+The top section of the Rename dialog is where you define the rename **mode** - which determines the way the two input fields, **old name** and **new name** are interpreted. 
+
+{{:media:13:rename_mode.png?nolink|}}
+
+Use the **Mode** drop-down to select the rename mode.
+
+  * //[[~standard_wildcard_rename|Standard Wildcard Rename]]//: enter a new name literally or rename using a simple wildcard system. 
+  * //[[~find_and_replace|Find And Replace]]//: specify a text string to search for and another to replace it with (this works just like search and replace in a text editor). 
+  * //[[~regular_expressions|Regular Expressions]]//: enter a new name literally or rename using a regular expressions search and replace. 
+  * //[[~regular_expressions_and_find_and_replace|Regular Expressions + Find and Replace]]//: enter a regular expression to search for and the text to replace it with (combines the above two modes). 
+
+Other controls in this section are:
+
+  * **Old name**: The input pattern that's applied to each old (original) filename. When renaming using wildcards or //Regular Expressions//, this field is used to specify the "from" or "search" pattern. When using //Find And Replace// mode this field specifies the find string. 
+  * **New name**: The output pattern that's applied to generate each new filename. When using //Find And Replace// mode this field specifies the replacement string.
+  * **Case sensitive**: Enables case sensitive pattern matching or //Find And Replace// searching//.// When it's turned on, the upper/lower case of an existing filename has to match the supplied pattern exactly - for example, //"d*"// won't match //"Dog"// if the **case sensitive** option is turned on.
+  * **Ignore extension**: Totally excludes the file extension from the rename operation - if turned on, the file extension won't be modified, and you don't have to (and shouldn't) account for it in any wildcard patterns. You should normally leave this option enabled since it makes wildcards (particularly regular expressions) a lot simpler, and it's rare to need to modify filename extensions.
+
+The **Reset** button provides a quick way to clear out the other fields of the Rename dialog and revert to a "blank slate".
+
+More:\\ 
+[[~standard_wildcard_rename|Standard Wildcard Rename]]\\
+[[~find_and_replace|Find and Replace]]\\
+[[~regular_expressions|Regular Expressions]]\\
+[[~regular_expressions_and_find_and_replace|Regular Expressions + Find and Replace]]\\

@@ -1,0 +1,116 @@
+~~Title: DOpusFactory ~~
+<pageheader/>
+
+The **DOpusFactory** object is a helper object that you can use to create various other objects. Unlike the objects that represent existing //things// (e.g. **[[lister|Lister]]** or **[[tab|Tab]]**), the objects created by **DOpusFactory** are independent objects that you can instantiate whenever you need their functionality. The **DOpusFactory** object is obtained via the **[[dopus|DOpus]].Create** method.
+
+
+<commandtable columns="4" id="cmdtable_1">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Blob
+$$ //none//\\
+or <int:size>\\
+or <nobr><byte, byte, ...></nobr>\\
+or <**[[blob|Blob]]**:source>
+$$ //object://**[[blob|Blob]]** 
+$$ Returns a new **[[blob|Blob]]** object, that lets you access and manipulate a chunk of binary data from a script. If no parameters are given the new **Blob** will be empty - you can set its size using the **resize** method - otherwise you can specify the initial size as a parameter.
+
+You can also create a **Blob** pre-filled with data by specifying the actual byte values (e.g. //Blob(72,69,76,76,79)//).
+
+If another **Blob** (or an array - see the documentation on the **Blob** object for a discussion of this) is given then the new **Blob** will be created as a copy of the existing one.
+$$ BusyIndicator
+$$ //none//
+$$ //object://**[[busyindicator|BusyIndicator]]** 
+$$ Creates a new **[[busyindicator|BusyIndicator]]** object, that lets you control the breadcrumbs bar busy indicator from your script.
+$$ Command
+$$ //none//
+$$ //object://**[[command|Command]]**
+$$ Creates a new **[[command|Command]]** object, that lets you run Opus commands from a script.
+$$ Date
+$$ //none//\\
+or <variant:date>\\
+or //JScript Date//
+$$ //object//:**[[date|Date]]** 
+$$ Creates a new **[[date|Date]]** object. If a date value is provided the new object will be initialized to that value, otherwise the date will be set to the current local time. The provided value can be one of the following:
+  * Another **Date** object
+  * A string in the form "yyyymmdd"
+  * A string in the form "yyyy-mm-dd hh:mm:ss.mmm" (or part thereof)
+  * A JScript **Date** object
+  * A unix epoch time value (seconds since 1/1/1970).
+$$ EverythingInterface
+$$ //none//
+$$ //object//:**[[everythinginterface|EverythingInterface]]**
+$$ Creates a new **[[everythinginterface|EverythingInterface]]** object, which lets you interact directly with [[https://www.voidtools.com|Everything]] from an Opus script.
+$$ Filter
+$$ //none//\\
+or <string>
+$$ //object://**[[filter|Filter]]**
+$$ Creates a new **[[filter|Filter]]** object, which lets you control recursive filtering when running commands from scripts. You can optionally provide a [[:file_operations:filtered_operations:textual_filters|textual filter]] string to initialise the filter with. Check the **valid** property of the new **Filter** object to find out whether this string was parsed successfully or not.
+$$ Map
+$$ //none//\\
+or <variant:key>,\\
+<variant:value>...
+$$ //object//:**[[map|Map]]** 
+$$ Creates a new **[[map|Map]]** object. If no arguments are provided, the **Map** will be empty. Otherwise, the **Map** will be pre-initialized with the supplied key/value pairs.
+
+//For example://
+<code>Map("firstname","fred","lastname","bloggs");</code>
+
+The individual keys and values can be different types.
+$$ OrderedMap
+$$ //none//\\
+or <variant:key>,\\
+<variant:value>...
+$$ //object//:**[[orderedmap|OrderedMap]]** 
+$$ Creates a new **[[orderedmap|OrderedMap]]** object. This is identical to the [[Map]] object except that the order of items added to the map is preserved rather than being sorted alphabetically.
+$$ StringSet
+$$ //none//\\
+or <string>, ...
+$$ //object//:**[[stringset|StringSet]]** 
+$$ Creates a new case-sensitive **[[stringset|StringSet]]** object. If no arguments are provided, the **StringSet** will be empty. Otherwise it will be pre-initialized with the supplied strings; for example:
+<code>StringSet("dog","cat","pony");</code>
+
+You can also pass an array of strings or **[[vector|Vector]]** object to initialise the set.
+$$ StringSetI
+$$ //none//\\
+or <string>, ...
+$$ //object//:**[[stringset|StringSet]]** 
+$$ Creates a new case-insensitive **[[stringset|StringSet]]** object. If no arguments are provided, the **StringSet** will be empty. Otherwise it will be pre-initialized with the supplied strings.
+$$ StringTools
+$$ //none//
+$$ //object//:**[[stringtools|StringTools]]** 
+$$ Creates a new **[[stringtools|StringTools]]** object, that provides helper functions for string encoding and decoding.
+$$ SysInfo
+$$ //none//
+$$ //object//:**[[sysinfo|SysInfo]]** 
+$$ Creates a new **[[sysinfo|SysInfo]]** object which you can use to query various details about the computer.
+$$ UnorderedSet
+$$ //none//\\ or //variants//...
+$$ object:**[[unorderedset|UnorderedSet]]** 
+$$ Creates a new **[[unorderedset|UnorderedSet]]** object. If no arguments are provided the **UnorderedSet** will be empty. Otherwise it will be pre-initialized with the supplied elements.
+
+You can also pass an array or **[[vector|Vector]]** to initialise the set.
+$$ Vector
+$$ //none//\\ or <int:elements>\\
+or //variants...//\\
+or //object://**[[vector]]**\\
+or //JScript Array//
+$$ //object://**[[vector|Vector]]** 
+$$ Creates a new **[[vector|Vector]]** object.
+
+If no arguments are provided, the **Vector** will be empty.
+
+If a single integer argument is provided, the **Vector** will be pre-initialized to that number of elements.
+
+You can also pass another **[[vector|Vector]]** or a //JScript// array, or most enumerable objects, as the argument to initialise the new **Vector** with the contents of an existing collection.
+
+If more than one argument is provided, the **Vector** will be pre-initialized with those elements; for example:
+<code>Vector("dog","cat","horse");</code>
+
+The individual elements can be different types.
+
+If you want to create a **Vector** with just a single element, it is best to create an empty **Vector** and then add the element as a second step. Passing a single element during creation can have unexpected results, as it may be interpreted as one of the other cases. (Many of the scripting objects can be implicitly converted into integers or collections.)
+</commandtable>
+

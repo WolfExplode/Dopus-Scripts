@@ -1,0 +1,22 @@
+~~Title: SmartFavorites ~~
+<pageheader/>
+
+The **SmartFavorites** object lets you query the contents of the [[:basic_concepts:the_lister:navigation:smartfavorites|SmartFavorites]] table. It is retrieved from the **[[dopus|DOpus]].smartfavorites** property.
+
+\\
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //collection://[[smartfavorite|SmartFavorite]]
+$$ You can enumerate the **SmartFavorites** object to retrieve individual **[[smartfavorite|SmartFavorite]]** objects.
+$$ threshhold
+$$ //int//
+$$ Returns the number of points an entry must have before it would be displayed in the [[:basic_concepts:the_lister:navigation:smartfavorites|SmartFavorites]] list.
+$$ max
+$$ //int//
+$$ Returns the maximum number of entries that would be displayed in the [[:basic_concepts:the_lister:navigation:smartfavorites|SmartFavorites]] list.
+</commandtable>
+
+ 

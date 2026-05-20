@@ -1,0 +1,104 @@
+~~Title: Directory Opus 13 - Highlights - Page 3~~
+Previous: [[release_history:opus13:page2|Opus 13 Highlights - Page 2]]
+<pageheader/>
+
+=== Folder Tree ===
+
+Adjustable spacing and indentation:
+
+<WRAP indent>{{:release_history:tree_spacing.gif?nolink|}}</WRAP>\\
+
+Tree roots can be re-ordered or turned off entirely:
+
+<WRAP indent>{{:release_history:tree_contentprefs.png?nolink|}}</WRAP>\\
+
+Cloud Storage folders can be moved to their own root:
+
+<WRAP indent>{{:release_history:tree_cloud.png?nolink|}}</WRAP>\\
+
+A new button closes all branches except the active one, while a preset system lets you save and restore which branches are open:
+
+<WRAP indent>{{:release_history:tree_colpreset.gif?nolink|}}</WRAP>\\
+
+Branches can be pinned to prevent them ever closing:
+
+<WRAP indent>{{:release_history:tree_pin.png?nolink|}}</WRAP>\\
+
+The inexplicable jumble Windows 11 added under Desktop is removed by default:
+
+<WRAP indent>{{:release_history:tree_win11clutter.jpg?nolink|}}</WRAP>\\
+
+Network servers are cached across restarts, and you can control which machines appear:
+
+<WRAP indent>{{:release_history:tree_network.png?nolink|}}</WRAP>\\
+
+----
+
+=== Thumbnails ===
+
+Improved display of long names, and Find-As-You-Type highlights:
+
+<WRAP indent>{{:release_history:thumb_labels.gif?nolink|}}</WRAP>\\
+
+Choose from several thumbnail scaling and cropping modes:
+
+<WRAP indent>{{:release_history:thumb_scale.gif?nolink|}}</WRAP>\\
+
+Thumbnail size and scaling can be overridden per-folder:
+
+<WRAP indent>{{:release_history:thumb_perfolder.png?nolink|}}</WRAP>\\
+
+Folders can be given custom thumbnail styles:
+
+<WRAP indent>{{:release_history:thumb_stylebr.jpg?nolink|}}</WRAP>
+<WRAP indent>{{:release_history:thumb_styledef.png?nolink|}}</WRAP>\\
+
+----
+
+=== Folder Tabs ===
+
+Locked tabs can be prevented from closing:
+
+<WRAP indent>{{:release_history:tabs_lock.png?nolink|}}</WRAP>\\
+
+The tab context menu can be edited:
+
+<WRAP indent>{{:release_history:tab_context.png?nolink|}}</WRAP>\\
+
+Push <kbd>Ctrl+Tab</kbd> to open the tab switcher:
+
+<WRAP indent>{{:release_history:tabs_switcher.png?nolink|}}</WRAP>\\
+
+Both vertical and horizontal tab bars now scroll with the mouse wheel:
+
+<WRAP indent>{{:release_history:tabs_scroll.gif?nolink|}}</WRAP>\\
+
+----
+
+=== Find As You Type (FAYT) ===
+
+Type <kbd>'</kbd> into the file display to search with Opus, or type <kbd>+</kbd> to search your machine with Everything:
+
+<WRAP indent>{{:release_history:fayt_everything.gif?nolink|}}</WRAP>\\
+
+Type <kbd>]</kbd>, then part of a name, to quickly go to a folder from a configurable list of sources:
+
+<WRAP indent>{{:release_history:fayt_folders.png?nolink|}}</WRAP>\\
+
+When highlighting names in the current folder, <kbd>Ctrl+S</kbd> selects all matches. <kbd>F3</kbd> jumps to the next match.\\
+
+Marks on the scrollbar indicate matches out of view:
+
+<WRAP indent>{{:release_history:fayt_scrollbar.png?nolink|}}</WRAP>\\
+
+Type <kbd>></kbd> to enter an ad-hoc Opus command. Pop-ups now help with command and argument names:
+
+<WRAP indent>{{:release_history:fayt_suggs.png?nolink|}}</WRAP>\\
+
+Scripts can add custom FAYT modes and respond to what you type. Each can have its own key(s) and colors:
+
+<WRAP indent>{{:release_history:fayt_scripts.png?nolink|}}</WRAP>\\
+
+----
+
+Next: [[release_history:opus13:page4|Opus 13 Highlights - Page 4]]

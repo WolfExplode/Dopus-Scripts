@@ -1,0 +1,20 @@
+~~Title: Folders ~~
+<pageheader/>
+
+This category contains options that relate to the how folders are read and displayed (including display options that can be configured for specific folders).
+
+  * **[[~automatic_reading|Automatic Reading]]**: Options that affect which types of folders are automatically loaded when re-opening saved windows. 
+  * **[[~folder_formats|Folder Formats]]**: Lets you configure the display format for specific folders, or folders containing certain types of files.
+    * **[[~folder_formats:automatic_formats|Automatic Formats]]**: The display format can be automatically remembered when you change it.
+  * **[[~folder_images|Folder Images]]**: Lets you configure different background images and colors for different folders.
+  * **[[~folder_sizes|Folder Sizes]]**: Controls whether folder sizes are automatically calculated or not.
+    * **[[~folder_sizes:junctions_and_links|Junctions and Links]]**: Folder size options relating to junctions and links.
+  * **[[~network_servers|Network Servers]]**: Options relating to the network server cache.
+  * **[[~special_folders|Special Folders]]**: Lets you control whether special folders are treated as cloud storage or not.
+  * **[[~virtual_folders|Virtual Folders]]**: Controls how Opus handles virtual folders like the Desktop and My Computer. 
+    * **[[~virtual_folders:desktop|Desktop]]**: Settings related to the Desktop folder.
+    * **[[~virtual_folders:file_system|File System]]**: Settings related to virtual folders based on a real filesystem folder.
+    * **[[~virtual_folders:this_pc|This PC]]**: Settings related to the This PC folder.
+
+
+

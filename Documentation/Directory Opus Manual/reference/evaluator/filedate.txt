@@ -1,0 +1,26 @@
+~~Title: FileDate~~
+<evalcmd>
+FileDate && date && The date (including time) of the specified file or folder. &&
+path && path && Path of the file or folder. &&
+[flags] && string && Optional flags. &&
+</evalcmd>
+
+Returns the timestamp of the specified file or folder.
+
+By default, the //modified// time is returned, in local time.
+
+The optional flags are:
+|a|accessed date|
+|c|created date|
+|m|modified date (the default)|
+|u|UTC instead of local time|
+
+//Example://
+<code>
+FileDate("C:\Program Files") as "d#yyyy-MM-dd t#HH.mm.ss"
+--> 2026-04-14 09.21.49
+
+FileDate("C:\Program Files", "mu") as "t#HH.mm.ss"
+--> 07.21.49
+</code>
+

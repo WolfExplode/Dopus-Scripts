@@ -1,0 +1,43 @@
+~~Title: Menu Toolbar ~~
+<pageheader/>
+
+This toolbar contains the "traditional" drop-down menus, as well as controls for modifying the appearance of the Lister.
+
+{{:media:13:menu_toolbar.png?nolink|}}
+
+==Left-hand side==
+On the left-hand side of this toolbar are several drop-down menus:
+
+  * **File**: The File menu contains commands to open a new Lister, close the current one and exit the program. It also displays the context menu for the currently selected files. 
+  * **Edit**: The Edit menu contains mainly clipboard related commands. As well as the traditional Cut / Copy / Paste commands, there are also commands for copying the names of selected files or the current path to the clipboard in various formats. The **[[:basic_concepts:folder_sizes|Calculate Folder Sizes]]** command calculates and displays the total sizes of selected folders. There are also commands for selecting files and folders (select all, select by pattern, etc). 
+  * **FTP**: The FTP menu displays your [[:ftp:ftp_address_book|FTP address book]] entries, and lets you make an [[:ftp:ftp_connect|ad-hoc connection]] to an FTP site. 
+  * **Tools**: This menu contains commands for various tool or utility functions, including: 
+    * **[[:basic_concepts:searching_and_filtering:find_files|Find Files]]**, **[[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|Synchronize]]** and **[[:additional_functionality:duplicate_file_finder|Find Duplicate Files]]** 
+    * **[[:additional_functionality:joining_files|Join Files]]** lets you join two or more files together, and **[[:additional_functionality:splitting_files|Split File]]** lets you split a single file into multiple parts. 
+    * **[[:additional_functionality:print_folder|Print / Export Folder Listing]]** lets you print the current folder either to the printer, a file or the clipboard, in various formats (including .CSV for import into a spreadsheet). 
+    * **[[:additional_functionality:image_conversion|Image conversion]]** tools 
+
+  * **Settings**: This menu contains commands to access the Opus configuration including:
+    * **[[:preferences|Preferences]]**
+    * **[[:customize|Customize]]** (create your own toolbars or hotkeys)
+    * **[[:file_types|File Types]]** (change what happens when you double-click or right-click on specific types of files)
+    * **[[:scripting:script_management|Script Management]]** (install, create and manage [[:scripting:script_add-ins|script add-ins]])
+
+
+==Right-hand side==
+On the right-hand side are the following menus and commands:
+
+  * **View**: The View menu lets you switch between the various [[..:..:view_modes|view modes]] in the current file display. It also contains sub-menus that let you modify the [[:basic_concepts:sorting_and_grouping|sorting and grouping]] of the current display. 
+  * {{:media:13:detailsbutton.png?nolink|}} **Details Mode**: This button provides a shortcut to [[..:..:view_modes|Details mode]]. 
+  * {{:media:13:thumbtailsbutton.png?nolink|}} **Details + Thumbnails**: This button provides a shortcut to [[..:..:view_modes|Details + Thumbnails mode]]. 
+  * {{:media:13:thumbnailsbutton.png?nolink|}} **Thumbnails Mode**: This button provides a shortcut to [[..:..:view_modes|Thumbnails mode]].
+  * **Folder**: The Folder menu contains commands to access the [[:basic_concepts:folder_options|Folder Options]] dialog, and the [[:basic_concepts:folder_options:folder_formats|Folder Formats]] system. If you have created any [[:preferences:preferences_categories:folders:folder_formats|Favorite folder formats]] you can select them from this menu. This menu also contains commands to manipulate [[..:..:tabs|Folder Tabs]], [[:basic_concepts:flat_view|Flat View]], [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|Checkbox Mode]], [[..:..:dual_display:navigation_lock|Navigation Lock]] and various [[:basic_concepts:searching_and_filtering|filtering]] commands. 
+  * {{:media:13:flatviewbutton.png?nolink|}} **Flat View**: This button lets you turn [[:basic_concepts:flat_view|Flat View mode]] on or off. Clicking the button once puts the file display in //Flat View Grouped// mode, a second click puts it in //Flat View Mixed// mode, and a third click turns Flat View off. If you right-click the button a popup menu gives the additional option of //Mixed (No Folders)// mode. 
+  * {{:media:13:navlock_button.png?nolink|}} **Navigation Lock**: This button lets you turn [[..:..:dual_display:navigation_lock|Navigation Lock]] on or off.
+  * **Lister:** The Lister menu contains commands to toggle the [[..:..:navigation:folder_tree|folder tree]], [[..:..:metadata_pane|metadata panel]] and [[..:..:status_bar|status bar]] on or off, as well as displaying a list of your configured [[..:..:styles|Lister Styles]]. 
+  * {{:media:13:dual_button_h.png?nolink|}} **Dual Horizontal**: This button toggles [[..:..:dual_display|dual display mode]] on or off, with horizontal layout. 
+  * {{:media:13:dual_button.png?nolink|}} **Dual Vertical**: This button toggles [[..:..:dual_display|dual display mode]] on or off, with vertical layout.
+  * {{:media:13:metapane_button.png?nolink|}} **Metadata Pane**: This button toggles the [[..:..:metadata_pane|metadata pane]] on or off.
+  * {{:media:13:menu_toolbar_-_viewer_pane.png?nolink|}} **Viewer Pane**: This button toggles the [[..:..:viewer_pane|viewer pane]] on or off.
+  * Finally the search field lets you perform a [[:basic_concepts:searching_and_filtering:windows_search|quick search]] of the current folder. 
+

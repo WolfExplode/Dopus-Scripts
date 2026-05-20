@@ -1,0 +1,10 @@
+~~Title: StartupData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the [[..:scripting_events:onstartup|OnStartup]] event, the method receives a **StartupData** object when Opus starts up.
+
+
+
+//This object currently has no defined methods or properties.//
+
+

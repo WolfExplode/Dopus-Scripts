@@ -1,0 +1,17 @@
+~~Title: List Edit Properties ~~
+<pageheader/>
+
+The specific properties applicable to the //List Edit// control are:
+
+  * **Type**: Specifies the type of data the control edits. Choose from Folders, Files, Network Servers and Strings.
+  * **Reset button**: The control should display a button allowing the user to reset it to its defaults.
+  * **Options button**: The control should display a button allowing the user to configure it.
+  * **Allow duplicates**: Duplicate entries are allowed if this is turned on.
+  * **Drag-and-drop**: The control supports drag-and-drop.
+  * **Edit as text**: The control provides a checkbox letting it be switched into a mode where it can be edited in text form.
+  * **Read-only**: Disables built-in editing functions. In this mode, clicking an entry button sends a "click" notification rather than editing it. 
+  * **Notify delete**: Causes delete buttons to be displayed for each item even in read only mode, and clicking a delete button sends a "delete" notification to the script's message loop.
+  * **Name filter**: Prevents the user entering characters that aren't allowed in filenames.
+  * **Options tip**: The tooltip shown over the options button (if enabled).
+
+The remaining flags control which items the control allows the user to add; most are type-specific.

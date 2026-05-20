@@ -1,0 +1,23 @@
+~~Title: OnAddButtons~~
+<pageheader/>
+
+The **OnAddButtons** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to add dynamic buttons to toolbars and menus. Scripts do this by adding [[:scripting:example_scripts:adding_a_new_internal_command|new internal commands]] to Opus, specifying one or more arguments that are used to generate dynamic buttons.
+
+For example, a function called `Foo` might have an argument `BAR` that's used to generate a number of buttons. When the user adds a toolbar button with the command `Foo BAR`, your script's **OnAddButtons** event would be called to generate dynamic buttons that are shown on the toolbar. Any buttons it creates will be displayed in place of the original button, and the original button will be hidden (except in Customize mode).
+
+The arguments that generate dynamic buttons are specified when adding the custom command via the `dynamic_args` property of the **[[:reference:scripting_reference:scripting_objects:scriptcommand|ScriptCommand]]** object.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnAddButtons
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:addbuttonsdata|AddButtonsData]] **
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ 
+</commandtable>
+
+
+
+

@@ -1,0 +1,422 @@
+~~Title: Control ~~
+<pageheader/>
+
+The **Control** object represents a control on a [[:scripting:script_dialogs|script dialog]]; it lets you read and modify a control's value (and contents). Use the **[[dialog|Dialog]].Control** method to obtain a **Control** object.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ bg
+$$ //string//
+$$ Set or query the color used for the background (fill) of this control. This is in the format //#RRGGBB// (hexadecimal) or //RRR,GGG,BBB// (decimal).
+Currently only //static text//, //markup text//, //button// and //list view// controls are supported for this property.
+$$ charcase
+$$ //string//
+$$ For an //edit// control, gets or sets the control's case setting. Values are **upper**, **lower** and **normal**.
+$$ columns
+$$ **[[dialoglistcolumns|DialogListColumns]]** 
+$$ For a //list view// control, returns a **[[dialoglistcolumns|DialogListColumns]]** object that lets you query or modify the columns in //Details// mode.
+$$ controlname
+$$ //string//
+$$ Returns the name of the control. This is the same name used to identify the control in dialog resources and [[reference:scripting_reference:scripting_objects:msg|Msg]] objects that notify you about clicks or other events involving a control.
+$$ count
+$$ //int//
+$$ Returns the number of items contained in the control (e.g. in a //combo box//, //list box// or //list view//, returns the number of items in the list).
+$$ cuetext
+$$ //string//
+$$ Get or set the cue text of a single-line edit control. This is the text shown to help the user when the edit control is empty.
+$$ cx
+$$ //int//
+$$ Set or query the width of the control, in pixels.
+$$ cy
+$$ //int//
+$$ Set or query the height of the control, in pixels.
+$$ enabled
+$$ //bool//
+$$ Set or query the enabled state of the control. Returns **True** if the control is enabled, **False** if it's disabled. You can set this property to change the state.
+$$ fg
+$$ //string//
+$$ Set or query the color used for the text (foreground) of this control. This is in the format //#RRGGBB// (hexadecimal) or //RRR,GGG,BBB// (decimal).
+Currently only //static text//, //markup text//, //button// and //list view// controls are supported for this property.
+$$ focus
+$$ //bool//
+$$ Set or query the input focus state of the control. Returns **True** if the control currently has input focus, **False** if it doesn't. Set to **True** to give the control input focus.
+$$ hwnd
+$$ //int//
+$$ Returns the control's underlying window handle. Not directly usable in Opus but you may want this if interfacing with automation tools.
+$$ image
+$$ //string// or\\
+//object://**[[image|Image]]** 
+$$ For a button or static control set to image mode, this assigns an image to the control. You can either provide a filename (or internal icon name - e.g. `#about` for the internal about icon), or an **[[image|Image]]** object that you obtained from the **[[dopus|DOpus]].LoadImage** or **[[script|Script]].LoadImage** methods.
+$$ label
+$$ //string// or\\
+//object://**[[image|Image]]** 
+$$ Set or query the control's label or title. Not all controls have labels - this will have no effect on controls (like the //list view//) that don't.
+
+Note that for //combo box// controls, this property is only valid for an editable combo - that is, one that you can type your own text into. You can use this property to set or query the current value of the editable text.
+
+For a static control set to "image" mode, you can also provide an **[[image|Image]]** object that you obtained from the **[[dopus|DOpus]].LoadImage** or **[[script|Script]].LoadImage** methods. This is the same as using the `image` property.
+
+For a //tab// control, you can set or query the labels of the individual tabs by specifying an index; e.g. `Control.label(0)` would reference the label of the first tab.
+$$ lines
+$$ //int//
+$$ For applicable controls (multiline edit control, details mode listview, listbox and scrollable markup text) returns the total number of lines of content contained in the control.
+$$ mode
+$$ //string//
+$$ For a //list view// control, lets you change or query the current view mode. Valid values are **icon**, **details**, **smallicon**, **list**. For a //list edit// control, lets you change or query the "edit as text" setting. Valid values are **text** and **buttons**.
+$$ readonly
+$$ //bool//
+$$ Set or query the //read only// state of an //edit// control.
+$$ redraw
+$$ //bool//
+$$ Set or query the redraw state of the control. Some controls let you turn off redrawing in order to make multiple changes without visible flicker (for example, adding a large number of items to a //list view//). Set to **False** to turn off redraw, or **True** to turn redraw back on after changing the control.
+$$ rotate
+$$ //int//
+$$ For a //static text// control set to "image" mode, you can set this property to rotate the displayed image. The value provided is the number of degrees from the image's initial orientation.
+$$ style
+$$ //string//
+$$ Set or query the font styles used to display this control's label. The string consists of zero or more characters; valid characters are **b** for bold and **i** for italics.
+
+Currently only //static text// controls are supported for this property.
+$$ textbg
+$$ //string//
+$$ Set or query the color used for the text background (fill) of this control. This is in the format //#RRGGBB// (hexadecimal) or //RRR,GGG,BBB// (decimal).
+
+Currently only //list view// controls are supported for this property.
+$$ title
+$$ //string// or\\
+//object://**[[image|Image]]** 
+$$ Alternative name for the **label** property. The term **title** is used in the dialog editor and XML resources, and can also be used here as a convenience.
+$$ topline
+$$ //int//
+$$ For applicable controls (multiline edit control, details mode listview, listbox and scrollable markup text) returns the index of the line currently displayed at the top of the control. You can set this value to change the scroll position in the control.
+$$ type
+$$ //string//
+$$ Returns a string indicating the type of the control.
+$$ userdata
+$$ //anything//
+$$ Lets you associate a data value with the control. Opus makes no use of this value, it's only for your own use.
+$$ value
+$$ //string// or\\
+//bool// or\\
+//int or//\\
+**[[dialoglistitem|DialogListItem]]** or\\
+**[[vector|Vector]]** or\\
+**[[date|Date]]**
+$$ Set or query the control's value. The meaning of this property depends on the type of the control:
+  * **Edit control**: Returns or accepts a string representing the current contents of the edit control. 
+  * **Check box**: For a simple on/off check box, returns or accepts a //bool// - **True** for checked and **False** for unchecked. For a tri-state check box, returns or accepts an //int// - **0** for unchecked, **1** for checked and **2** for the indeterminate state. 
+  * **Radio button**: Returns or accepts a //bool// - **True** for checked and **False** for unchecked. 
+  * **Tab**: Returns or accepts an //int// indicating the currently selected page in the tab control. 
+  * **List box / combo box / list view**: Returns or accepts a **[[dialoglistitem|DialogListItem]]** representing the selected item. When setting the value it also accepts an //int// representing the 0-based index of the selected item.
+  * **Palette control**: Returns the current color value. The color string is prefixed with a `!` character if the palette button's checkbox is disabled. You can set the color this way as well. You can also set the value to "enable" or "disable" to change the checkbox state without affecting the color.
+  * **Date/Time control**: Returns a **[[date|Date]]** object if a valid date or time is chosen. If the "Show None" property is enabled and the control has been turned off, returns the string "none".
+
+Note that for a multiple-selection //list box// or //list view//, this value will return a **[[vector|Vector]]** of [[dialoglistitem|DialogListItem]] objects, representing all currently selected items.
+$$ visible
+$$ //bool//
+$$ Set or query the visible state of the control. Returns **True** if the control is visible and **False** if it's hidden. You can set this property to hide or show the control.
+$$ visiblelines
+$$ //int//
+$$ For applicable controls (multiline edit control, details mode listview, listbox and scrollable markup text) returns the total number of lines of content visible at one time.
+$$ x
+$$ //int//
+$$ Set or query the left (x) position of the control, in pixels.
+$$ y
+$$ //int //
+$$ Set or query the top (y) position of the control, in pixels.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddGroup
+$$ <string:name>\\
+<int:id>\\
+[<string:flags>]
+$$ //int//
+$$ Adds a new group to a //list view// control. Items you add to the list can optionally be placed in groups. Each group must have a unique ID.
+
+The optional flags are "c" (group is collapsible) and "d" (group starts out collapsed). E.g. **AddGroup("Unimportant", 100, "cd")** would add a group called //Unimportant// that is initially collapsed.
+$$ AddItem 
+$$ <string:name>\\
+[<int:value>]\\
+[<int:groupid>]
+
+or
+
+<object:item>\\
+[<int:groupid>]
+
+or
+
+<**[[vector|Vector]]**>\\
+[<int:value>]\\
+[<int:groupid>]
+
+$$ //int//
+$$ Adds a new item to the control (//list box//, //combo box// or //list view//). The first parameter is the item's name, and the optional second parameter is a data value to associate with the item.
+
+When adding to a grouped //list view//, the optional third parameter provides the ID of the group you want to add the item to (the second parameter must be provided in this case, and can be set to 0 if no value is required).
+
+The item is added to the end of the list.
+
+Instead of the //name// and //value// you can also pass a **[[dialoglistitem|DialogListItem]]** object obtained from another control. This will copy the name and value from the existing item, but won't copy its group (since the new list may have different groups). You can assign the new item to a group with the optional second parameter.
+
+For a //list view// control, you can also pass a **[[vector|Vector]]** (or JScript array) of strings to add an item and its subitems all at once. You can also pass a two-dimensional array to add multiple items, each with their own sub-items.
+
+The return value indicates the position in the list of the new item.
+
+If you are adding to a listview control and need to add an item with multiple columns, you can do it like this (JScript):
+
+<code>
+var i = listview.AddItem("This is col 1");
+listview.GetItemAt(i).subitems(0) = "This is col 2";
+listview.GetItemAt(i).subitems(1) = "This is col 3";</code>
+
+For a //tab// control, this lets you add back a tab that you've previously removed via the **RemoveItem** method. Only the //name// argument is used, which indicates the name of the child dialog to add back to the control.
+$$ AddText
+$$ <**[[map|Map]]**:text>
+$$ //int//
+$$ Adds a text string as an overlay on a //static// control in image mode (i.e. lets you overlay text on images).
+
+The //text// parameter must be a **[[map|Map]]** object (created via the **[[dopusfactory|DOpusFactory]].Map** method, with the following member values to define the text. All values are optional.
+
+|text|The text to display|
+|color|RGB string that specifies the text color|
+|back|RGB string that specifies the background color, or "none" for transparent|
+|shadow|RGB string that specifies the shadow color|
+|alpha|Alpha level from 1-255|
+|x|x coordinate offset (relative to the anchor)|
+|y|y coordinate offset (relative to the anchor)|
+|w|absolute width (positive value) or extra padding (negative value)|
+|h|absolute height (positive value) or extra padding (negative value)|
+|anchor|anchor position; one of **tl** (top-left), **tm** (top-middle), **tr** (top-right), **ml** (middle-left), **m** (middle), **mr** (middle-right), **bl** (bottom-left), **bm** (bottom-middle), **br** (bottom-right)|
+|font|font ID to specify the font to use; must have been previously added via **[[dialog|Dialog]].CreateFont**|
+|multiline|set to True to enable multiline text (line-break is a cr/lf character pair)|
+|html|set to True to enable simple HTML markup|
+|justify|specify text justification for multiline (not supported by html). One of **l** (left), **r** (right), **m** (middle).|
+
+Text will be auto-sized unless a width and/or height are given using the `w` and `h` values. Setting the size causes the entire rectangle to be filled (otherwise only the area behind the text is filled).
+  - Specify a positive value to set the width or height explicitly.
+  - Specify -1 to still use automatic sizing, but fill the entire rectangle.
+  - Set to a number less than -1 to add padding to the automatic size. For example, -5 would add 4 pixels of padding.
+
+This method returns a numeric ID for the text which lets you modify and remove it.
+$$ AutoSize
+$$ [<bool:height>]
+$$ //bool//
+$$ Autosizes the control, if the control type supports autosize. Returns **True** if the control was autosized.
+
+If the optional //height// parameter is set to true, the control will be autosized vertically as well as horizontally.
+$$ ClientToScreen
+$$ <int:X>\\
+<int:Y>
+$$ **[[rect|Rect]]**
+$$ Takes an x,y pixel position relative to the control's client area and returns the same coordinates relative to the whole screen.
+
+The //client area// is the area inside the control, usually excluding the control's frame if it has one. The //screen// coordinates are relative to the top-left corner of the primary monitor. Coordinates can be negative if the mouse is to the left or top of the respective areas.
+
+While a rectangle is returned, only the **left** and **top** coordinates are meaningful. The **width** and **height** will always be zero.
+$$ DeselectItem
+$$ <int:position>
+
+or
+
+<object:item>\\
+$$ //int//
+$$ This method is mainly for use with multiple-selection //list box// and //list view// controls. It lets you deselect individual items in the control while leaving other items selected (or unaffected).
+
+You can specify either the index of the item to select (0 means the first item, 1 means the second and so on) or a **[[dialoglistitem|DialogListItem]]** object obtained from the **GetItemAt** or **GetItemByName** methods.
+
+You can also specify **-1** to deselect all items in the list box.
+$$ DeselectItemByData
+$$ <int:data>
+$$ //int//
+$$ Searches the control for an item with its **data** property set to the specified value, and deselects it. Returns the item's index (or -1 if not found).
+$$ EnableGroupView
+$$ <bool:enable>
+$$ none
+$$ Only applies to //list view// controls. By default group view is off; after adding groups with the **AddGroup** method, use **EnableGroupView** to turn group view on.
+$$ ExpandGroupByName
+$$ <str:name>\\
+<bool:expand>
+$$ none
+$$ For grouped //list view// controls, lets you expand/collapse one or more groups by name rather than having to do it one at a time via `GetGroupById`. The //name// argument can specify a wildcard to match more than one group at once (e.g. `ExpandGroupByName("*", false);` will collapse all groups).
+$$ GetItemRect
+$$ <int:item>\\
+[<int:subitem>]
+$$ **[[rect|Rect]]**
+$$ Returns a [[rect|Rect]] object containing the position of the specified item or subitem. Works with listview, listbox and tab controls. The first argument is the item's index; for listviews in details mode, a second argument providing the subitem's index can optionally be provided. The rectangle is returned in client coordinates relative to the control; you can use the `ClientToScreen` method to convert to screen coordinates if needed.
+$$ GetGroupById
+$$ <int:id>
+$$ **[[dialoglistgroup|DialogListGroup]]**
+$$ Returns a **[[dialoglistgroup|DialogListGroup]]** object representing the group with the specified ID that you've previous added to a //list view// control using the **AddGroup** method.
+$$ GetItemAt
+$$ <int:position>
+$$ **[[dialoglistitem|DialogListItem]]**\\
+or <string>
+$$ Returns a **[[dialoglistitem|DialogListItem]]** object representing the item contained in the control at the specified index (//list box//, //combo box// or //list view//). Item 0 represents the first item in the list, item 1 the second, and so on. For a //tab// control, this returns the name of the dialog whose tab is at the specified index.
+$$ GetItemByData
+$$ <int:data>
+$$ **[[dialoglistitem|DialogListItem]]**
+$$ Searches the control for an item with its **data** property set to the specified value.
+$$ GetItemByLabel\\
+GetItemByName
+$$ <string:name>
+$$ **[[dialoglistitem|DialogListItem]]**\\
+or <int>
+$$ Returns a **[[dialoglistitem|DialogListItem]]** object representing the item contained in the control with the specified name (//list box, combo box or list view//). This method has two names (...//Label// and ...//Name//) for historical reasons, you can use either method name interchangeably). For a //tab// control, this returns the index of the dialog within the tab.
+$$ InsertItemAt
+$$ <int:position>\\
+<string:name>\\
+[<int:value>]\\
+[<int:groupid>]
+
+or
+
+<int:position>\\
+<object:item>\\
+[<int:groupid>]
+
+or
+
+<int:position>\\
+<**[[vector|Vector]]**>\\
+[<int:value>]\\
+[<int:groupid>]
+
+$$ //int//
+$$ Inserts a new item in the control (//list box, combo box or list view//). The first parameter is the position to insert the item at (0 means the beginning of the list, 1 means the second position and so on). The second parameter is the item's name, and the optional third parameter is a data value to associate with the item.
+
+When adding to a grouped //list view//, the optional fourth parameter provides the ID of the group you want to add the item to (the third parameter must be provided in this case, and can be set to 0 if no value is required).
+
+Instead of the //name// and //value// you can also pass a **[[dialoglistitem|DialogListItem]]** object obtained from another control. This will copy the name and value from the existing item, but won't copy its group (since the new list may have different groups). You can assign the new item to a group with the optional third parameter.
+
+For a //list view// control, you can also pass a **[[vector|Vector]]** (or JScript array) of strings to add an item and its subitems all at once. You can also pass a two-dimensional array to add multiple items, each with their own sub-items.
+
+For a //tab// control, this lets you add back a tab that you've previously removed via the **RemoveItem** method. Only the //position// and //name// arguments are used. The //name// argument indicates the name of the child dialog to add back to the control.
+
+The return value indicates the position in the list of the new item.
+$$ InvertSelection
+$$ //none//
+$$ //none//
+$$ Inverts the selection status of all items in the control.
+$$ ModifyText
+$$ <**[[map|Map]]**:text>\\
+<int:id>
+$$ //none//
+$$ Modifies an existing text element in a static control. The //id// argument indicates the text element to modify, this is returned by the **AddText** method. See the **AddText** method for a description of the //text// argument.
+$$ MoveItem
+$$ <int:position>\\
+or\\
+<object:item>\\
+<int:newposition>
+$$ //int//
+$$ Moves an existing item to a new location (//list box//, //combo box//, //list view// or //tab//). The first parameter is the item to move (you can pass either its index or a **[[dialoglistitem|DialogListItem]]** object), and the second parameter is the new position the item should be moved to.
+
+The return value indicates the position in the list of the moved item.
+$$ RemoveGroup
+$$ <int:id>
+$$ none
+$$ Removes the specified group from a //list view// control.
+$$ RemoveItem
+$$ <int:position>\\
+or\\
+<object:item>
+$$ none
+$$ Removes an item from the control (//list box//, //combo box//, //list view// or //tab//). You can provide either the index of the item to remove (0 means the first item, 1 means the second and so on) or a **[[dialoglistitem|DialogListItem]]** object obtained from the **GetItemAt** or **GetItemByName** methods.
+
+You can also specify **-1** to completely clear the contents of the control, removing all items at once.
+$$ RemoveItemByData
+$$ <int:data>
+$$ //int//
+$$ Searches the control for an item with its **data** property set to the specified value, and removes it. Returns the item's index (or -1 if not found).
+$$ RemoveText
+$$ <int:id>
+$$ //none//
+$$ Removes a text element from a static control. The //id// argument indicates the text element to remove, this is returned by the **AddText** method.
+$$ ScreenToClient
+$$ <int:X>\\
+<int:Y>
+$$ **[[rect|Rect]]**
+$$ Takes an x,y pixel position relative to the whole screen and returns the same coordinates relative to the control's client area.
+
+The //client area// is the area inside the control, usually excluding the control's frame if it has one. The //screen// coordinates are relative to the top-left corner of the primary monitor. Coordinates can be negative if the mouse is to the left or top of the respective areas.
+
+While a rectangle is returned, only the **left** and **top** coordinates are meaningful. The **width** and **height** will always be zero.
+$$ SelectItem
+$$ <int:position>\\
+or\\
+<object:item>\\
+or \\
+<string:tab>
+$$ //int//
+$$ Selects an item in the control. For a //list box, combo box or list view//, you can specify either the index of the item to select (0 means the first item, 1 means the second and so on) or a **[[dialoglistitem|DialogListItem]]** object obtained from the **GetItemAt** or **GetItemByName** methods.
+
+For a multiple-selection //list box// or //list view// you can also specify **-1** to select all items in the control.
+
+For a //tab control//, you can change which page is visible by specifying the name of the page (i.e. the name of the child dialog) to show.
+
+The return value indicates the new selected index.
+$$ SelectItemByData
+$$ <int:data>
+$$ //int//
+$$ Searches the control for an item with its **data** property set to the specified value, and selects it. Returns the item's index (or -1 if not found).
+$$ SelectRange
+$$ <int:start>\\
+<int:end>
+
+or
+
+<object:item1>\\
+<object:item2>
+$$ object:**[[vector|Vector]]** 
+$$ Selects text within an //edit control// (or the edit field in a //combo box// control). The two parameters represent the start and end position of the desired selection. To select the entire contents, use **0** for the start and **-1** for the end.
+
+The return value is a **[[vector|Vector]]** with two members that provide the current start and end of the selection. To query the range without changing it, simply call the **SelectRange** method with no arguments.
+
+In a //list box// or //list view// control, this method selects a range of items.
+$$ SetFont
+$$ <int:id>
+$$ none
+$$ Sets the font used by the control to the specified font. The //id// parameter must have come from a previous call to **[[dialog|Dialog]].CreateFont**. You can use 0 to reset the font to its default.
+$$ SetItemWidth
+$$ <int:width>
+$$ none
+$$ Sets the width in pixels of items in a list view control that's set to **list** or **smallicon** mode. Specify **-1** to automatically size the items.
+$$ SetPos
+$$ <int:x>\\
+<int:y>
+$$ none
+$$ Sets the position of this control. The x and y coordinates are specified in pixels.
+$$ SetPosAndSize
+$$ <int:x>\\
+<int:y>\\
+<int:cx>\\
+<int:cy>
+$$ none
+$$ Sets the position and size of the control, in a single operation. All coordinates are specified in pixels.
+$$ SetSize
+$$ <int:cx>\\
+<int:cy>
+$$ none
+$$ Sets the size of this control. The cx (width) and cy (height) values are specified in pixels.
+$$ SetSyntax
+$$ <str:type>
+$$ none
+$$ For edit controls set to use the code editor, this allows you to enable syntax highlighting. The //type// string can be "jscript", "vbscript" or "eval" to use one of the standard syntaxes. You can also specify your own custom syntax details.
+$$ SetTooltip
+$$ <string:tip>
+$$ none
+$$ Assigns a tooltip to this control, which will be shown when the mouse hovers over it. Pass an empty string to remove an existing tooltip.
+</commandtable>
+
+
+
+

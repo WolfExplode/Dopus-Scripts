@@ -1,0 +1,15 @@
+~~Title: Filtering And Sorting~~
+<pageheader/>
+
+  * **[[preferences:preferences_categories:filtering_and_sorting:filters]]**: Provides a convenient place where you can define and edit filters that can be used by various Opus functions (filtered copy/delete operations, the Find tool, etc.) 
+  * **[[preferences:preferences_categories:filtering_and_sorting:filter_bar]]**: Options that control the [[:basic_concepts:searching_and_filtering:filter_bar|Filter Bar]]. 
+  * **[[preferences:preferences_categories:filtering_and_sorting:find_as_you_type]]**: Options that control the [[:basic_concepts:the_lister:find-as-you-type_field|Find-As-You-Type]] field (the FAYT).
+    * **[[preferences:preferences_categories:filtering_and_sorting:find_as_you_type:filter_mode]]**: Options specific to the FAYT's //Filter// mode.
+    * **[[preferences:preferences_categories:filtering_and_sorting:find_as_you_type:find_mode]]**: Options specific to the FAYT's //Find// mode.
+    * **[[preferences:preferences_categories:filtering_and_sorting:find_as_you_type:folders_mode]]**: Options specific to the FAYT's //Folders// mode.
+  * **[[preferences:preferences_categories:filtering_and_sorting:global_filters|Global Filters]]**: Files and folders that should be hidden globally.
+  * **[[preferences:preferences_categories:filtering_and_sorting:permanent_filters|Permanent Filters]]**: Lets you permanently hide files and folders so they don't even show in "hidden files" counts.
+  * **[[preferences:preferences_categories:filtering_and_sorting:quick_keys]]**: Configure the keys that control the [[:basic_concepts:the_lister:find-as-you-type_field|Find-As-You-Type]] field and the [[:basic_concepts:searching_and_filtering:filter_bar|Filter Bar]].
+  * **[[preferences:preferences_categories:filtering_and_sorting:sorting]]**: Options relating to how file lists are sorted.
+
+

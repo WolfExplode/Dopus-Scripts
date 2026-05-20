@@ -1,0 +1,13 @@
+~~Title: File Display Columns~~
+<pageheader/>
+
+This category contains options that affect the appearance and behavior of information columns in details and Power modes.
+
+  * **[[~appearance]]**: Assign specific colors and font styles to individual columns.
+  * **[[~evaluator_columns]]**: Create your own columns using the [[:evaluator|evaluator]] to manipulate filenames and metadata.
+  * **[[~evaluator_groups]]**: Customise the rules that define [[:basic_concepts:sorting_and_grouping|file and folder grouping]].
+  * **[[~filenames]]**: Options that control how filenames are displayed.
+  * **[[~icons]]**: Options that control file icon appearance.
+  * **[[~options]]**: General column-related options.
+  * **[[~shell_properties]]**: Import new columns from the //shell properties// system. Third-party tools may extend this system with additional columns, and this lets you add them to Opus.
+

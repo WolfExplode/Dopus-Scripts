@@ -1,0 +1,23 @@
+~~Title: FilterParseError~~
+<pageheader/>
+
+If a **[[filter|Filter]]** object fails to parse the [[:file_operations:filtered_operations:textual_filters|textual filter]] string you provide, you can retrieve this object from the **Filter.lasterror** property to find out what went wrong.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ length
+$$ //int//
+$$ Returns the length of the token that caused the parsing error.
+$$ message
+$$ //string//
+$$ Returns the error description.
+$$ position
+$$ //int//
+$$ Returns the position of the parsing error in the input string.
+$$ token
+$$ //string//
+$$ Returns the token that caused the parsing error.
+</commandtable>

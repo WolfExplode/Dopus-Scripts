@@ -1,0 +1,34 @@
+~~Title: Generated File Names~~
+<pageheader/>
+
+The evaluator can be used to generate filenames in two different situations:
+
+  * When you make a copy of a file e.g. by pressing <kbd>Ctrl+C</kbd>,<kbd>Ctrl+V</kbd>.
+  * When you make a shortcut to a file or folder.
+
+Opus will use your evaluator clause to generate a new filename both for the initial copy/shortcut, and subsequently when the desired filename is already in use.
+
+The evaluator clauses for these are configured via Preferences:
+
+  * [[:preferences:preferences_categories:file_operations:copying_files|File Operations / Copying Files / Copy of template]]
+  * [[:preferences:preferences_categories:file_operations:options|File Operations / Options / Use template when creating shortcuts]]
+
+To specify an evaluation clause, begin it with a `=` character. Your clause needs to return the new filename to use for the operation.
+
+In this evaluation context, the following variables are available:
+
+<commandtable columns="3">
+$$ Variable
+$$ Type
+$$ Description
+$$ count
+$$ //int//
+$$ Returns the generation count. For example, if you select a file and pressing <kbd>Ctrl+C</kbd>,<kbd>Ctrl+V</kbd>, `count` would initially be set to 0. If you press <kbd>Ctrl+V</kbd> again to make another copy of the same file, `count` would be set to 1. You would usually include the `count` in the generated filename itself to make the new filename unique.
+$$ ext
+$$ //string//
+$$ Returns the file extension of the file in question (if any). This is for informational purposes only and doesn't need to be added to the name of the generated filename (Opus will do that for you automatically).
+$$ name
+$$ //string//
+$$ Returns the name of the file or folder in question. The file extension (if any) is removed from this string.
+</commandtable>
+

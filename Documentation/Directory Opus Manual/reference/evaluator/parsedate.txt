@@ -1,0 +1,25 @@
+~~Title: ParseDate~~
+<evalcmd>
+ParseDate && date or bool && The parsed date, or **false** if parsing failed. &&
+datetime && string && The date/time string to parse. &&
+[format] && string && Date format specification.
+</evalcmd>
+
+Parses a date/time string to a date value, with controllable formatting.
+
+If the //format// argument is a string, it must be a valid date/time [[:reference:command_reference:external_control_codes:codes_for_date_and_time|picture string]] (e.g. "dd/MM/yyyy").
+Otherwise, //format// should be the sum of one or more of the following flag values:
+|1|Use system locale format|
+|2|Use ISO 8601 format|
+|4|Short date format|
+|8|Long date format|
+|16|No date (time only)|
+|32|Short time format|
+|64|Long time format|
+|128|No time (date only)|
+
+If locale flags are not specified, the default is to use the current user's locale date/time format.
+If individual date/time flags are not specified, the function will identify the format type automatically.
+However this is less efficient so if you know the date/time format type it's better to specify them.
+
+

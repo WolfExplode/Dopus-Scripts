@@ -1,0 +1,15 @@
+~~Title: Evaluator Functions~~
+<pageheader/>
+
+A function (button/hotkey) can be written entirely using the evaluator if desired.
+
+  * An evaluator function can use the [[:reference:evaluator:getitems|GetItems]] function to query for selected files/folders.
+  * Dialogs can be displayed to query for basic information with the [[:reference:evaluator:dialog|Dialog]] function.
+  * Other commands or external programs can be run using the [[:reference:evaluator:run|Run]] function.
+
+==Variables==
+
+{{page>standard_variables&nodate&nouser&nofooter}}
+
+
+

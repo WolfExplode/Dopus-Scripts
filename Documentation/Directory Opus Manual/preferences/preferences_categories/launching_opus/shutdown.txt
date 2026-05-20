@@ -1,0 +1,6 @@
+~~Title: Shutdown~~
+<pageheader/>
+
+==Shutdown Directory Opus when all functions finish==
+
+Opus will shutdown automatically once you close the last Lister and no functions are running in the background. This makes Opus behave more like a traditional application that you run, use and then exit when finished with. We recommend that you keep Opus running in the background even when you're not using it as it makes it much quicker to open Listers, and means things like [[:additional_functionality:system-wide_hotkeys|system-wide hotkeys]] and [[:additional_functionality:floating_toolbars|floating toolbars]] can work, but if you don't want to use it like this you can turn this option on.

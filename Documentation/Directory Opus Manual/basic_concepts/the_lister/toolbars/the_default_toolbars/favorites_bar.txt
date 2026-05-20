@@ -1,0 +1,6 @@
+~~Title: Favorites Bar~~
+<pageheader/>
+
+TOBEDONE
+
+{{:media:13:favorites_toolbar.png?nolink|}}

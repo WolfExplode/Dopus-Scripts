@@ -1,0 +1,183 @@
+~~Title: Msg ~~
+<pageheader/>
+
+The **Msg** object represents a [[:scripting:script_dialogs|script dialog]] input event message. It’s returned by the **[[dialog|Dialog]].GetMsg** method which you call when running the message loop for a [[:scripting:script_dialogs:the_dialog_message_loop:detached_dialogs|detached dialog]].
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>// 
+$$ //bool//
+$$ Returns **True** if the message is valid, or **False** if the dialog has been closed (which means you should exit your message loop).
+$$ buttons
+$$ //string//
+$$ Returns a string indicating which mouse button was pressed when the message was generated. Possible values are **left**, **right** and **middle**.
+$$ checked
+$$ //int//
+$$ If the event type is **checked**, this indicates the check state of the item. If checkboxes are used in automatic mode, this will be the **new** check state of the item. In manual mode, this will indicate the **existing** state and it's up to you to change the state if desired.
+
+Check states are:
+|**0**|unchecked|
+|**1**|checked|
+|**2**|indeterminate|
+|**3**|unchecked/disabled|
+|**4**|checked/disabled|
+|**5**|indeterminate/disabled|
+$$ control
+$$ //string//
+$$ Returns the name of the control involved in the event. You can get a **[[control|Control]]** object representing the control by passing this string to the **[[dialog|Dialog]].Control** method.
+
+  * For a **timer** event this returns the name of the timer that was triggered.
+  * For a **hotkey** event this returns the name of the hotkey.
+  * For a **drop** event this returns the name of the control that the files were dropped on.
+  * For a **tab** event this tells you which monitored tab the event occurred in (either the ID you assigned in the **[[dialog|Dialog]].WatchTab** method, or the numeric handle of the tab if you didn't assign an ID).
+  * For a **dirchange** event this tells you which watcher detected a file or folder change (the ID you assigned via the **[[dialog|Dialog]].WatchDir** method).
+  * If you have added an icon to the taskbar via the **[[dialog|Dialog]].NotifyIcon** method, **notifyicon** indicates an event associated with that icon.
+  * For a **http** event this tells you the ID of the [[httprequest|HTTPRequest]] object.
+  * For a **custom** message, this provides the name of the message.
+$$ cx
+$$ //int//
+$$ For **move** and **resize** events, this property returns the new width of the dialog.\\
+\\
+The dialog must have `want_move` or `want_resize` set to receive these events.
+$$ cy
+$$ //int//
+$$ For **move** and **resize** events, this property returns the new height of the dialog.\\
+\\
+The dialog must have `want_move` or `want_resize` set to receive these events.
+$$ data
+$$ //int// or// bool//
+$$ If the event type is **focus**, indicates the new focus state of the control - **True** if the control has gained the focus, or **False** if it's lost it.
+
+For a //combo box// or //list box// control: If the event type is **selchange** or **dblclk**, returns the data value associated with the selected item.
+
+For a two-state //check box// control or //radio button//: If the event type is **click**, returns a //bool// indicating the current check state.
+
+For a three-state //check box//: If the event type is **click**, returns an //int// representing the current state.
+
+For a date/time picker control, this value will be **true** if a valid date is selected, or **false** if the date is turned off (only applies if the "Show None" property is enabled).
+
+If the event type is **timer**, this value indicates the number of milliseconds that have elapsed since the last time this timer was triggered.
+
+If the event type is **tab**, and the **value** property is set to **filechange**, this indicates which file change events occurred in the monitored tab. **1** = add, **2** = delete, **4** = change. The values will be added together (so e.g. **6** indicates at least one item was changed and at least one was deleted).
+
+For a **http** event, this value contains the event status code. The **value** property provides the same information as a keyword.
+
+For a **color** event from a palette control, this will be `0` for an intermediate color change (e.g. the user has the palette open and is clicking around within it) and 1 for final changes (when the palette window closes).
+
+For a **custom** message sent from another script, this may be the optional numeric parameter that can be sent with the message. Scripts can also send a container object like a **[[map|Map]]** and this will be found in the **object** property instead.
+
+For a **hash** message, this provides the request ID returned by the **[[fsutil|FSUtil]].Hash** method.
+
+For a **key** message, this provides the virtual key code of the pressed key. Virtual key codes are listed [[https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes|here]].
+$$ dialog
+$$ //string//
+$$ Returns the name of the parent dialog.
+$$ event
+$$ //string//
+$$ Returns a string indicating the event that occurred. Currently defined events are:
+|**checked**|For a listview control with the //**Checkboxes**// property enabled, indicates that the checkbox of a list item has been clicked. |
+|**click**|The control was clicked (e.g. a button, check box, radio button, markup text or static control with //**Notify Clicks**// property enabled). For a //list edit// control, the **data** value will be `1` for the reset button and `2` for the options button. |
+|**clipboard**|Sent whenever the system clipboard contents change, once monitoring has been enabled with the **[[dialog|Dialog]].WatchClipboard** method.|
+|**close**|The user clicked the dialog's close button. Only generated if the **[[dialog|Dialog]].want_close** property has been set to **True**. You'll need to close the dialog manually using the **[[dialog|Dialog]].EndDlg** method.|
+|**color**|A new color has been chosen in a palette control.|
+|**custom**|A custom message sent from another script. The message name can be found in the **name** property.|
+|**datetime**|The date has changed in a date/time picker control.|
+|**dblclk**|An item in the list was double-clicked (list box, combo box or list view) or the control was double-clicked (static control with //**Notify Clicks** //property enabled). |
+|**delete**|The delete button has been clicked on an item in a //list edit// control.|
+|**dirchange**|A file or folder that you established monitoring of via the **[[dialog|Dialog]].WatchChanges** method has changed. The **control** property tells you which watcher was triggered.|
+|**drag**|The user has initiated a drag and drop from a static or list view control. You can respond by calling the **[[dialog|Dialog]].Drag** method. The //**Drag Source**// property must be enabled on the control for this event to be generated. |
+|**drop**|Files were dropped onto your dialog. The dialog template must have its **//Accept Drops//** property set to **True** to enable drag & drop support. |
+|**editchange**|The contents of an edit field were modified. For a list view this event indicates that the label of a list item was edited. |
+|**enter**|The Enter key was pushed in an //edit// control with the //**Enter**// property enabled).|
+|**focus**|The control gained or lost focus. |
+|**hash**|An asynchronous hash calculation requested via [[fsutil|FSUtil]].Hash has returned. |
+|**hotkey**|A key combination added as a hotkey with the **[[dialog|Dialog]].AddHotkey** method has been pressed. |
+|**http**|An event associated with a [[httprequest|HTTPRequest]] has occurred.|
+|**invalid**|The dialog has been closed|
+|**key**|A key was pressed in a control. Currently only supported by list view controls.|
+|**mode**|The mode has changed in a //list edit// control (the "edit as text" option has been changed).|
+|**move**|The dialog was moved. Only generated if the **[[dialog|Dialog]].want_move** property has been set to **True**. Related to **resize** event below. |
+|**rclick**|An item in the list was right-clicked (list box, list view) or the control was right-clicked (static control with //**Notify Clicks** //property enabled, or button control with the //**Right Button**// property enabled). |
+|**push**|A button with the **Arrow** and **Split** properties both set to true will generate this message when the arrow part of the button is clicked.|
+|**resize**|The dialog was resized. Only generated if the **[[dialog|Dialog]].want_resize** property has been set to **True**. Don't mix manual and automatic resizing with the same control: If you move or resize a control in response to this event, the control should not have any of the **resize** flags set in the dialog editor. |
+|**selchange**|The selection was changed (list box, combo box, list view or tab).|
+|**tab**|An event has occurred in a tab monitored using the **[[dialog|Dialog]].WatchTab** method. |
+|**timer**|A periodic timer created with the **[[dialog|Dialog]].SetTimer** method has elapsed. |
+
+$$ focus
+$$ //bool//
+$$ Returns **True** if the control had focus when the message was generated.
+$$ index
+$$ //int//
+$$ Returns the current selection index for a //combo box//, //list box// or //tab control//.
+$$ mousex
+$$ //int//
+$$ Returns the horizontal position of the mouse cursor when the message was generated.
+$$ mousey
+$$ //int//
+$$ Returns the vertical position of the mouse cursor when the message was generated.
+$$ name
+$$ //string//
+$$ An alias for the **control** property.
+$$ object
+$$ //variant//
+$$ For a **drop** event, this property returns a **[[vector|Vector]]** of **[[item|Item]]** objects, representing the files that were dropped onto your dialog.
+
+For a **custom** message sent from another script, this may be the optional container object (e.g. a **[[map|Map]]**) that can be sent with the message. Scripts can also send a numeric parameter and this will be found in the **data** property instead.
+
+For a date/time picker control, this property returns a **[[date|Date]]** object when a new valid date is chosen.
+
+For a **hash** message this returns the calculated hash value; it will either be a string, or a **[[vector|Vector]]** of strings, depending on how many hash methods were requested in the call to **[[fsutil|FSUtil]].Hash**.
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating the qualifier keys (if any) that were held down when the message was generated.
+
+The string can contain any or all of the following: //shift,// //ctrl//, //alt//, //lwin//, //rwin//
+
+If no qualifiers were down, the string will be: //none//
+$$ result
+$$ //bool//
+$$ Returns **True** if the message is valid, or **False** if the dialog has been closed.
+$$ subitem
+$$ //int//
+$$ Returns the subitem (column) number for listview controls with **rclick** and **dblclk** events.
+$$ tab
+$$ //string//
+$$ For a dialog tab control, returns the name of the parent tab (if the control is on a dialog that's inside a tab control).
+
+If the event type is **tab**, this returns a **[[tab|Tab]]** object representing the monitored tab that the event occurred in. Calling this repeatedly may be inefficient.
+$$ value
+$$ //string//
+$$ For the **dblclk**, **editchange** and **selchange** events, returns the current contents of the edit field (or selected item label).
+
+For the **tab** event, indicates which event occurred in the monitored tab. Possible values are **select**, **navigate**, **filechange**, **activate**, **srcdst**, **view**, **flat**, and **close** (sent if the tab is closed while you are monitoring it).
+
+For the **drag** event, this indicates which button is being used to drag (**left** or **right**).
+
+For a **click** event from a markup text control, this indicates the ID of the clicked link.
+
+For a **http** event, this indicates the current http status code.
+
+For a **color** event from a palette control, this will be the selected color as either a hex or decimal string (depending on the control property). If the palette button's checkbox is disabled, this will be prefixed by a `!` character.
+
+For a date/time picker control, this returns the textual value of the selected date or time. The `object` property returns a **[[date|Date]]** object, which may be more useful.
+
+For a **key** message this provides the pressed key in text form (e.g. "space").
+$$ x
+$$ //int//
+$$ For **move** and **resize** events, this property returns the new x position of the dialog. May be negative on multi-monitor systems.\\
+\\
+The dialog must have `want_move` or `want_resize` set to receive these events.
+$$ y
+$$ //int//
+$$ For **move** **resize** events, this property returns the new y position of the dialog. May be negative on multi-monitor systems.\\
+\\
+The dialog must have `want_move` or `want_resize` set to receive these events.
+</commandtable>
+
+
+
+

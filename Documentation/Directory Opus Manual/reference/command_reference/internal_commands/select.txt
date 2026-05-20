@@ -1,0 +1,665 @@
+~~Title: Select ~~
+<pageheader/>
+
+The `Select` internal command is used to:
+
+  * Display the //Select// dialog (in either [[:basic_concepts:selecting_files:simple_wildcard_selection|simple]] or [[:basic_concepts:selecting_files:advanced_selection|advanced]] modes) 
+  * Select all, deselect all, and invert the current selection of all files and folders 
+  * Select or deselect files by filename with a wildcard pattern 
+  * Select all files in the source that are selected in the destination, and vice versa 
+  * Select all files with extensions matching those already selected 
+  * Convert [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|checkmarks]] into selection and vice versa 
+  * Hide files based on whether they are selected or not 
+  * Select a range of files by index 
+  * Select files by date and size 
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ (#)//(no arguments)//
+$$ -
+$$ -
+$$ Displays the //Select// dialog (in either [[:basic_concepts:selecting_files:simple_wildcard_selection|simple]] or [[:basic_concepts:selecting_files:advanced_selection|advanced]] modes, depending on which was last used).
+
+``Select``
+$$ ADVANCED
+$$ /O
+$$ //(no value)//
+$$ Displays the //Select// dialog in [[:basic_concepts:selecting_files:advanced_selection|advanced]] mode.
+
+``Select ADVANCED``
+$$ 
+$$ 
+$$ //<filter name>//
+$$ Displays the //Select// dialog in advanced mode, with the specified saved filter already loaded.
+
+``Select ADVANCED=MyFilter``
+$$ ALL
+$$ /S
+$$ //(no value)//
+$$ Select all files and folders in the current source file display.
+
+``Select ALL``
+$$ ALLDIRS
+$$ /S
+$$ //(no value)//
+$$ Select all folders in the current source file display.
+
+``Select ALLDIRS``
+$$ ALLFILES
+$$ /S
+$$ //(no value)//
+$$ Select all files in the current source file display.
+
+``Select ALLFILES``
+$$ CASE
+$$ /S
+$$ //(no value)//
+$$ Makes the wildcard selection case-sensitive.
+
+``Select *.JPEG CASE``
+$$ DATE
+$$ /K
+$$ //<date>//
+$$ Select files whose last modification timestamps match the specified date. You can specify:
+
+  * Just a date, in the format //YYYY-MM-DD// 
+  * Just a time, in the format //HH:MM// (seconds are ignored) 
+  * Both a date and time, in the format //YYYY-MM-DD HH:MM// Note that specifying both a date and time requires quotes around the value, because of the space character separating the two.
+
+You can also use `>` (greater than) before the date to match all files newer than the specified date, or `<` (less than) before the date to match all files older than the specified date.
+
+You can also specify an //age// rather than a //date// to test for. For example, to select all files older than 5 days, you might specify `Select DATE ">5 days"`. Valid keywords for age selection are **day**, **week**, **month**, **year**, **hour**, **minute**, **second**.
+
+``Select *.jpg DATE ">2012-06-15 10:00"``
+$$ 
+$$ 
+$$ //<date1>//**..**//<date2>//
+$$ Select files whose last modification timestamps falls between the two specified dates. Both dates are supplied in the format described above.
+
+``Select DATE 2012-01-01..2012-12-31 TYPE=files``
+$$ 
+$$ 
+$$ **oldest**
+$$ Select the oldest item in the current source file display. You can combine this with the `PATTERN` argument to select the oldest of a specific type of file.
+
+``Select *.doc DATE=oldest``
+$$ 
+$$ 
+$$ **newest**
+$$ Select the newest item in the current file display.
+
+``Select DATE=newest DESELECTNOMATCH``
+$$ 
+$$ 
+$$ **created**
+$$ Normally this command considers the last modification timestamp of each file, however by specifying this keyword you can make it look at the creation time instead.
+
+``Select *.(zip|7z|rar) DATE=created,2010-03-10..2010-03-17``
+$$ 
+$$ 
+$$ **both**
+$$ Considers both created and last modification timestamps.
+
+``Select DATE=both,newest``
+$$ 
+$$ 
+$$ **next**
+$$ Modifies the behavior of the `newest` and `oldest` keywords. Normally, `Select DATE=newest` would select the newest file in the list. If it were already selected, nothing would change. If you add the `next` keyword, Opus will progressively select the next newest file each time the command is run.
+
+``Select DATE=next,newest``
+$$ DESELECT
+$$ /S
+$$ //(no value)//
+$$ Instead of selecting files, the command will deselect them. This is used in conjunction with the `PATTERN`, `ALLDIRS` and `ALLFILES` arguments.
+
+``Select *.jpg DESELECT``
+$$ DESELECTNOMATCH
+$$ /S
+$$ //(no value)//
+$$ Files that don't match the pattern will be deselected (normally files that don't match are left alone). This also works when using the `FILTER` argument to select files with a predefined filter.
+
+``Select *.doc DESELECTNOMATCH``
+$$ DESELECTOTHERTYPE
+$$ /S
+$$ //(no value)//
+$$ When used with the `TYPE` argument to restrict a selection to either files or folders (or with the `ALLFILES` and `ALLDIRS` arguments), `DESELECTOTHERTYPE` causes all items of the other type to be deselected
+
+``Select * TYPE=files DESELECTOTHERTYPE``
+$$ DESTTOSOURCE
+$$ /O
+$$ //(no value)//
+$$ Selects all files and folders in the source file display that are currently selected in the destination. The comparison is only done on the filename - the files are not actually compared.
+
+``Select DESTTOSOURCE``
+$$ 
+$$ 
+$$ **in**
+$$ Selects all files and folders in the source file display that exist in the destination.
+
+``Select DESTTOSOURCE=in``
+$$ 
+$$ 
+$$ **noext**
+$$ Does not consider file extensions when comparing selected files in the source and destination. For example, if **IMGP1234.JPG** was selected in the destination, and **IMGP1234.WAV** existed in the source, it would be selected.
+
+``Select DESTTOSOURCE=noext``
+$$ 
+$$ 
+$$ **notin**
+$$ Selects all files and folders in the source file display that don't exist in the destination.
+
+``Select DESTTOSOURCE=notin``
+$$ DUPES
+$$ /S
+$$ //(no value)//
+$$ Displays the **Duplicates Selection** dialog, which lets you select files after performing a [[:additional_functionality:duplicate_file_finder|duplicates search]].
+
+``Select DUPES``
+$$ EXACT
+$$ /S
+$$ //(no value)//
+$$ Indicates that the PATTERN argument is a literal file name and not a wildcard or regular expression. This allows you to specify an exact filename without having to escape wildcard characters like '(' and ')'.
+
+``Select "Cat Photo (1).jpg" EXACT``
+$$ FILTER
+$$ /O
+$$ //(no value)//
+$$ Performs file selection using a pre-defined filter. The name of the filter must be given as the value of the `PATTERN` argument. Filters must have previously been configured through the **[[:preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences.
+
+You can use this with the `TYPE` argument to restrict the filter to either files or folders only. You can also use the `FILTERFLAGS` argument to control what happens with files that match / don't match the filter.
+
+``Select "Image Files" FILTER``
+
+You can also use this from a script, by using the **[[..:..:scripting_reference:scripting_objects:command|Command]].SetFilter** method to assign a filter to a **Command** object. Running the command `Select FILTER` from that object would select files according to the filter.
+$$
+$$
+$$ **list**
+$$ Generates a dynamic list of configured filters. Selecting a filter from the list invokes the `Select` command to select files matching the filter.
+
+``Select FILTER=list``
+$$ FILTERDEF
+$$ /K/R
+$$ //<filter>//
+$$ Lets you define a filter in [[:file_operations:filtered_operations:textual_filters|text format]] to select matching files. Similar to the `FILTER` argument, however the filter does not need to be predefined.
+
+This is a **/R** argument and so everything after the `FILTERDEF` keyword will be treated as the argument's value.
+
+``Select FILTERDEF name match *.zip and size match > 2 mb``
+$$ FILTERFLAGS
+$$ /K
+$$ **select**
+$$ 
+This argument is used in conjunction with the `FILTER` argument.
+
+The `select` keyword selects files that match the filter. This is the default behaviour if `FILTERFLAGS` is not specified.
+
+``Select Documents FILTER FILTERFLAGS=select``
+$$ 
+$$ 
+$$ **deselect**
+$$ Deselect files that match the filter.
+
+``Select "Music Files" FILTER FILTERFLAGS=deselect``
+$$ 
+$$ 
+$$ **deselectnomatch**
+$$ Deselect files that don't match the filter.
+
+``Select "Music Files" FILTER FILTERFLAGS=deselectnomatch``
+$$ 
+$$ 
+$$ **hide**
+$$ Hide files that match the filter.
+
+``Select "Temp Files" FILTER FILTERFLAGS=hide``
+$$ 
+$$ 
+$$ **hidenomatch**
+$$ Hide files that don't match the filter.
+
+``Select "Image Files" FILTER FILTERFLAGS=hidenomatch``
+$$
+$$
+$$ **showhidden**
+$$ Any currently hidden items will be redisplayed before the new filter is applied.
+
+``Select "Recently Modified" FILTER FILTERFLAGS=showhidden``
+$$ FIRST
+$$ /O
+$$ //(no value)//
+$$ Select the first item in the source file display, deselect all other items.
+
+``Select FIRST``
+$$ $$ $$ **visible**
+$$ Select the first visible item in the source file display.
+
+``Select FIRST=visible``
+$$ FROMCHECKS
+$$ /S
+$$ //(no value)//
+$$ Convert the state of checked items to selections (checked items will be selected, non-checked items will be deselected). This only applies in [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|checkbox mode]].
+
+``Select FROMCHECKS``
+$$ FROMSCRIPT
+$$ /O
+$$ //(no value)//
+$$ This command should be used when running a Select command from a script (e.g. via `Command.RunCommand()`). It tells the command to select the files in the **Command** object itself.
+
+``Func.Command.RunCommand("Select FROMSCRIPT");``
+$$
+$$
+$$ **unhide**
+$$ Any items that are currently hidden will be unhidden before being selected.
+
+``Func.Command.RunCommand("Select FROMSCRIPT=unhide");``
+$$ GROUPNAME
+$$ /O
+$$ //(no value)//
+$$ When the file display is [[:basic_concepts:sorting_and_grouping|grouped]], this lets you select files based on the group they are in. When `GROUPNAME` is used without an associated value, the value of the `PATTERN` argument is used as the name of the group to match.
+
+The example below selects all files in groups beginning with **X**.
+
+``Select X* GROUPNAME``
+$$ 
+$$ 
+$$ //<group name>//
+$$ When a value is provided for the `GROUPNAME` argument it specifies the name (or wildcard pattern) of the file group. The selection operation will be confined to files and folders in matching groups.
+
+You can also use this in conjunction with the `SETFOCUS` argument to give input focus to a group header.
+
+``Select *.jpg GROUPNAME Today``\\
+``Select NOPATTERN GROUPNAME Yesterday SETFOCUS``
+$$ HIDESEL
+$$ /O
+$$ //(no value)//
+$$ Hide all selected items (both files and folders). This is used either with the `PATTERN` argument to hide all files that match the pattern, or with the `NOPATTERN` argument to hide all currently selected files.
+
+``Select *.tmp HIDESEL``
+$$ 
+$$ 
+$$ **dirs**
+$$ Hide all selected directories. 
+
+``Select HIDESEL=dirs NOPATTERN``
+$$ 
+$$ 
+$$ **files**
+$$ Hide all selected files. 
+
+``Select HIDESEL=files NOPATTERN``
+$$ HIDEUNAFFECTED
+$$ /S
+$$ //(no value)//
+$$ When used with the [[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|synchronize]] tool, this hides any items from the list that are not marked to be synchronized (either copied or deleted).
+
+``Select HIDEUNAFFECTED``
+$$ HIDEUNSEL
+$$ /O
+$$ //(no value)//
+$$ Hide all unselected items (both files and folders). This is used either with the `PATTERN` argument (files that don't match the pattern will be hidden), or with the `NOPATTERN` argument (all currently unselected files will be hidden).
+
+``Select NOPATTERN HIDEUNSEL``
+$$ 
+$$ 
+$$ **dirs**
+$$ Hide all unselected directories. 
+
+``Select HIDEUNSEL=dirs NOPATTERN``
+$$ 
+$$ 
+$$ **files**
+$$ Hide all unselected files. 
+
+``Select HIDEUNSEL=files NOPATTERN``
+$$ IGNOREDIACRITICS
+$$ /S
+$$ //(no value)//
+$$ Ignores diacritics when performing the wildcard selection.
+
+``Select manana* IGNOREDIACRITICS``
+$$ IGNORECHECKBOXMODE
+$$ /S
+$$ //(no value)//
+$$ The command will act as if the file display is not in [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|checkbox mode]], even if it is. Normally, the Select command will check and uncheck files while in checkbox mode, but this argument allows you to modify the normal file selection and leave the checkboxes alone. In particular, it allows scripts to set the normal selection and focus item to a particular file without modifying the checkbox states.
+
+``Select "dopus.exe" IGNORECHECKBOXMODE``
+$$ INVERT
+$$ /S
+$$ //(no value)//
+$$ Inverts the selection state of all items in the source file display. You can combine this with `TYPE=focus` to only toggle the selection of the current focus item.
+
+``Select INVERT``
+$$ LAST
+$$ /O
+$$ //(no value)//
+$$ Selects the last item in the source file display, deselect all other items.
+
+``Select LAST``
+$$ $$ $$ **visible**
+$$ Select the last visible item in the source file display.
+
+``Select LAST=visible``
+$$ MAKEVISIBLE
+$$ /O
+$$ //(no value)//
+$$ Ensures that the first selected item is visible in the file display. The list will be scrolled if needed. Similar to the `SETFOCUS` argument except the viewer pane will not update to show the new selection.
+
+``Select *.doc MAKEVISIBLE``\\
+``Select NOPATTERN MAKEVISIBLE``
+$$ 
+$$ 
+$$ **immediate**
+$$ Prevents the short delay that normally occurs before the selected file is scrolled into view.
+
+``Select NEXT MAKEVISIBLE=immediate``
+$$ NEXT
+$$ /O
+$$ //(no value)//
+$$ Selects the next item in the file display. The first item immediately following the first currently selected item will be selected, and all other items deselected.
+
+``Select NEXT``
+$$ 
+$$ 
+$$ **mark**
+$$ Toggles the selection state of the currently focused item, and moves the input focus to the next item in the list. This is the equivalent of pressing the <kbd>Ins</kbd> key in the file display.
+
+``Select NEXT=mark``
+$$ 
+$$ 
+$$ **nodeselect**
+$$ Prevents any currently selected items from being deselected.
+
+``Select NEXT=nodeselect``
+$$ 
+$$ 
+$$ **row**
+$$ In the icon display modes (e.g. Thumbnails mode) this will move the selection down one row (vertically instead of horizontally). Ignored in Details and Power modes.
+
+``Select NEXT=row,mark``
+$$
+$$
+$$ **sortfield**
+$$ Selects the next file with a different value in the current sort column.
+
+``Select NEXT=sortfield``
+$$ NOCOLUMN
+$$ /S
+$$ //(no value)//
+$$ Lets you use the `RANGE` argument without having the //Index// column automatically added to the file display.
+
+``Select RANGE=10-20 NOCOLUMN``
+$$ NONE
+$$ /S
+$$ //(no value)//
+$$ Deselects all items in the source file display.
+
+``Select NONE``
+$$ NOPATTERN
+$$ /S
+$$ //(no value)//
+$$ The **Select** command normally requires a value for the `PATTERN` argument to operate, but in some cases you may need it to operate without supplying a pattern. For example, the `HIDESEL` and `HIDEUNSEL` arguments can be used to hide all currently selected or unselected items without applying a new wildcard selection first.
+
+``Select HIDESEL NOPATTERN``
+$$ NOTCOPYING
+$$ /S
+$$ //(no value)//
+$$ Restricts the selection to files and folders not currently involved in a copy operation (either part of a running copy job or a queued job).
+
+``Select ALLFILES NOTCOPYING``
+$$ PATH
+$$
+$$ //<pattern>//
+$$ In a folder with FlatView enabled, or with expanded sub-folders, this lets a wildcard selection be restricted to entries in folders matching the supplied path. You can either specify a fully qualified path or one that is relative to the current (base) folder. Wildcards are also supported. Specify `.` to only select files in the current (base) folder.
+
+``Select *.jpg PATH=.``
+$$ PATTERN
+$$ 
+$$ //<pattern>//
+$$ Specify a wildcard pattern. All items matching the supplied pattern will be selected (or deselected, hidden, etc. based on the other arguments for this command). The pattern can be specified using [[..:..:wildcard_reference:pattern_matching_syntax|standard pattern matching]] syntax, or [[..:..:wildcard_reference:regular_expression_syntax|regular expressions]] if the `REGEXP` argument is supplied. The `PATTERN` argument is also used to provide the name of a pre-defined filter in conjunction with the `FILTER` argument.
+
+This is the default argument for the `Select` command and so the `PATTERN` keyword does not need to be supplied.
+
+``Select *.(bmp|jpg|gif) HIDEUNSEL``
+$$ PREV
+$$ /O
+$$ //(no value)//
+$$ Select the previous item in the file display. The first item immediately preceding the last currently selected item will be selected, and all other items deselected.
+
+``Select PREV``
+$$ 
+$$ 
+$$ **mark**
+$$ Toggles the selection state of the currently focused item, and moves the input focus to the previous item in the list. Similar to pressing the <kbd>Ins</kbd> key, except the focus moves to the previous rather than the next item.
+
+``Select PREV=mark``
+$$ 
+$$ 
+$$ **nodeselect**
+$$ Prevents any currently selected items from being deselected.
+
+``Select PREV=nodeselect``
+$$ 
+$$ 
+$$ **row**
+$$ In the icon display modes (e.g. Thumbnails mode) this will move the selection up one row (vertically instead of horizontally). Ignored in Details and Power modes.
+
+``Select PREV=row,mark``
+$$
+$$
+$$ **sortfield**
+$$ Selects the previous file with a different value in the current sort column.
+
+``Select PREV=sortfield``
+$$ RANGE
+$$ /K
+$$ //<range>//
+$$ Selects a range of items based on their index (their position in the list). This command is equivalent to the range selection mode of the [[:basic_concepts:the_lister:find-as-you-type_field|find-as-you-type]] field. The //<range>// value consists of one or more comma-separated ranges; each range can be a single number, or two numbers separated by a hyphen to indicate all numbers within that range.
+
+By default the //Index// column is automatically added to the file display when you use this command; add the `NOCOLUMN` argument to prevent this.
+
+``Select RANGE 3,8-15,22-25,30``
+$$ REGEXP
+$$ /S
+$$ //(no value)//
+$$ Use [[..:..:wildcard_reference:regular_expression_syntax|regular expression]] mode instead of standard pattern matching.
+
+``Select .*\.jpg REGEXP``
+$$ RESELECT
+$$ /S
+$$ //(no value)//
+$$ Reselects all files and folders that were used (and deselected) by the previously executed command.
+
+``Select RESELECT``
+$$ RESTORE
+$$ /O
+$$ //(no value)//
+$$ Restores a saved selection. By default restores the selection saved for the tab, but you can specify a name to restore a global selection.
+
+``Select RESTORE``
+$$ $$ $$ **name://name//**
+$$ Restores the named selection. This can have been saved in a different tab, but the full paths of the selected files must be the same unless the **ignorepath** switch is used.
+
+``Select RESTORE=name:mysel``
+$$ $$ $$ **ignorepath**
+$$ This switch allows selections to be "copied" from one folder to another - files are matched only on their filename rather than the whole path. You would use this with named selection previous saved with the `Select SAVE` command.
+
+``Select RESTORE=name:mysel,ignorepath``
+$$ $$ $$ **nodeselect**
+$$ Prevents existing selections being lost when the selection is restored.
+
+``Select RESTORE=nodeselect``
+$$ SAVE
+$$ /O
+$$ //(no value)//
+$$ Saves (remembers) the current selection. By default the selection is saved within the source tab, but you can specify a name to save the selection globally.
+
+``Select SAVE``
+$$ $$ $$ **name://name//**
+$$ Saves the current selection with the specified name. This lets the selection be restored in a different tab.
+
+``Select SAVE=name:mysel``
+$$ SETFOCUS
+$$ /S
+$$ //(no value)//
+$$ Ensures that the first selected item is visible in the file display. The list will be scrolled if needed. Additionally, if the viewer pane is open the first selected file will be automatically viewed if possible.
+
+``Select *.jpg SETFOCUS``
+$$ SHOWFOCUS
+$$ /S
+$$ //(no value)//
+$$ If necessary, scrolls the file display to make the currently focused item visible. The selection will not be modified.
+
+``Select SHOWFOCUS``
+$$ SHOWHIDDEN
+$$ /O
+$$ //(no value)//
+$$ Reveal any files or folders that have previously been hidden by commands using the `HIDESEL` or `HIDEUNSEL` arguments. The other way to reveal files hidden this way is by re-reading the folder (e.g. press <kbd>F5</kbd>).
+
+You can also use this //in conjunction with// `HIDESEL` and `HIDEUNSEL`, to automatically reveal files already hidden while hiding others.
+
+``Select NOPATTERN SHOWHIDDEN``
+$$ 
+$$ 
+$$ **dirs**
+$$ Reveals all hidden directories. 
+
+``Select SHOWHIDDEN=dirs NOPATTERN``
+$$ 
+$$ 
+$$ **files**
+$$ Reveals all hidden files. 
+
+``Select SHOWHIDDEN=files NOPATTERN``
+$$ SHOWUNAFFECTED
+$$ /S
+$$ //(no value)//
+$$ When used with the [[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|synchronize]] tool, this reveals any items that have previously been hidden because they were not marked to be synchronized (either copied or deleted).
+
+``Select SHOWUNAFFECTED``
+$$ SIMILAR
+$$ /O
+$$ //(no value)//
+$$ Selects all files with the same file extensions as the currently selected files. For example, if a single **.jpg** and a single **.gif** file are currently selected, this command would select //all// **.jpg** and **.gif** files in the source file display.
+
+``Select SIMILAR``
+$$
+$$
+$$ **sortfield**
+$$ Selects all files that have the same value in the current sort column as the focus item.
+
+``Select SIMILAR=sortfield``
+$$ 
+$$ 
+$$ **trueext**
+$$ Causes the command to ignore multi-part extensions. E.g. **file.part1.rar**, **file.part2.rar** and **file.part3.rar** would all be considered to be **.rar** files rather than having different extensions.
+
+``Select SIMILAR=trueext``
+$$ SIMILARBASE
+$$ /S
+$$ //(no value)//
+$$ Selects all files with the same base-names as the currently selected files. For example, if **cat.jpg** and **dog.gif** are currently selected, this command would select //all// **cat.*** and **dog.*** files in the source file display.
+
+``Select SIMILARBASE``
+$$ SIMPLE
+$$ /S
+$$ //(no value)//
+$$ Displays the //Select// dialog in [[:basic_concepts:selecting_files:simple_wildcard_selection|simple]] mode.
+
+``Select SIMPLE``
+$$ SIZE
+$$ /K
+$$ //<size>//
+$$ Select files whose size matches the specified size. By default the size specified is treated as bytes, but you can use the following suffixes to use different units:
+
+  * **kb** - kilobytes 
+  * **mb** - megabytes 
+  * **gb** - gigabytes You can also use `>` (greater than) before the size to match all files larger than the specified size, or `<` (less than) before the size to match all files smaller than the specified size.
+
+``Select *.png SIZE >2mb``
+$$ 
+$$ 
+$$ //<size1>//**..**//<size2>//
+$$ Select files whose size falls between the two specified sizes. Both sizes are supplied in the format described above.
+
+``Select SIZE 500kb..5mb DESELECTNOMATCH``
+$$ 
+$$ 
+$$ **largest**
+$$ Select the largest item in the current source file display. You can combine this with the `PATTERN` argument to select the largest of a specific type of file.
+
+``Select *.doc SIZE=largest``
+$$ 
+$$ 
+$$ **smallest**
+$$ Select the smallest item in the current file display.
+
+``Select SIZE=smallest``
+$$ SOURCETODEST
+$$ /O
+$$ //(no value)//
+$$ Selects all files and folders in the destination file display that are currently selected in the source. The comparison is only done on the filename - the files are not actually compared.
+
+``Select SOURCETODEST``
+$$ 
+$$ 
+$$ **in**
+$$ Selects all files and folders in the destination file display that exist in the source.
+
+``Select SOURCETODEST=in``
+$$ 
+$$ 
+$$ **noext**
+$$ Does not consider file extensions when comparing selected files in the source and destination. For example, if **IMGP1234.JPG** was selected in the source, and **IMGP1234.WAV** existed in the destination, it would be selected.
+
+``Select SOURCETODEST=noext``
+$$ 
+$$ 
+$$ **notin**
+$$ Selects all files and folders in the destination file display that don't exist in the source.
+
+``Select SOURCETODEST=notin``
+$$ THIS
+$$ /S
+$$ //(no value)//
+$$ Selects the current focus entry. It is possible for the entry with input focus to not be selected (for example, if you move the focus highlight with <kbd>Ctrl</kbd>+<kbd>↓</kbd>) and this command will select whichever entry is currently focused.
+
+``Select THIS``
+$$ TOCHECKS
+$$ /S
+$$ //(no value)//
+$$ Convert item selection states to check states. Selected items will be checked, and unselected items will be unchecked. If the file display is not currently in [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|checkbox mode]] it will be turned on automatically.
+
+``Select TOCHECKS``
+$$ TOGGLECHECKS
+$$ /S
+$$ //(no value)//
+$$ Toggles the check state of all selected items (when in [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|checkbox mode]]).
+
+``Select TOGGLECHECKS``
+$$ TYPE
+$$ /K
+$$ **files**
+$$ Force the selection to only affect files - even if folders match the pattern they will be unaffected.
+
+You can add the `DESELECTOTHERTYPE` argument to deselect all items of the "other" type.
+
+``Select a* TYPE=files``
+$$ 
+$$ 
+$$ **dirs**
+$$ Force the selection to only affect folders.
+
+``Select "new *" TYPE=dirs``
+$$
+$$
+$$ **focus**
+$$ Applies only to the current focus item.
+
+``Select INVERT TYPE=focus``
+</commandtable2>
+
+

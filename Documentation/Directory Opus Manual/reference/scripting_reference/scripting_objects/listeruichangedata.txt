@@ -1,0 +1,24 @@
+~~Title: ListerUIChangeData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onlisteruichange|OnListerUIChange]]** event, the method receives a **ListerUIChangeData** object when various user interface elements are opened or closed in a Lister.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ change
+$$ //string//
+$$ Returns a //string// indicating which UI element changed. This will equal one of the following strings: //dual//, //tree//, //metapane//, //viewer//, //utility//, //duallayout//, //metapanelayout//, //viewerlayout//, //toolbars//, //toolbarset//, //toolbarsauto//, //minmax.//
+$$ lister
+$$ //object://**[[lister|Lister]]** 
+$$ Returns a **[[lister|Lister]]** object representing the Lister that is changing.
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the event was triggered.\\
+The string can contain any or all of the following: //shift// //ctrl//, //alt//, //lwin//, //rwin//\\
+If no qualifiers were down, the string will be: //none//
+</commandtable>
+
+

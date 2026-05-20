@@ -1,0 +1,9 @@
+~~Title: Details~~
+<pageheader/>
+
+This page contains options that control the behavior of file displays when they are set to //Details// mode.
+
+  * **Copy column data with <kbd>Ctrl</kbd> + right-click**: Enables you to copy data from individual columns or cells. See [[:basic_concepts:selecting_files:selecting_cells|Selecting Cells]].
+  * **Sort-field specific key scrolling**: Normally, when you type in the file display (and the [[:basic_concepts:the_lister:find-as-you-type_field|Find-as-you-type]] field comes up in Find mode), Opus will search for items by name and scroll to show them. If this option is on, the current sort field can affect this behavior - for example, if the list is sorted by the //Type// column, the FAYT field will search for items by file type rather than by name. 
+  * **Begin lasso on filenames**: In full row select mode it can be hard to find somewhere to click to drag out the file selection lasso - this option lets you begin the lasso on the filename if the specified qualifier key is held down.
+

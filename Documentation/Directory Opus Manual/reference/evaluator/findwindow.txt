@@ -1,0 +1,18 @@
+~~Title: FindWindow~~
+<evalcmd>
+FindWindow && bool && Returns True if the window exists. &&
+class && string && Window class to search for. &&
+[title] && string && Window title to search for. &&
+[flags] && string && Optional flags are:
+
+|**r**|use regular-expression rather than standard pattern matching|
+</evalcmd>
+
+Searches for a top-level window in the system matching the specified class and/or title.
+
+You can specify just a class name, just a title name, or both a class and a title (in which case both must match). To specify a title without a class, use an empty string for the class name.
+
+The strings support wildcards (either standard pattern matching or regular expressions if the "r" flag is given).
+
+//See also://\\
+[[running]]

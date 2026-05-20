@@ -1,0 +1,20 @@
+~~Title: OnScriptConfigChange ~~
+<pageheader/>
+
+The **OnScriptConfigChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification whenever the user modifies the script's configuration via the Preferences editor.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnScriptConfigChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:scriptconfigchangedata|ScriptConfigChangeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **ScriptConfigChangeData.changed** property identifies the configuration items that were modified.
+</commandtable>
+
+
+
+

@@ -1,0 +1,17 @@
+~~Title: Ceil~~
+<evalcmd>
+Ceil && double && Rounded input value. &&
+value && double && Input value.
+</evalcmd>
+
+Rounds the input value up to the nearest integer (toward positive infinity).
+
+//Example://
+<code>
+Output( Ceil(1.6) );
+--> 2.000000
+</code>
+
+//See also://\\
+[[floor]]\\
+[[round]]\\

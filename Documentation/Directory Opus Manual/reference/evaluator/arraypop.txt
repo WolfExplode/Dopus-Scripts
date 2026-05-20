@@ -1,0 +1,18 @@
+~~Title: ArrayPop~~
+<evalcmd>
+ArrayPop && int && New size of the array. &&
+array && array && Array to remove element from.
+</evalcmd>
+
+Removes (pops) the last element from the array.
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

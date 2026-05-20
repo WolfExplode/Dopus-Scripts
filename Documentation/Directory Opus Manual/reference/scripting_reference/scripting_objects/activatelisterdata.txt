@@ -1,0 +1,24 @@
+~~Title: ActivateListerData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onactivatelister|OnActivateLister ]]**event, the method receives an **ActivateListerData** whenever the window activation state of a Lister changes.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ active
+$$ //bool//
+$$ Returns **True** if this Lister is activating, **False** if deactivating. Note that if the activation moves from one Lister straight to another the script will be called twice.
+$$ lister
+$$ [[lister|Lister]]
+$$ Returns a **[[lister|Lister]]** object representing the Lister that is closing.
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the event was triggered.\\
+The string can contain any or all of the following: //shift// //ctrl//, //alt//, //lwin//, //rwin//\\
+If no qualifiers were down, the string will be: //none//
+</commandtable>
+
+

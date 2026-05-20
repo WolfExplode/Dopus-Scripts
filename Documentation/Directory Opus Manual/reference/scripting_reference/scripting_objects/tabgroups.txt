@@ -1,0 +1,64 @@
+~~Title: TabGroups ~~
+<pageheader/>
+
+The **TabGroups** object lets your script query and modify the configured [[:basic_concepts:the_lister:tabs:tab_groups|Folder Tab Groups]]. You can obtain a **TabGroups** object from the **[[dopus|DOpus]].TabGroups** property.
+
+
+
+The **TabGroups** object is a collection of **[[tabgroup|TabGroup]]** objects; you can enumerate it to discover the top-level tab groups and folders. Folders can also be enumerated to discover the tab groups and folders they contain, and so on.
+
+
+<commandtable columns="4" id="cmdtable_1">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddChildFolder
+$$ //<object://**[[tabgroup|TabGroup]]**> or <string:name>
+$$ //object:**[[tabgroup|TabGroup]]**//
+$$ Adds a new folder to the list of tab groups. You can either provide a **[[tabgroup|TabGroup ]]**object (which has the folder property set to **True**) or the name for the new folder. If the operation succeeds a **[[tabgroup|TabGroup ]]**object is returned which represents the new folder. If the operation fails **False** is returned.
+$$ AddChildGroup
+$$ //<object://**[[tabgroup|TabGroup]]**> or <string:name>
+$$ //object:**[[tabgroup|TabGroup]]**//
+$$ Adds a new tab group to the list of tab groups. You can either provide a **[[tabgroup|TabGroup ]]**object or the name for the new group. If the operation succeeds a **[[tabgroup|TabGroup ]]**object is returned which represents the new tab group. If the operation fails **False** is returned.
+$$ DeleteChild
+$$ //<object://**[[tabgroup|TabGroup]]**>
+$$ //none//
+$$ Deletes the child item (folder or tab group).
+$$ Save
+$$ //none//
+$$ //none//
+$$ Saves the tab group list and any changes you have made.\\
+Note that this only saves changes made to the object it is called on, and each use of **DOpus.TabGroups** creates a new, independent object. Therefore, you should modify tab groups like this (JScript):<code>
+var tabGroups = DOpus.TabGroups;
+var group = tabGroups.AddChildGroup("New Tab Group");
+if (!group)
+	DOpus.Output("Group already exists");
+else {
+	group.desc = "Example description";
+	var tabs = group.tabs;
+	tabs.AddTab("C:\\");
+	tabGroups.Save();
+}</code>
+\\
+And not like this:<code>
+// This will not work correctly.
+var group = DOpus.TabGroups.AddChildGroup("New Tab Group");
+if (!group)
+	DOpus.Output("Group already exists");
+else {
+	group.desc = "Example description";
+	group.tabs.AddTab("C:\\");
+	DOpus.TabGroups.Save(); // <-- Incorrect
+}</code>
+\\
+The second example will not work because the last line creates a second, unrelated snapshot of the current state, which is unaffected by the unsaved changes to the first snapshot, and then saves the second snapshot without making any changes to it.
+$$ Update
+$$ //none//
+$$ //none//
+$$ Updates the **TabGroups** object to reflect any changes made through the Preferences user interface.
+</commandtable>
+
+
+
+

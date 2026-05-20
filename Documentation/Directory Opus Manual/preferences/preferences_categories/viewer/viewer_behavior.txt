@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" 
+    dir="ltr" 
+    class="no-js" 
+    theme="auto" 
+    pluginnote="0"
+    pluginwrap="1"
+>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Viewer Behavior [Directory Opus Manual]</title>
+    <script>(function(H){H.className=H.className.replace(/\bno-js\b/,'js')})(document.documentElement)</script>
+    <meta name="generator" content="DokuWiki"/>
+<meta name="theme-color" content="#008800"/>
+<meta name="robots" content="noindex,follow"/>
+<meta name="keywords" content="preferences,preferences_categories,viewer,viewer_behavior"/>
+<link rel="search" type="application/opensearchdescription+xml" href="/lib/exe/opensearch.php" title="Directory Opus Manual"/>
+<link rel="start" href="/"/>
+<link rel="contents" href="/doku.php?id=preferences:preferences_categories:viewer:viewer_behavior&amp;do=index" title="Sitemap"/>
+<link rel="manifest" href="/lib/exe/manifest.php" crossorigin="use-credentials"/>
+<link rel="alternate" type="application/rss+xml" title="Recent Changes" href="/feed.php"/>
+<link rel="alternate" type="application/rss+xml" title="Current namespace" href="/feed.php?mode=list&amp;ns=preferences:preferences_categories:viewer"/>
+<link rel="alternate" type="text/html" title="Plain HTML" href="/doku.php?do=export_xhtml&amp;id=preferences:preferences_categories:viewer:viewer_behavior"/>
+<link rel="alternate" type="text/plain" title="Wiki Markup" href="/doku.php?do=export_raw&amp;id=preferences:preferences_categories:viewer:viewer_behavior"/>
+<link rel="stylesheet" href="/lib/exe/css.php?t=mindthedark&amp;tseed=f251427ccb62082a82ddf11b19141da5"/>
+<script >var NS='preferences:preferences_categories:viewer';var JSINFO = {"SMILEY_CONF":{"8-)":"cool.svg","8-O":"eek.svg","8-o":"eek.svg",":-(":"sad.svg",":-)":"smile.svg","=)":"smile2.svg",":-\/":"doubt.svg",":-\\":"doubt2.svg",":-?":"confused.svg",":-D":"biggrin.svg",":-P":"razz.svg",":-o":"surprised.svg",":-O":"surprised.svg",":-x":"silenced.svg",":-X":"silenced.svg",":-|":"neutral.svg",";-)":"wink.svg","m(":"facepalm.svg","^_^":"fun.svg",":?:":"question.svg",":!:":"exclaim.svg","LOL":"lol.svg","FIXME":"fixme.svg","DELETEME":"deleteme.svg"},"id":"preferences:preferences_categories:viewer:viewer_behavior","namespace":"preferences:preferences_categories:viewer","ACT":"show","useHeadingNavigation":1,"useHeadingContent":1};(function(H){H.className=H.className.replace(/\bno-js\b/,'js')})(document.documentElement);</script>
+<script src="/lib/exe/jquery.php?tseed=8faf3dc90234d51a499f4f428a0eae43" defer="defer"></script>
+<script src="/lib/exe/js.php?t=mindthedark&amp;tseed=f251427ccb62082a82ddf11b19141da5" defer="defer"></script>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="shortcut icon" href="/lib/exe/fetch.php?media=wiki:favicon.ico" />
+<link rel="apple-touch-icon" href="/lib/tpl/mindthedark/images/apple-touch-icon.png" />
+        <meta name="configUserChoice" id="configUserChoice" content="1" />
+</head>
+
+<body>
+    <div id="dokuwiki__site"><div id="dokuwiki__top" class="site dokuwiki mode_show tpl_mindthedark  notFound  showSidebar hasSidebar">
+
+        
+<!-- ********** HEADER ********** -->
+<div id="dokuwiki__header"><div class="pad group">
+
+    
+    <div class="headings group">
+        <ul class="a11y skip">
+                            <li>
+                    <a href="#" title="Toggle theme" rel="nofollow" id="themeSwitchMobile">
+                        <span> Toggle theme </span>
+                    </a>
+                </li>
+                    </ul>
+
+        <h1><a href="/doku.php?id=introduction"  accesskey="h" title="[H]"><img src="/lib/exe/fetch.php?media=logo.png" width="128" height="128" alt="" /> <span>Directory Opus Manual</span></a></h1>
+            </div>
+
+    <div class="tools group">
+        <!-- USER TOOLS -->
+                    <div id="dokuwiki__usertools">
+                <h3 class="a11y">User Tools</h3>
+                <ul>
+                    
+                                            <li class="action profile">
+                            <a href="#" title="Toggle theme" rel="nofollow" id="themeSwitch">
+                                <span> Toggle theme </span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<path d="M19,3H14V5H19V18L14,12V21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M10,18H5L10,12M10,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H10V23H12V1H10V3Z" ></svg>                            </a>
+                        </li>
+                    
+                    <li class="action login"><a href="/doku.php?id=preferences:preferences_categories:viewer:viewer_behavior&amp;do=login&amp;sectok=" title="Log In" rel="nofollow"><span>Log In</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M10 17.25V14H3v-4h7V6.75L15.25 12 10 17.25M8 2h9a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-4h2v4h9V4H8v4H6V4a2 2 0 0 1 2-2z"/></svg></a></li>                </ul>
+            </div>
+        
+        <!-- SITE TOOLS -->
+        <div id="dokuwiki__sitetools">
+            <h3 class="a11y">Site Tools</h3>
+            <form action="/doku.php?id=introduction" method="get" role="search" class="search doku_form" id="dw__search" accept-charset="utf-8"><input type="hidden" name="do" value="search" /><input type="hidden" name="id" value="preferences:preferences_categories:viewer:viewer_behavior" /><div class="no"><input name="q" type="text" class="edit" title="[F]" accesskey="f" placeholder="Search" autocomplete="on" id="qsearch__in" value="" /><button value="1" type="submit" title="Search">Search</button><div id="qsearch__out" class="ajax_qsearch JSpopup"></div></div></form>			        </div>
+
+    </div>
+
+    <!-- BREADCRUMBS -->
+            <div class="breadcrumbs">
+                            <div class="youarehere"><span class="bchead">You are here: </span><span class="home"><bdi><a href="/doku.php?id=introduction" class="wikilink1" title="introduction" data-wiki-id="introduction">Introduction</a></bdi></span> » <bdi><a href="/doku.php?id=preferences" class="wikilink1" title="preferences" data-wiki-id="preferences">Preferences</a></bdi> » <bdi><a href="/doku.php?id=preferences:preferences_categories" class="wikilink1" title="preferences:preferences_categories" data-wiki-id="preferences:preferences_categories">Preferences Categories</a></bdi> » <bdi><a href="/doku.php?id=preferences:preferences_categories:viewer" class="wikilink1" title="preferences:preferences_categories:viewer" data-wiki-id="preferences:preferences_categories:viewer">Viewer</a></bdi> » <bdi><a href="/doku.php?id=preferences:preferences_categories:viewer:viewer_behavior" class="wikilink2" title="preferences:preferences_categories:viewer:viewer_behavior" rel="nofollow" data-wiki-id="preferences:preferences_categories:viewer:viewer_behavior">Viewer Behavior</a></bdi></div>
+                                </div>
+    
+    <hr class="a11y" />
+</div></div><!-- /header -->
+
+        <div class="wrapper group">
+
+                            <!-- ********** ASIDE ********** -->
+                <div id="dokuwiki__aside"><div class="pad aside include group">
+                    <h3 class="toggle">Sidebar</h3>
+                    <div class="content"><div class="group">
+                                                                        <div class="plugin__navi "><ul>
+<li class="level1 "><div class="li"><a href="/doku.php?id=copyrights" class="wikilink1" title="copyrights" data-wiki-id="copyrights">Copyrights</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=licence" class="wikilink1" title="licence" data-wiki-id="licence">Licenses</a></div>
+</li>
+<li class="level1 "><div class="li"><a href="/doku.php?id=acknowledgements" class="wikilink1" title="acknowledgements" data-wiki-id="acknowledgements">Acknowledgements</a></div>
+</li>
+<li class="level1 "><div class="li"><a href="/doku.php?id=introduction" class="wikilink1" title="introduction" data-wiki-id="introduction">Introduction</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=release_history" class="wikilink1" title="release_history" data-wiki-id="release_history">New In Directory Opus 13</a></div>
+</li>
+</ul>
+</div>
+<h5 id="using_directory_opus">Using Directory Opus</h5>
+<div class="level5">
+<div class="plugin__navi "><ul>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=basic_concepts" class="wikilink1" title="basic_concepts" data-wiki-id="basic_concepts">Basic Concepts</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=file_operations" class="wikilink1" title="file_operations" data-wiki-id="file_operations">File Operations</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=ftp" class="wikilink1" title="ftp" data-wiki-id="ftp">FTP</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=additional_functionality" class="wikilink1" title="additional_functionality" data-wiki-id="additional_functionality">Additional Functionality</a></div>
+</li>
+</ul>
+</div>
+</div>
+
+<h5 id="configuration">Configuration</h5>
+<div class="level5">
+<div class="plugin__navi "><ul>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=preferences" class="wikilink1" title="preferences" data-wiki-id="preferences">Preferences</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=customize" class="wikilink1" title="customize" data-wiki-id="customize">Customize</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=file_types" class="wikilink1" title="file_types" data-wiki-id="file_types">File Types</a></div>
+</li>
+</ul>
+</div>
+</div>
+
+<h5 id="programming">Programming</h5>
+<div class="level5">
+<div class="plugin__navi "><ul>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=scripting" class="wikilink1" title="scripting" data-wiki-id="scripting">Scripting</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=evaluator" class="wikilink1" title="evaluator" data-wiki-id="evaluator">Evaluator</a></div>
+</li>
+</ul>
+</div>
+</div>
+
+<h5 id="reference_section">Reference Section</h5>
+<div class="level5">
+<div class="plugin__navi "><ul>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:wildcard_reference" class="wikilink1" title="reference:wildcard_reference" data-wiki-id="reference:wildcard_reference">Wildcards and RegEx</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:command_reference" class="wikilink1" title="reference:command_reference" data-wiki-id="reference:command_reference">Commands</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:status_bar_codes" class="wikilink1" title="reference:status_bar_codes" data-wiki-id="reference:status_bar_codes">Status Bar Codes</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:metadata_keywords" class="wikilink1" title="reference:metadata_keywords" data-wiki-id="reference:metadata_keywords">Metadata Keywords</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:scripting_reference:scripting_objects" class="wikilink1" title="reference:scripting_reference:scripting_objects" data-wiki-id="reference:scripting_reference:scripting_objects">Script Objects</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:scripting_reference:scripting_events" class="wikilink1" title="reference:scripting_reference:scripting_events" data-wiki-id="reference:scripting_reference:scripting_events">Script Events</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:evaluator" class="wikilink1" title="reference:evaluator" data-wiki-id="reference:evaluator">Evaluator Functions</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:dopusrt_reference" class="wikilink1" title="reference:dopusrt_reference" data-wiki-id="reference:dopusrt_reference">DOpusRT</a></div>
+</li>
+<li class="level1 "><div class="li"><a href="/doku.php?id=reference:textual_filters" class="wikilink1" title="reference:textual_filters" data-wiki-id="reference:textual_filters">Textual Filters</a></div>
+</li>
+<li class="level1 close"><div class="li"><a href="/doku.php?id=reference:icon_sets" class="wikilink1" title="reference:icon_sets" data-wiki-id="reference:icon_sets">Icon Sets</a></div>
+</li>
+<li class="level1 "><div class="li"><a href="/doku.php?id=reference:rename_macro_language" class="wikilink1" title="reference:rename_macro_language" data-wiki-id="reference:rename_macro_language">Rename Macro Language</a></div>
+</li>
+</ul>
+</div>
+</div>
+
+<!-- no cachefile used, caching forbidden -->
+                                            </div></div>
+                </div></div><!-- /aside -->
+            
+            <!-- ********** CONTENT ********** -->
+            <div id="dokuwiki__content"><div class="pad group">
+                
+                <div class="pageId"><span>preferences:preferences_categories:viewer:viewer_behavior</span></div>
+
+                <div class="page group">
+                                                            <!-- wikipage start -->
+                    
+<h1 class="sectionedit1" id="this_topic_does_not_exist_yet">This topic does not exist yet</h1>
+<div class="level1">
+
+<p>
+You&#039;ve followed a link to a topic that doesn&#039;t exist yet. If permissions allow, you may create it by clicking on <strong>Create this page</strong>.
+</p>
+
+</div>
+
+<!-- cachefile /var/www/dokuwiki/data/cache/6/6a0b775788f7dbb4ce7ec17a48f1f36b.xhtml used -->
+                    <!-- wikipage stop -->
+                                    </div>
+
+<!--                <div class="docInfo"></div> -->
+
+                            </div></div><!-- /content -->
+
+            <hr class="a11y" />
+
+            <!-- PAGE ACTIONS -->
+            <div id="dokuwiki__pagetools">
+				            </div>
+        </div><!-- /wrapper -->
+
+        
+<!-- ********** FOOTER ********** -->
+<div id="dokuwiki__footer"><div class="pad">
+<!--
+    
+    <div class="buttons">
+                <a href="https://www.dokuwiki.org/donate" title="Donate" target="_blank"><img
+            src="/lib/tpl/mindthedark/images/button-donate.gif" width="80" height="15" alt="Donate" /></a>
+        <a href="https://php.net" title="Powered by PHP" target="_blank"><img
+            src="/lib/tpl/mindthedark/images/button-php.gif" width="80" height="15" alt="Powered by PHP" /></a>
+        <a href="//validator.w3.org/check/referer" title="Valid HTML5" target="_blank"><img
+            src="/lib/tpl/mindthedark/images/button-html5.png" width="80" height="15" alt="Valid HTML5" /></a>
+        <a href="//jigsaw.w3.org/css-validator/check/referer?profile=css3" title="Valid CSS" target="_blank"><img
+            src="/lib/tpl/mindthedark/images/button-css.png" width="80" height="15" alt="Valid CSS" /></a>
+        <a href="https://dokuwiki.org/" title="Driven by DokuWiki" target="_blank"><img
+            src="/lib/tpl/mindthedark/images/button-dw.png" width="80" height="15" alt="Driven by DokuWiki" /></a>
+    </div>
+-->
+</div></div><!-- /footer -->
+
+        
+    </div></div><!-- /site -->
+
+    <div class="no"><img src="/lib/exe/taskrunner.php?id=preferences%3Apreferences_categories%3Aviewer%3Aviewer_behavior&amp;1779160742" width="2" height="1" alt="" /></div>
+    <div id="screen__mode" class="no"></div></body>
+</html>

@@ -1,0 +1,34 @@
+~~Title: StoredQuery~~
+<pageheader/>
+
+A **StoredQuery** object represents a [[:basic_concepts:virtual_file_system:file_collections:stored_queries|stored query collection]]. It is retrieved by with the `query` property of the **[[item|Item]]** object.
+
+This object lets you read and modify the query's parameters. Changes you make to the object will be reflected in the stored query next time it is read or its contents refreshed.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ autoupdate
+$$ //bool//
+$$ True if the query auto-updates when it's read, false if it has to be manually refreshed.
+$$ engine
+$$ //string//
+$$ Search engine the query uses. As well as the engine itself, any options it offers can also be controlled. For example, "everything,case" would use Everything in case sensitive mode.
+
+^Keyword^Options^
+|everything|case, wholeword, matchpath, regex, diacritics|
+|everythingglobal|case, wholeword, matchpath, regex, diacritics|
+|windows|nqs,noauto|
+|opus|nonames,content,nowild,regex,anywords,case,nodiacritics,nopartial,utf8|
+$$ paths
+$$ //Vector//
+$$ A [[vector|Vector]] of paths that the query runs against.
+$$ query
+$$ //string//
+$$ The query string.
+</commandtable>
+
+
+
+

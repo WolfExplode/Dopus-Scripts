@@ -1,0 +1,23 @@
+~~Title: Edit Control Properties ~~
+<pageheader/>
+
+Note that the //Edit Control// uses the **Title** property to set its default value. The specific properties applicable to the //Edit Control// are: 
+
+  * **Edit Type**: Sets the type of the edit control. The available types are:
+    * **Single line**: Allows the entry of a single line of text.
+    * **Multiline**: Lets you enter multiple lines of text. When the cursor is on this type of control, pushing the **Return** key will insert a line break in the text.
+    * **Number**: Allows the entry of a positive, whole number.
+    * **Double**: Allows entering of decimal values.
+    * **Password**: Designed for password entry, this control type obscures the text you type into it.
+    * **Code**: A multiline editor designed for entering code. Uses a fixed-width font, and has optional syntax highlighting (enabled with the **Control.SetSyntax** method).
+  * **Cue Text**: Specifies a “cue” string that’s displayed by the control when it’s empty (i.e. to provide a hint to the user as to what they should enter). Only available in **Single line** mode.
+  * **Read Only**: Set to **True** to make the control “read only” – text in it can be viewed, selected and copied, but not edited.
+  * **Word Wrap**: Set to **False** to disable automatic word wrapping in a multiline control. Lines will only break at newline characters.
+  * **Enter**: Set to **True** to make the control trap the <kbd>Enter</kbd> key. Your message loop will receive an "enter" message when the key is pressed. If set to **False** pressing the <kbd>Enter</kbd> key activates the dialog's default button (usually **OK**).
+  * **Max Length**: Sets the maximum length in characters that can be entered into the control. For multi-line edit controls, if the maximum is empty (or set to **0**) there will be no limit on the amount of text that can be entered. For single-line edit controls, the default limit is 30,000 characters unless you specify something different.
+  * **Up/Down Control**: Set to **True** to give a **Number** control a set of up/down arrows that the user can click to adjust the value.
+  * **Minimum Value**: Sets the minimum acceptable value the Up/Down control will allow the user to enter. 
+  * **Maximum Value**: Sets the maximum acceptable value the Up/Down control will allow the user to enter.
+
+
+

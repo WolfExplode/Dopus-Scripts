@@ -1,0 +1,18 @@
+~~Title: AddColData ~~
+<pageheader/>
+
+The **AddColData** object is passed to the **OnAddColumns** event in a [[:scripting:script_add-ins|script add-in]]. The script can use this to [[:scripting:example_scripts:adding_a_new_column|add columns]] using the **AddColumn** method.
+
+
+<commandtable columns="4" id="cmdtable_1">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddColumn
+$$ //none//
+$$ //object://**[[scriptcolumn|ScriptColumn]]** 
+$$ Adds a new information column to Opus. The returned **[[scriptcolumn|ScriptColumn]]** object must be properly initialized. A script add-in can add as many columns as it likes, and these will be available in file displays, infotips and the **[[:basic_concepts:searching_and_filtering:find_files:advanced_find|Advanced Find]]** function.
+</commandtable>
+
+

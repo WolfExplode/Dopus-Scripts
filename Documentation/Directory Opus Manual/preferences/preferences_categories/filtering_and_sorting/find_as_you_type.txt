@@ -1,0 +1,20 @@
+~~Title: Find-As-You-Type~~
+<pageheader/>
+
+The [[:basic_concepts:the_lister:find-as-you-type_field|Find-As-You-Type]] field (FAYT) is a multi-purpose field that appears at the bottom of the file display when you type.
+
+The FAYT has a number of modes; those with specific options are:
+
+  * [[~filter_mode|Filter Mode]]
+  * [[~find_mode|Find Mode]]
+  * [[~folders_mode|Folders Mode]]
+
+==Wrap-around selection in popup list==
+
+In some modes the FAYT pops open a list of suggestions, previous paths, etc. If the **Wrap-around** option is turned on, you pushing <kbd>Up</kbd> at the top of the popup list will move the selection to the bottom (and vice versa for <kbd>Down</kbd>).
+
+==Times==
+
+  * **Close timeout**: Lets you specify how long the FAYT field remains displayed for once you have stopped typing. Not all modes auto-timeout; for example, in //Command// mode the field will remain open until you press <kbd>Enter</kbd> or <kbd>Esc</kbd> or click out of the field.
+  * **Auto search**: Lets you specify how long after you stop typing a search (e.g. using Windows Search or Everything) will begin.
+

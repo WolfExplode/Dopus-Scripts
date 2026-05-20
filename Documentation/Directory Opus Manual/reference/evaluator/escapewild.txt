@@ -1,0 +1,19 @@
+~~Title: EscapeWild~~
+<evalcmd>
+EscapeWild && string && The input string with wildcard characters escaped.&&
+string && string && String to escape. &&
+[flags] && string && Optional flags.
+</evalcmd>
+
+Escapes all wildcard characters in the input string and returns the result.
+
+The optional flags are:
+|r|escape characters used in regular expressions|
+|b|double all backslashes|
+|n|double backslashes that come before the letter 'n'|
+
+//Example://
+<code>
+Output(EscapeWild("*.*"));
+--> '*.'*
+</code>

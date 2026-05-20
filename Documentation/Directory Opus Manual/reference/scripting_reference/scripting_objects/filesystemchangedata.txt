@@ -1,0 +1,18 @@
+~~Title: FilesystemChangeData~~
+<pageheader/>
+
+A [[:scripting:script_add-ins|script add-in]] can monitor file and folder changes by implementing the **[[..:scripting_events:onfilesystemchange|OnFilesystemChange]]** event and calling the **[[fsutil|FSUtil]].WatchChanges** method to establish monitoring.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ id
+$$ //string//
+$$ Returns the ID of the watcher that detected a file or folder change. This ID is assigned when you create the watcher in the call to **[[fsutil|FSUtil]].WatchChanges**.
+</commandtable>
+
+
+
+

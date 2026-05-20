@@ -1,0 +1,73 @@
+~~Title: Directory Opus 13 - Highlights - Page 1~~
+Previous: [[release_history:opus13|Opus 13 Highlights - Table of contents]]
+<pageheader/>
+
+=== Highlights Video ===
+
+A [[https://www.youtube.com/watch?v=K57m_Ogy8Lg|video version of these highlights]] is on our YouTube channel.
+
+=== Dark Mode and Themes ===
+
+Dark Mode, Light Mode, //Any Colors You Like// Mode. For the whole program.
+
+<WRAP indent>{{popup>:media:13:dark_light_purple.png?|{{:media:13:dark_light_purple_600.png}}}}</WRAP>
+
+(This manual also has dark mode! Use //Toggle Theme// at the top.)\\
+
+Built-in Dark and Light themes:
+
+<WRAP indent>{{:release_history:def_themes.png?nolink|}}</WRAP>\\
+
+Hundreds of adjustable colors:
+
+<WRAP indent>{{:release_history:color_prefs.png?nolink|}}</WRAP>\\
+
+Instant color changes:
+
+<WRAP indent>{{:release_history:colorchanges.gif?nolink|}}</WRAP>\\
+
+Make Windows 11's scrollbars look like Windows 10's:
+
+<WRAP indent>{{:release_history:win11scrollbars.gif?nolink|}}</WRAP>\\
+
+----
+
+=== Fonts ===
+
+Change more fonts, including dialogs and tooltips:
+
+<WRAP indent>{{:release_history:dialog_font.png?nolink|}}</WRAP>
+
+<WRAP indent>{{:release_history:video_infotip_rusqu.png?nolink|}}</WRAP>\\
+
+----
+
+=== File Copying ===
+
+Performance improvements, and support for server-side copy offload. (See [[release_history:opus13_detailed:file_copying|Detailed release notes: File Copying]] for particulars.)
+
+Improved progress dialog and queue UI:
+
+<WRAP indent>{{:release_history:filecopy.png?nolink|}}</WRAP>\\
+
+Destination placeholders for files about to be copied:
+
+<WRAP indent>{{:release_history:copyghost.gif?nolink|}}</WRAP>\\
+
+----
+
+=== Everything (Indexed Search) ===
+
+[[https://www.voidtools.com/|Everything]]'s search index can be used within Opus.
+
+Search by name below the current folder, or across all indexed drives at once, with immediate results:
+
+<WRAP indent>{{:release_history:everything_globalsearch.png?nolink|}}</WRAP>\\
+
+Instant folder size calculation when indexed:
+
+<WRAP indent>{{:release_history:everything_foldersizes.gif?nolink|}}</WRAP>\\
+
+----
+
+Next: [[release_history:opus13:page2|Opus 13 Highlights - Page 2]]

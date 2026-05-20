@@ -1,0 +1,19 @@
+~~Title: DumpVars~~
+<evalcmd>
+DumpVars && string && Concatenated list of all current variables. &&
+[pattern...] && string && One or more optional regular expressions.
+</evalcmd>
+
+Returns a concatenated list of all current evaluator variables and their types/values. Useful for debugging.
+
+With no arguments all variables will be returned, otherwise you can supply one or more regular expressions to match variables by name.
+
+//Example://
+<code>
+a = 5;
+name = "jon";
+Output(DumpVars());
+--> a    (1) : 5
+--> name (7) : jon
+</code>
+

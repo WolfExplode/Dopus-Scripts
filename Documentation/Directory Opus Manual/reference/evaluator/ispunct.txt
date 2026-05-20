@@ -1,0 +1,25 @@
+~~Title: IsPunct~~
+<evalcmd>
+IsPunct && bool && **True** if //string// consists only of punctuation characters. &&
+string && string && String to test.
+</evalcmd>
+
+Returns **True** if //string// consists entirely of punctuation characters, otherwise returns **False**.
+
+//Example://
+<code>
+Output(IsPunct("!.,;:"))
+--> true
+
+Output(IsPunct("!.,j:"))
+--> false
+</code>
+
+//See also://\\
+[[isalpha]]\\
+[[isdigit]]\\
+[[islower]]\\
+[[isspace]]\\
+[[isupper]]\\
+
+

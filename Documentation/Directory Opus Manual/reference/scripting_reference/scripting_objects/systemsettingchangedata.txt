@@ -1,0 +1,30 @@
+~~Title: SystemSettingChangeData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onsystemsettingchange|OnSystemSettingChange]]** event, the method receives a **SystemSettingChangeData** object when various system settings change.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ type
+$$ //string//
+$$ Returns a string indicating the setting that changed. Settings are:
+
+|**theme**|The Windows theme (visual style) has changed|
+|**colorset**|Opus has changed from light to dark mode or vice versa|
+|**environment**|System environment variables have been changed|
+|**dwmcomposition**|Indicates that Windows DWM composition has been turned on or off.|
+|**dwmcolorization**|Indicates that Windows DWM colorization has been changed.|
+|**intl**|The system locale has changed.|
+|**userinteractionmode**|The system input method has changed (from mouse to touch or vice versa). The current method can be queried via the **[[sysinfo|SysInfo]].TouchInput** method.|
+|**spacingscheme**|Indicates that the [[:preferences:preferences_categories:user_interface:spacing|UI spacing scheme has changed]]. The new scheme name is available in the **name** property. You can also query the scheme using the **[[dopus|DOpus]].spacingscheme** property.|
+|**windowmetrics**|System window metrics have changed (e.g. font size).|
+
+$$ name
+$$ //string//
+$$ Returns a name string for supported settings.
+</commandtable>
+
+

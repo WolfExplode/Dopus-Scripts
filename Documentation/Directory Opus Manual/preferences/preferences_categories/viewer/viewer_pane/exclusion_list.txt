@@ -1,0 +1,9 @@
+~~Title: Viewer Pane Exclusion List~~
+<pageheader/>
+
+This page lets you exclude the viewer pane from displaying files in certain folders.
+
+  * Click **Add folder** to add a specific folder. Selecting files within this folder won't trigger the viewer pane.
+  * Click **Add Wildcard** to use a wildcard pattern. This can match particular folders (e.g. `\\*` would match all network paths) and it also lets you exclude certain filetypes wherever they're located. For example, `*.pdf` would prevent the viewer pane from showing PDF files.
+
+

@@ -1,0 +1,23 @@
+~~Title: Concat~~
+<evalcmd>
+Concat && string && Concatenate one or more strings. &&
+count && int && Number of strings to join. &&
+string1 && string && First string. &&
+string2 && string && Second string. &&
+[string...] && string && Additional strings to join... &&
+[joiner] && string && String to join with. &&
+[final] && string && Final joiner string.
+</evalcmd>
+
+Joins one or more strings together and returns the result. Empty strings are skipped. 
+
+The //joiner// string is used to join each pair of strings. If not provided, a space is the default.
+The //final// string is used to join the final string. If not provided, the regular joiner string is used.
+
+//Example://
+<code>
+Output(Concat(4, "one", "two", "three", "four", ", ", " and "));
+--> one, two, three and four
+</code>
+
+//See also:// [[concatpath|ConcatPath]]

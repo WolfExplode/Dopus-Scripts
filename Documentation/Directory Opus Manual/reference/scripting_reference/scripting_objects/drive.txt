@@ -1,0 +1,47 @@
+~~Title: Drive ~~
+<pageheader/>
+
+The **Drive** object provides information about a drive (hard drive, CD ROM, etc) on your system. You can obtain a **[[vector|Vector]]** of **Drive** objects, one for each drive on your system, from the **[[fsutil|FSUtil]].Drives** method. You can also get a **Drive** object from the **[[path|Path]].GetDrive** method.
+
+ 
+<commandtable columns="3" id="cmdtable_1">
+$$ (#)**Property Name**
+$$ **Return** Type
+$$ Description
+$$ (#)//default value//
+$$ //string//
+$$ Returns the root of the drive (e.g. **C:\**).
+$$ avail 
+$$ //object://**[[filesize|FileSize]]** 
+$$ Returns a **[[filesize|FileSize]]** object indicating the available free space on the drive.
+$$ bpc 
+$$ //int//
+$$ Returns the bytes-per-cluster value for the drive.
+$$ filesys 
+$$ //string//
+$$ Returns a string representing the filesystem type.
+$$ flags
+$$ //int//
+$$ Returns a value representing filesystem flags for the drive.
+$$ free
+$$ //object://**[[filesize|FileSize]]** 
+$$ Returns a **[[filesize|FileSize]]** object indicating the total free space on the drive.
+$$ label
+$$ //string//
+$$ Returns the drive's label.
+$$ ssd
+$$ //bool//
+$$ Returns `true` if the drive can be identified as solid state.
+$$ total
+$$ //object://**[[filesize|FileSize]]** 
+$$ Returns a **[[filesize|FileSize]]** object indicating the total size of the drive.
+$$ type 
+$$ //string//
+$$ Returns a string indicating the drive type (removable, fixed, remote, cdrom, ramdisk).
+</commandtable>
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+~~Title: IsSpace~~
+<evalcmd>
+IsSpace && bool && **True** if //string// consists only of space characters. &&
+string && string && String to test.
+</evalcmd>
+
+Returns **True** if //string// consists entirely of space characters (spaces, tabs, newlines), otherwise returns **False**.
+
+//Example://
+<code>
+Output(IsSpace("     "))
+--> true
+
+Output(IsSpace("_____"))
+--> false
+</code>
+
+//See also://\\
+[[isalpha]]\\
+[[isdigit]]\\
+[[islower]]\\
+[[ispunct]]\\
+[[isupper]]\\
+

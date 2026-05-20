@@ -1,0 +1,27 @@
+~~Title: Dialog Editor ~~
+<pageheader/>
+
+{{:media:image059.png?nolink|}}
+
+If you’re familiar with the dialog editor in Visual Studio then you’ll probably recognize the script dialog editor, as it was very heavily influenced by the Visual Studio original.
+
+The four main parts of the dialog editor are:
+
+  * **Commands**: Commands for editing the dialog including positioning and alignment tools.
+  * **Workspace**: The main area where the dialog is designed.
+  * **Control Palette**: Controls you can add to the dialog.
+  * **Properties**: Edit the properties of the dialog and controls.
+
+
+See [[..:..:script_dialogs:creating_script_dialogs|Creating Script Dialogs]] for information on how to get to the dialog editor.
+
+More:
+
+[[~dialog_editor_commands|Dialog Editor Commands]]\\
+[[~adding_dialog_controls|Adding Dialog Controls]]\\
+[[~sizing_and_positioning_dialog_controls|Sizing and Positioning Dialog Controls]]\\
+[[~using_the_layout_commands|Using the Layout Commands]]\\
+[[~dialog_control_tab_order|Dialog Control Tab Order]]\\
+[[~dialog_control_mnemonics|Dialog Control Mnemonics]]\\
+[[~language_overlays|Language Overlays]]\\
+[[~dialog_control_properties|Dialog Control Properties]]\\

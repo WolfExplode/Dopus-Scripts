@@ -1,0 +1,26 @@
+~~Title: PowerEventData~~
+<pageheader/>
+
+A [[:scripting:script_add-ins|script add-in]] can implement the **[[..:scripting_events:onpowerevent|OnPowerEvent]]** method to receive notifications of certain system power-related events. The **PowerEventData** object is passed as the single argument to this method.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ data
+$$ //string//
+$$ Returns data for this event. The meaning of this property varies depending on the value of the **type** property.
+$$ type
+$$ //string//
+$$ Returns the power event type. Possible events are:
+|battery|The remaining battery capacity has changed. The current battery capacity is provided in the `data` property.|
+|display|The display state has changed. The `data` property will equal "on", "dimmed" or "off".|
+|resume|The system has resumed from sleep or hibernation.|
+|saver|Battery saver mode state has changed. The `data` property will equal "on" or "off".|
+|source|The power source has changed. The `data` property will equal "battery", "ups" or "ac".|
+|suspend|The system is about to enter sleep or hibernation.|
+</commandtable>
+
+
+
+

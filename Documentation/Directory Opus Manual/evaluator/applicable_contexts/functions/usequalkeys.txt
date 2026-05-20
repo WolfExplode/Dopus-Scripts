@@ -1,0 +1,34 @@
+~~Title: Go USEQUALKEYS~~
+<pageheader/>
+
+You can use the evaluator to override the default behaviour of the `Go USEQUALKEYS` command.
+
+Normally this auto-generates buttons that read a folder normally, in a dual display (with the <kbd>Ctrl</kbd> key), in a new tab (with the <kbd>Alt</kbd> key), or in a new Lister (with the <kbd>Shift</kbd> key).
+
+The evaluator clause can return a string to replace the default arguments of the `Go` command and implement its own behaviour.
+
+This is configured from via the **go_usequalkeys_eval** [[:preferences:preferences_categories:miscellaneous:advanced_options|Advanced]] Preferences option.
+
+In this evaluation context, the following variables are available:
+
+<commandtable columns="3">
+$$ Variable
+$$ Type
+$$ Description
+$$ alt
+$$ //bool//
+$$ True if the <kbd>Alt</kbd> key is down.
+$$ ctrl
+$$ //bool//
+$$ True if the <kbd>Ctrl</kbd> key is down.
+$$ shift
+$$ //bool//
+$$ True if the <kbd>Shift</kbd> key is down.
+$$ cmdline
+$$ //string//
+$$ Provides the original command line for the function.
+</commandtable>
+
+The return value should be a //string// consisting of valid arguments for the `Go` command.
+
+E.g., `if (shift) return "NEW";`.

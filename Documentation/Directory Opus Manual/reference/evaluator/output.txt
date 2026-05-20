@@ -1,0 +1,14 @@
+~~Title: Output~~
+<evalcmd>
+Output && none && &&
+string && string && String to output. &&
+[clear] && bool && Set to **True** to clear the log first.
+</evalcmd>
+
+Outputs the provided string to the [[:basic_concepts:the_lister:utility_panel|script log]].
+
+//Example://
+<code>
+Output("Hello!");
+--> Hello!
+</code>

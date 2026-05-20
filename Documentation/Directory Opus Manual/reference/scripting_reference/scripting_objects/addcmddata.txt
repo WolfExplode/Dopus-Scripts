@@ -1,0 +1,18 @@
+~~Title: AddCmdData ~~
+<pageheader/>
+
+The **AddCmdData** object is passed to the **[[..:scripting_events:onaddcommands|OnAddCommands]] **event in a [[:scripting:script_add-ins|script add-in]]. The script can use this to [[:scripting:example_scripts:adding_a_new_internal_command|add internal commands]] using the **AddCommand** method.
+
+
+<commandtable columns="4" id="cmdtable_1">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ AddCommand
+$$ //none//
+$$ //object://**[[scriptcommand|ScriptCommand]]** 
+$$ Adds a new internal command to Opus. The returned **[[scriptcommand|ScriptCommand]]** object must be properly initialized. A script add-in can add as many internal commands as it likes to the Opus internal command set.
+</commandtable>
+
+

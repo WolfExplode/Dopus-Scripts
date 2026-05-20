@@ -1,0 +1,13 @@
+~~Title: HighlightedColumns~~
+<pageheader/>
+
+The **HighlightedColumns** object lets you enumerate any [[:basic_concepts:selecting_files:selecting_cells|selected cells]] belonging to an **[[item|Item]]** object.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //collection://**[[columnvalue|ColumnValue]]** 
+$$ Returns a collection of **[[columnvalue|ColumnValue]]** objects that you can enumerate.
+</commandtable>

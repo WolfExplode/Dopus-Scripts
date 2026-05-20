@@ -1,0 +1,10 @@
+~~Title: Advanced Find ~~
+<pageheader/>
+
+The advanced mode of the [[.|find tool]] lets you use a filter control to define the search.
+
+{{:media:13:find_-_advanced.png?nolink|}} 
+
+The Filter control lets you build up complex search expressions that let you find files based on many different criteria. In the above example we are searching for all image files that are at least 1280x1024 pixels in size, and have been modified within the past two months.
+
+See the [[:file_operations:filtered_operations|Filtered Operations]] section for a full description of the filtering system, including details on [[:file_operations:filtered_operations:defining_a_filter|how to define a filter]] and what [[:file_operations:filtered_operations:filter_clause_types|attributes you can search for]].

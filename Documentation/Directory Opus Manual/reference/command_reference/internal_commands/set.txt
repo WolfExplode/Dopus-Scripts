@@ -1,0 +1,3436 @@
+~~Title: Set ~~
+<pageheader/>
+
+The **Set** internal command can be used to:
+
+  * Turn the various Lister elements ([[:basic_concepts:the_lister:navigation:folder_tree|folder tree]], [[:basic_concepts:the_lister:metadata_pane|metadata pane]], [[:basic_concepts:the_lister:viewer_pane|viewer pane]], [[:basic_concepts:the_lister:dual_display|dual display]], etc) on or off in the current Lister 
+  * Add or remove information columns from the current file display 
+  * Turn [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|Checkbox Mode]], [[:basic_concepts:flat_view|Flatview Mode]] and [[:basic_concepts:the_lister:dual_display:navigation_lock|Navigation Lock]] on or off 
+  * Make changes to [[:basic_concepts:searching_and_filtering|filtering]], [[:basic_concepts:sorting_and_grouping|sorting]], [[:basic_concepts:sorting_and_grouping|grouping]] and [[:basic_concepts:the_lister:view_modes|view mode]] settings 
+  * Turn [[:file_operations:uac_and_administrator_mode|Administrator mode]] on or off 
+  * Enable or disable the Copy and Delete [[:file_operations:filtered_operations|recursive filters]] 
+  * Enable or disable full-row selection and grid lines 
+  * Adjust the size and position of the current Lister window 
+  * Display a drop-down menu of your [[:basic_concepts:folder_options:folder_formats|favorite folder formats]] 
+  * ... and lots of other things :) 
+
+You can combine multiple **Set** command arguments on the one command line to make multiple changes to the Lister at once. For example, <nobr>`Set DUAL=on TREE=off`</nobr> would turn dual-display mode on, and the folder trees off, in one operation.
+
+
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ ADMIN
+$$ /K
+$$ **on**
+$$ Turns [[:file_operations:uac_and_administrator_mode|Administrator mode]] in in the active Lister. Opus will prompt you for the timeout, after which Administrator mode is automatically deactivated. This function has no effect on Windows XP, or if UAC is disabled.
+
+``Set ADMIN=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns Administrator mode off in the active Lister.
+
+``Set ADMIN=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles Administrator mode on or off.
+
+``Set ADMIN=toggle``
+$$ 
+$$ 
+$$ //<timeout>//
+$$ Specify a timeout (in minutes) to suppress the timeout dialog from appearing.
+
+``Set ADMIN=toggle,10``
+
+If you specify 0 (zero), the timeout is disabled and Administrator mode will stay on in the Lister until the button is pushed again or the window is closed.
+
+``Set ADMIN=toggle,0``
+$$ AUTOSIZE
+$$ /K
+$$ **on**
+$$ Turns on the //Auto-size all columns in Details and Power modes// Folder Format option in the current file display. This overrides all column widths so they behave as "auto" until the option is turned off again. Note that any configured maximum column widths still apply.
+
+``Set AUTOSIZE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the //Auto-size all columns in Details and Power modes// option off.
+
+``Set AUTOSIZE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the //Auto-size all columns in Details and Power modes// option on or off in the current file display.
+
+``Set AUTOSIZE=toggle``
+$$ AUTOSIZECOLUMNS
+$$ /O
+$$ //(no value)//
+$$ Automatically resizes all columns in the source file display (applies to details and power modes only). This is a one-off width change based on the current column contents, as opposed to setting the columns into autosize mode like the **AUTOSIZE** argument would do. Another difference is that this will not normally override columns with maximum widths set (although you can use the **override** flag to allow this), nor ones set to //Collapse//, and so on.
+
+``Set AUTOSIZECOLUMNS``
+$$ 
+$$ 
+$$ **dest**
+$$ Automatically resizes all columns in the destination file display.
+
+``Set AUTOSIZECOLUMNS=dest``
+$$ 
+$$ 
+$$ **left**
+$$ Resizes all columns in the left (or top) file display of a dual display Lister.
+
+``Set AUTOSIZECOLUMNS=left``
+$$ 
+$$ 
+$$ **right**
+$$ Resizes all columns in the right (or bottom) file display.
+
+``Set AUTOSIZECOLUMNS=right``
+$$ 
+$$ 
+$$ **both**
+$$ Resizes all columns in both file displays of a dual display Lister (or the sole display of a single display Lister).
+
+``Set AUTOSIZECOLUMNS=both``
+$$ 
+$$ 
+$$ **focus**
+$$ Resizes all columns in the file display that currently has input focus. (This is almost always the same as the source file display.)
+
+``Set AUTOSIZECOLUMNS=focus``
+$$ 
+$$ 
+$$ **widest**
+$$ Resizes the columns on both sides of a dual display Lister, setting the columns on both sides to the same width (the widest of the two).
+
+``Set AUTOSIZECOLUMNS=widest``
+$$
+$$
+$$ **col://column//**
+$$ Resizes only the specified column rather than all columns. You can specify more than one column, and the other options shown above can also be used in conjunction.
+
+``Set AUTOSIZECOLUMNS=col:name,col:desc,both``
+$$
+$$
+$$ **override**
+$$ Overrides any minimum and maximum limits for the widths of the columns being resized.
+
+``Set AUTOSIZECOLUMNS=col:name,override``
+$$ BACKGROUNDIMAGE
+$$ /K/M
+$$ //<type>:<file>//
+$$ Sets the background image for one or more Lister elements to the specified filename.
+
+//type// can be one of the following strings: **filedisplay**, **tabs**, **tree**, **metapane**, **status**, **toolbars**, **viewerpane**, **all**.
+
+  * If //type// isn't specified, **filedisplay** is the default.
+  * If //filename// isn't specified, any existing image is removed.
+
+This is a **/M** argument, so can accept multiple values if you want to set more than one image at once (or, use `all:` to set all images).
+
+``Set BACKGROUNDIMAGE "filedisplay:/mypictures/butterfly-tile.png"``
+$$ BACKGROUNDIMAGEOPTS
+$$ /K
+$$ //<options>//
+$$ Specify one or more comma-separated options for the background image when changing it with the `BACKGROUNDIMAGE` argument.
+
+  * Options that specify the placement of images are: **tiled**, **stretch**, **aspectfit**, **aspectfill**, **aspecttile**, **topleft**, **topright**, **bottomleft**, **bottomright**, **center** (only one can be specified).
+  * The **shared** option indicates that images should be shared across the entire Lister.
+  * **opacity:** can be used to set the image opacity (e.g. `opacity:50`)
+  * **fillcolor:** can specify a fill color for transparent images (e.g. `fillcolor:#ff8000`).
+  * **nofade** prevents the cross-fade effect when changing images.
+  * **local** makes the image changes local to the current Lister, rather than changing the global Preferences settings.
+  * **reset** combine with **local** to reset a Lister to the global settings.
+
+``Set BACKGROUNDIMAGE all:/mypictures/butterfile-tile.png BACKGROUNDIMAGEOPTS=tiled,shared,opacity:75``
+$$ BLURFILENAMES
+$$ /K
+$$ **on**
+$$ Turns on blurring of filenames in the source Lister. You might want to do this in order to use an external screenshot tool to take a screenshot while hiding potentially sensitive information.
+
+``Set BLURFILENAMES=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns filename blurring off in the source Lister.
+
+``Set BLURFILENAMES=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles filename blurring on or off.
+
+``Set BLURFILENAMES=toggle``
+$$ CALCFOLDERSIZES
+$$ /K
+$$ **all**
+$$ Turns on the Preferences option to calculate folder sizes automatically (for all folders). Note that this simply modifies the Preferences setting - any currently open Listers won't calculate their folder sizes until they are refreshed.
+
+``Set CALCFOLDERSIZES=all``
+$$ 
+$$ 
+$$ **local**
+$$ Turns on the option to calculate folder sizes automatically for all local drives.
+
+``Set CALCFOLDERSIZES=local``
+$$ 
+$$ 
+$$ **fixed**
+$$ Turns on the option for all fixed local drives.
+
+``Set CALCFOLDERSIZES=fixed``
+$$ 
+$$ 
+$$ **off**
+$$ Turns automatic folder size calculation off.
+
+``Set CALCFOLDERSIZES=off``
+$$
+$$
+$$ **selected**
+$$ Turns on the option to calculate folder sizes in selected folders only. The list of folders is configured via the [[:preferences:preferences_categories:folders:folder_sizes]] Preferences page.
+
+``Set CALCFOLDERSIZES=selected,toggle``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles calculation on or off for the specified folder type.
+
+``Set CALCFOLDERSIZES=local,toggle``
+$$ 
+$$ 
+$$ **skipjunctions**
+$$ Specify this flag as well to turn on the //Skip junctions and softlinks// option.
+
+``Set CALCFOLDERSIZES=local,toggle,skipjunctions``
+$$ CHECKBOXMODE
+$$ /K
+$$ **on**
+$$ Turns [[:basic_concepts:selecting_files:selecting_with_the_mouse_and_keyboard:checkbox_mode|Checkbox mode]] on in the source file display.
+
+``Set CHECKBOXMODE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns Checkbox mode off in the source file display.
+
+``Set CHECKBOXMODE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles Checkbox mode on or off.
+
+``Set CHECKBOXMODE=toggle``
+$$ CLEARFILTERS
+$$ /S
+$$ //(no value)//
+$$ Clears all file and folder filters in the current source file display. The filters that are cleared are those controlled by the **HIDEFILTERFILENAME**, **HIDEFILTERFOLDERS**, **SHOWFILTERFILENAME** and **SHOWFILTERFOLDERS** arguments.
+
+``Set CLEARFILTERS``
+$$ CLEARSYNC
+$$ /S
+$$ //(no value)//
+$$ Once you've used the **Find SYNC** and **Copy SYNC** commands to automate the [[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|synchronize]] operation, you can use `Set CLEARSYNC` to exit synchronize mode and return the Lister to normal.
+
+//Example:// See the `Find SYNC` [[find#SYNC|command]] for an example.
+$$ COLUMNS
+$$ /K
+$$ //<column>, ...//
+$$ Changes which columns are displayed in the current source file display. You can specify one or more comma-separated [[..:..:metadata_keywords:keywords_for_columns|column keywords]] - the columns will be displayed in the order specified. Note that the **Name** column must always be present and will be added automatically if you don't specify it.
+
+``Set COLUMNS name,sizeauto,desc,attr``
+$$ 
+$$ 
+$$ //<format>//
+$$ Applies the columns from named favorite folder format to the current source file display. The format must have been previously created through the **[[:preferences:preferences_categories:folders:folder_formats|Folders / Folder Formats]]** Preferences page. Note that if the name of your favorite format conflicts with the name of an actual column, the column name will "win".
+
+``Set COLUMNS "Photo Viewing"``
+$$ 
+$$ 
+$$ **!default**
+$$ Applies the columns from the Folder Type format applicable to the source file display's path. For example, if the current path is a network drive, the columns from the **Network Drives** format would be applied.
+
+``Set COLUMNS=!default``
+$$ 
+$$ 
+$$ **!factory**
+$$ Applies the columns from the hardcoded factory-default folder format to the current source file display.
+
+``Set COLUMNS !factory``
+$$ 
+$$ 
+$$ **!folder**
+$$ Finds and applies the columns by using the same rules as when the folder was initially loaded. This generally gives you the columns you would get if the current directory was loaded into a new window. See the **[[:preferences:preferences_categories:folders:folder_formats|Folders / Folder Formats]]** Preferences page for a description of the rules applied when Opus chooses a folder format for a path.
+
+``Set COLUMNS !folder``
+$$ 
+$$ 
+$$ **!user**
+$$ Applies the columns from the **User default** folder format to the current source file display.
+
+``Set COLUMNS !user``
+$$ COLUMNSADD
+$$ /K
+$$ //<column>, ...//
+$$ Adds the specified columns to the current source file display. Can also be used to move or resize existing columns. You can specify one or more comma-separated [[..:..:metadata_keywords:keywords_for_columns|column keywords]].
+
+Each column name can optionally be followed by the position to insert the column, and the width to make the new column. The format of this is as follows:
+
+|**(**//<pos>//**)**|Specify the position of the column. This can be a number where **0** represents the left-most column, **1** the second column and so on. It can also be specified relative to another column's current position - see below for more information.|
+|**(**//<pos>//**,\\ **//<size>//**)**|Specify both the position and size. The //<size>// argument indicates the width of the new column. This can be a number in pixels, **a** for //Auto//, **f** for //Fill//, **e** for //Expand// and **c** for //Collapse//|
+|**(**//<pos>,\\ <size>,\\ <max>//**)**|Specify position, size and maximum width. The //<max>// argument lets you specify the maximum width for automatically-sized columns. This can be a number in pixels, or **f** for //Fill//.|
+|**(**//<pos>,\\ <size>,\\ <max>,\\ <min>//**)**|Specify position, size, maximum and minimum width. The //<min>// argument lets you specify the minimum width for automatically-sized columns. This should be a number in pixels.|
+|**(**//<pos>,\\ <size>,\\ <max>,\\ <min>,\\ //**z)**|Specify position, size, maximum width, minimum width, and freeze the columns at this point. This column and those that come before it remain left-aligned and do not scroll - any subsequent columns scroll beneath the frozen ones.|
+
+The //<pos>// argument can also be specified relative to another column's current position. For example:
+
+  * **0+Name** places the new column where the //Name// column was, pushing //Name// and everything after it one place to the right. 
+  * **1+Name** places it directly on the right of //Name//. 
+  * **2+Name** places it two to the right of //Name//. 
+  * **1-Name** places it two to the left of //Name// (i.e. in the position of the column that was one to the left of //Name//). You can also set //<pos>// to **!** to leave it unchanged, or prefix it with **!** to say it should be unchanged if the column is already present, but use the position specified after the **!** if it is being added.
+
+To specify any arguments other than //<pos>//, those that precede it must be included. If you don't want to provide a value for one of the prior arguments, use * instead. For example, if you want to specify size 80 but without specifying a position, you could use **(*, 80)**.
+
+The //<size>//, //<max>// and //<min>// values of existing columns can also be changed by specifying a **!** for //<pos>//.
+
+Within the **Lister Column Header** **[[:customize:the_customize_dialog:context_menus|Context Menu]]**, you can use several special values for the position:
+
+|**%header%**|Turns into the ID of the column which was right-clicked. Typically used to remove the column which was right-clicked.|
+|**%headerinsert%**|Turns into the position nearest where you right-clicked. Typically used to insert a column nearest where you right-clicked. If the position is not specified, the column will be added to the end of the existing columns.|
+
+``Set COLUMNSADD picwidth``\\
+``Set COLUMNSADD desc(2),author(*,*)``\\
+``Set COLUMNSADD picwidth(*,a)``\\
+``Set COLUMNSADD=Status(!1+Name)``
+$$ COLUMNSFREEZE
+$$ /K
+$$ //<columns>//
+$$ Sets the number of frozen columns in the current source display. Frozen columns remain left-aligned and do not scroll - any subsequent columns scroll beneath the frozen ones.
+
+This command acts as a toggle - if the specified number of columns are already frozen, they will be unfrozen.
+
+``Set COLUMNSFREEZE=3`` // - freeze the first three columns //
+$$
+$$
+$$ **off**
+$$ Turns off frozen columns in the current source display.
+
+``Set COLUMNSFREEZE=off``
+$$ COLUMNSREMOVE
+$$ /O
+$$ //<column>, ...//
+$$ Removes the specified columns from the current source display. You can specify one or more comma-separated [[..:..:metadata_keywords:keywords_for_columns|column keywords]].
+
+``Set COLUMNSREMOVE=mp3bitrate,mp3samplerate``
+
+Within the **Lister Column Header** **[[:customize:the_customize_dialog:context_menus|Context Menu]]**, you can use **%header%** to refer to the column which was right-clicked.
+
+``Set COLUMNSREMOVE=%header%``
+$$ COLUMNSTOGGLE
+$$ /K
+$$ //<column>, ...//
+$$ Toggles the specified columns on or off in the current source display. The position and size of added columns can be given as for **COLUMNSADD**.
+
+You can specify one or more comma-separated [[..:..:metadata_keywords:keywords_for_columns|column keywords]]. If more than one column name is provided, the named columns will only be turned off if **all** specified columns are currently present. Otherwise, those columns not currently present will be added.
+
+``Set COLUMNSTOGGLE=desc(2),author``\\
+``Set COLUMNSTOGGLE=Status(1+Name)``
+
+(See the **COLUMNSADD** argument, above, for detail on how to specify positions if the examples are not clear.)
+
+Within the **Lister Column Header** **[[:customize:the_customize_dialog:context_menus|Context Menu]]** only:
+
+  * You can use **%headerinsert%** for the position to insert columns nearest where you right-clicked instead of at the end.
+
+``Set COLUMNSTOGGLE=picwidth(%headerinsert%)``
+$$ 
+$$ 
+$$ **any**
+$$ Makes the command consider similar columns to be the same with regard to toggling.
+
+For example, there are several columns which display file sizes in different units. If //Size (Bytes)// is the only size column in use, and **any** is not used, then a command to toggle the //Size (KB)// column will result in both size columns on at once. Adding **any** would instead turn off the //Size (Bytes)// column in that situation and not turn anything on the first time. If the command was then run a second time, with no size column present, then it would add the //Size (KB)// column.
+
+``Set COLUMNSTOGGLE=any,sizekb``
+$$ 
+$$ 
+$$ **columnlist**
+$$ Specify the **columnlist** keyword to have Opus automatically generate a list of columns which can be toggled.
+
+The list will appear as a several sub-menus, one for each column category (//Name and Path//, //Date and Time//, //Picture Metadata//, etc.). This is similar to the list in the default **Lister Column Header** **[[:customize:the_customize_dialog:context_menus|Context Menu]]**.
+
+``Set COLUMNSTOGGLE=columnlist``
+
+The **columnlist** keyword is only supported by the **COLUMNSTOGGLE** argument; the similar **COLUMNSADD** and **COLUMNSREMOVE** arguments can't use it, but are unlikely to need it.
+$$ 
+$$ 
+$$ **insert**
+$$ The **insert** keyword, when combined with the **columnlist** keyword and used in the **Lister Column Header** **[[:customize:the_customize_dialog:context_menus|Context Menu]]**, causes Opus to insert new columns in the position nearest where the you right-clicked the header. Without it, new columns will be added to the end.
+
+``Set COLUMNSTOGGLE=columnlist,insert``
+
+The **insert** keyword does not work without the **columnlist** keyword or when used outside the **Lister Column Header** menu. To do something similar in a command which toggles one specific column, use **%headerinsert%** for the position, as documented above.
+$$ CONFIRM
+$$ /S
+$$ //(no value)//
+$$ Used to show a confirmation message specific to the command being run, often with a link to the Preferences setting for making the change permanent. This is only supported by certain commands, and not something you'd generally use when creating your own buttons. It is used on the default toolbars to help people understand when something only affects the current window or tab, and how make the same change globally instead.
+
+``Set EXPANDABLEFOLDERS=Toggle CONFIRM``
+$$ CONTENTFORMAT
+$$ /K
+$$ //<content group>//
+$$ Sets the current source file display to use the named [[:basic_concepts:folder_options:content_types|content type]] folder format.
+
+``Set CONTENTFORMAT Images``
+$$ COPYFILTER
+$$ /K
+$$ **on**
+$$ Turns on the recursive [[:file_operations:filtered_operations|copy filter]] for the active Lister.
+
+``Set COPYFILTER=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the copy filter in the active Lister.
+
+``Set COPYFILTER=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the copy filter on or off in the active Lister.
+
+``Set COPYFILTER=toggle``
+$$ DARKMODE
+$$ /K
+$$ **on**
+$$ Forces dark mode on for Opus, regardless of current Windows setting.
+
+``Set DARKMODE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Forces dark mode off for Opus, regardless of current Windows setting.
+
+``Set DARKMODE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ If dark mode is currently active, forces it off; otherwise, forces dark mode on.
+
+``Set DARKMODE=toggle``
+$$ 
+$$ 
+$$ **togglesmart**
+$$ Toggles dark mode, acting like **reset** if the new mode is the same as the Windows setting, and **toggle** if it is the opposite.
+
+``Set DARKMODE=togglesmart``
+$$ 
+$$ 
+$$ **reset**
+$$ Resets dark mode within Opus to use and track the Windows setting.
+
+``Set DARKMODE=reset``
+$$ 
+$$ 
+$$ **noreset**
+$$ Prevents the button being highlighted as "active" if Opus is set to use the Windows setting, even if the Windows setting matches the mode the command would activate.
+
+``Set DARKMODE=on,noreset``
+$$ DELFILTER
+$$ /K
+$$ **on**
+$$ Turns on the recursive [[:file_operations:filtered_operations|delete filter]] for the active Lister.
+
+``Set DELFILTER=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the delete filter in the active Lister.
+
+``Set DELFILTER=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the delete filter on or off in the active Lister.
+
+``Set DELFILTER=toggle``
+$$ DELRECYCLEBIN
+$$ /K
+$$ **on**
+$$ Turns on the //Delete to Recycle Bin where possible// option on the [[:preferences:preferences_categories:file_operations:deleting_files]] Preferences page.
+
+``Set DELRECYCLEBIN=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the //Delete to Recycle Bin where possible// option.
+
+``Set DELRECYCLEBIN=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the //Delete to Recycle Bin where possible// option on and off.
+
+``Set DELRECYCLEBIN=toggle``
+$$ DELRECYCLECONFIRM
+$$ /K
+$$ **on**
+$$ Turns on the //Skip confirmation when deleting to Recycle Bin// option on the [[:preferences:preferences_categories:file_operations:deleting_files|Deleting Files]] page in Preferences.
+
+``Set DELRECYCLECONFIRM=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the //Skip confirmation when deleting to Recycle Bin// option.
+
+``Set DELRECYCLECONFIRM=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the //Skip confirmation when deleting to Recycle Bin// option on and off.
+
+``Set DELRECYCLECONFIRM=toggle``
+$$ DEST
+$$ /K
+$$ **left**
+$$ Sets the left (or top) file display in a dual-display Lister to be the destination.
+
+``Set DEST=left``
+$$ 
+$$ 
+$$ **right**
+$$ Sets the right (or bottom) file display to be the destination.
+
+``Set DEST=right``
+$$ 
+$$ 
+$$ **focus**
+$$ Sets the file display that currently has the input focus to be the destination.
+
+``Set DEST=focus``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the state (source/destination) of the left and right file displays.
+
+``Set DEST=toggle``
+$$ DISABLEGLOBALHOTKEYS
+$$ /K
+$$ **on**
+$$ Temporarily disables all global hotkeys. Hotkeys local to a Lister will continue to function.
+
+``Set DISABLEGLOBALHOTKEYS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Re-enables all global hotkeys.
+
+``Set DISABLEGLOBALHOTKEYS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles all global hotkeys on and off.
+
+``Set DISABLEGLOBALHOTKEYS=toggle``
+$$ DUAL
+$$ /K
+$$ **on**
+$$ Turns on [[:basic_concepts:the_lister:dual_display|dual-display]] mode in the active Lister.
+
+``Set DUAL=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off dual-display mode in the active Lister.
+
+``Set DUAL=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles dual-display mode on or off in the active Lister.
+
+``Set DUAL=toggle``
+$$ 
+$$ 
+$$ **horiz**
+$$ Sets dual-display mode to use horizontal layout (one file display above the other). By itself this value will turn dual-display mode on, but you can combine it with **toggle** to toggle horizontal dual-display on or off. If dual-display mode is already on but the layout is set to vertical, the layout will change to horizontal.
+
+``Set DUAL=horiz,toggle``
+$$ 
+$$ 
+$$ **vert**
+$$ Sets dual-display mode to use vertical layout (one file display next to the other).
+
+``Set DUAL=vert``
+$$ 
+$$ 
+$$ **togglelayout**
+$$ Toggles the layout of dual-display mode between horizontal and vertical. If dual-display mode is not currently active this command has no effect unless the **toggle** keyword and either the **horiz** or **vert** keywords are also given.
+
+If combined with those other keywords the function will turn on dual-display mode if it's not on already, switch the layout (from horizontal to vertical or vice versa) if dual-display is already on but not in the desired orientation, and close dual-display mode if it is on and already in the desired orientation.
+
+``Set DUAL=togglelayout``
+$$ 
+$$ 
+$$ **source**
+$$ When dual-display mode is turned on, the newly opened file display will become the source. This value must be combined with one of the other values that actually causes dual-display mode to be switched on.
+
+``Set DUAL=toggle,source``
+$$ 
+$$ 
+$$ **dest**
+$$ When dual-display mode is turned on, the newly opened file display will become the destination.
+
+``Set DUAL=toggle,dest``
+$$ 
+$$ 
+$$ **right**
+$$ When dual-display mode is turned off, it will be the right (or bottom) file display that closes.
+
+``Set DUAL=off,right``
+$$ 
+$$ 
+$$ **left**
+$$ When dual-display mode is turned off, it will be the left (or top) file display that closes.
+
+``Set DUAL=toggle,left``
+$$ 
+$$ 
+$$ **remember**
+$$ Use this value with the **toggle** keyword to cause the second file display to remember its path when it is closed and then opened again. If this isn't specified, the newly opened file display's path will be controlled by the **Specify initial folder when switching to dual file display** option on the **[[:preferences:preferences_categories:file_displays:options|File Displays / Options]]** page in Preferences.
+
+``Set DUAL=toggle,horiz,remember``
+$$ DUALSIZE
+$$ /K
+$$ //<size>[,<size>]//
+$$ Adjusts the splitter between the dual file displays in the active Lister. If the displays are arranged vertically, the command will affect their widths; if they are arranged horizontally it will affect their heights.
+
+The size is given as a percentage, specifying how much of the available space the first file display should use, with the second file display getting whatever is left.
+
+For example, specify 50 to make both file displays the same size (the same as double-clicking the splitter between them):
+
+``Set DUALSIZE 50``
+
+As another example, specify 75 to make the first file display use 75% of the space to leave 25% of the space for the second:
+
+``Set DUALSIZE 75``
+
+It is also possible to specify two sizes to make the command toggle between them. This lets you create a button or hotkey to quickly toggle between giving most of the space to one display and making them equal again.
+
+``Set DUALSIZE 75,50``
+
+You can also resize the splitter by a relative amount by specifying a positive or negative delta.
+
+``Set DUALSIZE +10``
+$$ ENABLELABELFILTER
+$$ /K
+$$ //<name>//
+$$ This command allows named [[:file_operations:labels|wildcard labels and label filters]] to be turned on or off. The specified name must have been assigned to the filter before you can control it via this command. Both global and Folder Format-based label filters are supported. You can specify **local://<name>//** and **global://<name>//** to restrict the type of filter you want to control, or just provide the name and Opus will look for it in both types of filter.
+
+``Set ENABLELABELFILTER my_filter,toggle``
+$$ 
+$$ 
+$$ **on**
+$$ Turns the specified label filter on.
+
+``Set ENABLELABELFILTER my_filter,on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the specified label filter off.
+
+``Set ENABLELABELFILTER my_filter,off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the specified label filter on or off.
+
+``Set ENABLELABELFILTER my_filter,toggle``
+$$ EVALUATORDISABLE
+$$ /O
+$$ **on**
+$$ Disables the [[:evaluator|evaluator]]. You might want to do this if you've been experimenting with it and you find it's causing problems that need to be resolved before it can be turned back on again. The evaluator will stay disabled until you re-enable it (or until Opus is restarted).
+
+``Set EVALUATORDISABLE=on``
+$$
+$$
+$$ **off**
+$$ Re-enables the evaluator.
+$$
+$$
+$$ **toggle**
+$$ Toggles the evaluator on and off.
+$$ EXPANDABLEFOLDERS
+$$ /O
+$$ **on**
+$$ Turns on [[:basic_concepts:expandable_folders|expandable folders]] in the current Lister. In this mode, folders can be expanded inline in the file display, much as they can in the folder tree. This command lets you override the default setting on the [[:preferences:preferences_categories:file_displays:folder_expansion]] Preferences page.
+
+``Set EXPANDABLEFOLDERS=on``
+$$
+$$
+$$ **off**
+$$ Turns off expandable folders in the current Lister.
+
+``Set EXPANDABLEFOLDERS=off``
+$$
+$$
+$$ **toggle**
+$$ Toggles expandable folders on and off in the current Lister.
+
+``Set EXPANDABLEFOLDERS=toggle``
+$$ FAYTFINDOPTIONS
+$$ /K
+$$ **firstchar**\\
+**diacritics**\\
+**fileext**\\
+**shorter**\\
+**anywhere**
+$$ This command lets you toggle various options for the [[:basic_concepts:the_lister:find-as-you-type_field|FAYT]] Find Mode from a command. The specified options will be toggled unless you prefix the keyword with `+` (to turn the option on) or `-` (to turn it off).
+
+``Set FAYTFINDOPTIONS diacritics``\\
+``Set FAYTFINDOPTIONS +firstchar,-anywhere``
+$$ FDBTOOLBAR
+$$ /O
+$$ //<name>//
+$$ This command lets you change which toolbar is used for the [[:basic_concepts:the_lister:navigation:file_display_border|File Display]]. If you don't specify a name the default File Display Toolbar is selected.
+
+Multiple toolbars can be specified, separated by a comma.
+
+``Set FDBTOOLBAR "My FDB Toolbar"``\\
+``Set FDBTOOLBAR "File Display,Images"``
+$$ 
+$$ 
+$$ **!static**
+$$ Turns off the FDB toolbar altogether (reverting to a static header).
+
+``Set FDBTOOLBAR !static``
+$$ FILTERS
+$$ /K
+$$ **on**
+$$ Turns both the copy and delete [[:file_operations:filtered_operations|recursive filters]] for the active Lister.
+
+``Set FILTERS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns both recursive filters off in the active Lister.
+
+``Set FILTERS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles both recursive filters on or off in the active Lister.
+
+``Set FILTERS=toggle``
+$$ FLATVIEW
+$$ /K
+$$ **on**
+$$ Turns [[:basic_concepts:flat_view|Flat View]] mode on in the source file display.
+
+``Set FLATVIEW=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns Flat View mode off in the source file display.
+
+``Set FLATVIEW=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles Flat View on or off in the current source file display. If combined with one of the mode keywords (**group**, **mixed**, **mixednofolders**), Flat View will only be turned off if it is currently in the specified mode - otherwise, it will be set to that mode (and turned on if needed).
+
+``Set FLATVIEW=toggle,grouped``
+$$ 
+$$ 
+$$ **toggleoff**
+$$ Toggles Flat View on or off. Unlike **toggle**, Flat View will be turned off if it is currently enabled in //any// mode, even if the mode does not match the specified keyword.
+
+``Set FLATVIEW=mixednofolders,toggleoff``
+$$ 
+$$ 
+$$ **grouped**
+$$ Sets Flat View to //Grouped// mode.
+
+``Set FLATVIEW=grouped``
+$$ 
+$$ 
+$$ **mixed**
+$$ Sets Flat View to //Mixed// mode.
+
+``Set FLATVIEW=toggle,mixed``
+$$ 
+$$ 
+$$ **mixednofolders**
+$$ Sets Flat View to //Mixed (No Folders)// mode.
+
+``Set FLATVIEW=mixednofolders,on``
+$$
+$$
+$$ **keepformat**
+$$ Lets you toggle Flat View without changing the current folder format. (Like disabling the Flat View format in Preferences, but only for the current change.) This can be useful if you usually want the location column added, but don't want it when using a particular button. It can also be useful if you want to set up columns and filtering in the file display before switching Flat View on, to reduce overheads (calculating columns you didn't want) and visual noise (things appearing in the file display, only to be removed immediately).
+
+As an example, this toggles Flat View with all files hidden and the Full Path column visible (and Location and Relative Location columns removed, if present):
+
+<code>
+@if:Set FLATVIEW=grouped
+Set FLATVIEW=off,keepformat
+Set HIDEFILTERFILENAME
+Set FORMAT=!folder
+@if:else
+Set HIDEFILTERFILENAME=*
+Set COLUMNSREMOVE=path,pathrel
+Set COLUMNSADD=fullpath(1)
+Set FLATVIEW=grouped,keepformat
+</code>
+$$ FOCUS
+$$ /K
+$$ **left**
+$$ Sets the input focus to the left-hand file display in a dual-display Lister.
+
+``Set FOCUS=left``
+$$ 
+$$ 
+$$ **right**
+$$ Sets the input focus to the right-hand file display in a dual-display Lister.
+
+``Set FOCUS=right``
+$$ 
+$$ 
+$$ **source**
+$$ Sets the input focus to the current source file display.
+
+``Set FOCUS=source``
+$$ 
+$$ 
+$$ **dest**
+$$ Sets the input focus to the destination file display.
+
+``Set FOCUS=dest``
+$$ 
+$$ 
+$$ **tree**
+$$ Sets the input focus to the folder tree. In a dual-display Lister, with dual trees, focus will go to the tree attached to the source file display.
+
+``Set FOCUS=tree``
+$$ 
+$$ 
+$$ **lefttree**
+$$ Sets the input focus to the left-hand folder tree in a dual-display, dual-tree Lister.
+
+``Set FOCUS=lefttree``
+$$ 
+$$ 
+$$ **righttree**
+$$ Sets the input focus to the right-hand folder tree in a dual-display Lister.
+
+``Set FOCUS=righttree``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the input focus between the left and right file displays.
+
+``Set FOCUS=toggle``
+$$ 
+$$ 
+$$ **pathfield**
+$$ Sets the focus to the source breadcrumbs path field.
+
+``Set FOCUS=pathfield``
+$$ 
+$$ 
+$$ **leftpathfield**
+$$ Sets the focus to the left/top path field in a dual-display Lister.
+
+``Set FOCUS=leftpathfield``
+$$ 
+$$ 
+$$ **rightpathfield**
+$$ Sets the focus to the right/bottom path field in a dual-display Lister.
+
+``Set FOCUS=rightpathfield``
+$$ 
+$$ 
+$$ **filedisplay**
+$$ When testing which control has focus using [[:customize:creating_your_own_buttons:command_modifiers|@if:set]] you can use this to mean "any file display" rather than having to specifiy source/destination etc.
+
+``@if:set FOCUS=filedisplay``
+$$ 
+$$ 
+$$ **metapane**
+$$ Gives focus to the [[:basic_concepts:the_lister:metadata_pane|Metadata pane]].
+
+``Set FOCUS=metapane``
+$$
+$$
+$$ **utilitypane**
+$$ Sets the focus to the [[basic_concepts:the_lister:utility_panel|utility pane]].
+
+``Set FOCUS=utilitypane``
+$$
+$$
+$$ **viewpane**
+$$ Sets the focus to the [[basic_concepts:the_lister:viewer_pane|viewer pane]].
+
+``Set FOCUS=viewpane``
+$$ FOLDERTREESIZE
+$$ /K
+$$ //<size>[,<size>]//[,**left**|**right**|**dest**]
+$$ Adjusts the size of the folder tree pane in the active Lister. The size is given as an absolute width in pixels. It is possible to specify two separate sizes, and the command will toggle between them. You can also make the command operate on a folder tree other than the one attached to the current source file display by appending the **left**, **right** or **dest** keywords.
+
+``Set FOLDERTREESIZE 200,300``
+$$ FONTSCALE
+$$ /K
+$$ //<absolute factor>//
+$$ Sets the font scaling in the file display to the specified factor. **100** (meaning 100%) is the baseline level, and represents the actual point size configured on the **[[:preferences:preferences_categories:colors_and_fonts:fonts|Fonts]]** page in Preferences. **200** would represent twice as large, **50** would represent half as large, and so on.
+
+Note that font scaling only applies to Details, Power and Thumbnails [[:basic_concepts:the_lister:view_modes|view modes]]. There are separate scaling settings for Details/Power and Thumbnails modes - by default this command adjusts the settings for the
+current mode, but you can use optional keywords to specify the affected mode.
+
+``Set FONTSCALE=125``
+$$ 
+$$ 
+$$ //<relative factor>//
+$$ Adjusts the font scaling in the file display by the specified delta. Use a positive value to increase the scaling and a negative value to decrease it.
+
+``Set FONTSCALE=-10``
+$$ 
+$$ 
+$$ //<factor1>,<factor2>//
+$$ Specify two absolute scale factors to create a command that toggles between the two.
+
+``Set FONTSCALE=100,150``
+$$ 
+$$ 
+$$ **left**
+$$ Scales the font in the left-hand file display, whether it is the source or not.
+
+``Set FONTSCALE=50,left``
+$$ 
+$$ 
+$$ **right**
+$$ Scales the font in the right-hand file display.
+
+``Set FONTSCALE=right,-25``
+$$ 
+$$ 
+$$ **dest**
+$$ Scales the font in the destination file display.
+
+``Set FONTSCALE=dest,+50``
+$$ 
+$$ 
+$$ **both**
+$$ Scales the font in both the left and right file displays.
+
+``Set FONTSCALE=50,125,both``
+$$ 
+$$ 
+$$ **details**
+$$ Only adjusts the font for Details and Power mode.
+
+``Set FONTSCALE=150,details``
+$$ 
+$$ 
+$$ **thumbnails**
+$$ Only adjusts the font for Thumbnails mode.
+
+``Set FONTSCALE=+50,thumbnails``
+$$ 
+$$ 
+$$ **all**
+$$ Adjusts the font for both Details/Power modes and Thumbnails mode.
+
+``Set FONTSCALE=+50,thumbnails``
+$$
+$$
+$$ **quiet**
+$$ Prevents a message displaying in response to the font scale changing.
+
+``Set FONTSCALE=+25,quiet``
+$$ FORMAT
+$$ /K
+$$ //<format>//
+$$ Applies the named favorite folder format to the current source file display. The format must have been previously created through the **[[:preferences:preferences_categories:folders:folder_formats|Folders / Folder Formats]]** Preferences page.
+
+``Set FORMAT "Photo Viewing"``
+$$ 
+$$ 
+$$ **!default**
+$$ Applies the Folder Type format applicable to the source file display's path. For example, if the current path is a network drive, the **Network Drives** format would be applied.
+
+``Set FORMAT=!default``
+$$ 
+$$ 
+$$ **!factory**
+$$ Applies the hardcoded, factory-default folder format to the current source file display.
+
+``Set FORMAT !factory``
+$$ 
+$$ 
+$$ **!folder**
+$$ Finds and applies a folder format by using the same rules as when the folder was initially loaded. This generally gives you what you would get if you opened the current folder in a new window. See the **[[:preferences:preferences_categories:folders:folder_formats|Folders / Folder Formats]]** Preferences page for a description of the rules applied when Opus chooses a folder format for a path.
+
+``Set FORMAT !folder``
+$$ 
+$$ 
+$$ **!user**
+$$ Applies the **User Default** folder format to the current source file display.
+
+``Set FORMAT !user``
+$$ FORMATLIST
+$$ /O
+$$ //(no value)//
+$$ Displays a generated list of your favorite and content type folder formats (acts as a [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic button]]). This displays one item for each format saved in the Favorite Formats category on the **[[:preferences:preferences_categories:folders:folder_formats|Folder Formats]]** page in Preferences. Selecting a format from the generated list applies its settings to the current file display.
+
+``Set FORMATLIST``
+$$ 
+$$ 
+$$ **contenttype**
+$$ Only displays content type formats (omits those for favorites).
+
+``Set FORMATLIST=contenttype``
+$$ 
+$$ 
+$$ **favorites**
+$$ Only displays favorite formats (omits those for content types).
+
+``Set FORMATLIST=favorites``
+$$ 
+$$ 
+$$ **icons**
+$$ Assigns icons to the list items the command generates. The button which creates the list must also have its icon turned on for them to appear.
+
+``Set FORMATLIST=icons,favorites``
+$$ 
+$$ 
+$$ **noreset**
+$$ Prevents the addition of the "reset" commands which are normally generated at the end of the format list (e.g. Reset to Defaults).
+
+``Set FORMATLIST=favorites,noreset``
+$$ FORMATLOCK
+$$ /K
+$$ **on**
+$$ Turns the [[:basic_concepts:folder_options:locking_the_format|format lock]] on in the current Lister. By default this works on the active file display (the one with focus) but you can combine with the other arguments to control which file displays are affected.
+
+``Set FORMATLOCK=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the format lock off in the active file display.
+
+``Set FORMATLOCK=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the format lock on or off in the current Lister. This command can replace the padlock icon in the default status bar. If combined with the **all** keyword in a dual display Lister, this will turn the format lock on in both file displays if neither or one are currently on. Only if both are already on will the lock be turned off.
+
+``Set FORMATLOCK=toggle,all``
+$$ 
+$$ 
+$$ **left**
+$$ Applies the format lock to only the left (or top) file display in a dual-display Lister.
+
+``Set FORMATLOCK=toggle,left``
+$$ 
+$$ 
+$$ **right**
+$$ Applies the format lock to only the right (or bottom) file display.
+
+``Set FORMATLOCK=toggle,right``
+$$ 
+$$ 
+$$ **source**
+$$ Applies the format lock to only the source file display in a dual-display Lister.
+
+``Set FORMATLOCK=toggle,source``
+$$ 
+$$ 
+$$ **dest**
+$$ Applies the format lock to only the destination file display.
+
+``Set FORMATLOCK=toggle,dest``
+$$
+$$
+$$ **all**
+$$ Applies the format lock to both file displays in a dual-display Lister (or the single display otherwise).
+
+``Set FORMATLOCK=off,all``
+$$ FORMATREMEMBER
+$$ /S
+$$ //(no value)//
+$$ Stores (remembers) the current folder format in the source tab. This can later be restored with the `Set FORMATRESTORE` command.
+
+``Set FORMATREMEMBER``
+$$ FORMATRESTORE
+$$ /S
+$$ //(no value)//
+$$ Restores the previous remembered format. For example, you could use this on a button that toggles between the current format and a saved format:
+<code>
+@if:Set FORMATRESTORE
+Set FORMATRESTORE
+@if:else
+Set FORMATREMEMBER CONTENTFORMAT=Images
+</code>
+$$ FRIENDLYDATES
+$$ /K
+$$ **normal**
+$$ Turns on "friendly dates", where date columns display "Today" for today, "Yesterday" for yesterday, and weekday names ("Monday", etc.) for dates from the last seven days.
+
+``Set FRIENDLYDATES=normal``
+$$ 
+$$ 
+$$ **today**
+$$ Turns on "friendly dates", but only for "Today".
+
+``Set FRIENDLYDATES=today``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off "friendly dates". All dates will display as a day, month and year (according to your date format settings).
+
+``Set FRIENDLYDATES=off``
+$$ 
+$$ 
+$$ **toggles**
+$$ Toggles "friendly dates" on and off. Can be combined with **normal** or **today** to specify a mode when turning friendly dates on; otherwise, the previously configured mode will be used.
+
+``Set FRIENDLYDATES=toggle``\\
+``Set FRIENDLYDATES=toggle,normal``
+$$ FTPMODE
+$$ /K
+$$ **ascii**
+$$ Sets the file transfer mode for the current FTP connection to ASCII. This command has no effect if the source file display is not currently viewing a remote FTP site.
+
+``Set FTPMODE=ascii``
+$$ 
+$$ 
+$$ **binary**
+$$ Sets the transfer mode to binary for the current FTP connection.
+
+``Set FTPMODE=binary``
+$$ 
+$$ 
+$$ **auto**
+$$ Automatically selects the transfer mode based on the file type being transferred.
+
+``Set FTPMODE=auto``
+$$ FULLROWSELECT
+$$ /K
+$$ **on**
+$$ Turns full-row selection on. There are separate full-row settings in Preferences for both power (**[[:preferences:preferences_categories:file_display_modes:power_mode|File Display Modes / Power Mode]]**) and details (**[[:preferences:preferences_categories:file_display_modes:details_mode|File Display Modes / Details]]**) [[:basic_concepts:the_lister:view_modes|view modes]], and by default this command will affect the setting for the current view mode in the source file display. You can use the other keywords for this argument to control which view mode is affected.
+
+``Set FULLROWSELECT=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns full-row selection off.
+
+``Set FULLROWSELECT=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles full-row selection on or off.
+
+``Set FULLROWSELECT=toggle``
+$$ 
+$$ 
+$$ **power**
+$$ Only affects the setting for Power mode, irrespective of the current view mode.
+
+``Set FULLROWSELECT=toggle,power``
+$$ 
+$$ 
+$$ **details**
+$$ Only affects the setting for details mode.
+
+``Set FULLROWSELECT=on,details``
+$$ 
+$$ 
+$$ **display**
+$$ When turning off full-row selection, the "always highlight full row" setting will be turned on. Has no effect if full-row selection is being turned on.
+
+``Set FULLROWSELECT=toggle,display``
+$$ 
+$$ 
+$$ **namecol**
+$$ When turning off full-row selection, the "full width of Name column" mode will be used instead of "filename only" mode. Has no effect if full-row selection is being turned on.
+
+``Set FULLROWSELECT=off,namecol``
+$$ GLOBALHIDEFILENAME
+$$ /O
+$$ //(no value)//
+$$ Clears the **Global hide filter** filename filter (on the **[[preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences).
+
+``Set GLOBALHIDEFILENAME``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the **Global hide filter** filename filter to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]].
+
+The supplied pattern can be prefixed with **regex:** to specify the pattern is a regular expression.
+
+If the filter is already set to the specified pattern, it will be cleared, making the command automatically act as a toggle.
+
+``Set GLOBALHIDEFILENAME "(desktop.ini|*.db)"``\\
+``Set GLOBALHIDEFILENAME regex:.db$``
+$$ GLOBALHIDEFILTER
+$$ /K
+$$ **on**
+$$ Turns the **Enable global wildcard filters** option on (on the **[[preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences).
+
+``Set GLOBALHIDEFILTER on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the **Enable global wildcard filters** option off.
+
+``Set GLOBALHIDEFILTER off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Enable global wildcard filters** option on or off.
+
+``Set GLOBALHIDEFILTER=toggle``
+$$ GLOBALHIDEFOLDERS
+$$ /O
+$$ //(no value)//
+$$ Clears the **Global hide filter** folder filter (on the **[[preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences).
+
+``Set GLOBALHIDEFOLDERS``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the **Global hide filter** folder filter to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]].
+
+The supplied pattern can be prefixed with **regex:** to specify the pattern is a regular expression.
+
+If the filter is already set to the specified pattern, it will be cleared, making the command automatically act as a toggle.
+
+``Set GLOBALHIDEFOLDERS .svn``
+$$ GLOBALHIDEHIDDEN
+$$ /K
+$$ **on**
+$$ Turns the global **Hide hidden files** option on (on the **[[preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences).
+
+``Set GLOBALHIDEHIDDEN on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the global **Hide hidden files** option off.
+
+``Set GLOBALHIDEHIDDEN off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the global **Hide hidden files** option on or off.
+
+``Set GLOBALHIDEHIDDEN=toggle``
+$$ GRIDLINESH
+$$ /K
+$$ **on**
+$$ Turns horizontal grid lines on in the current file display (only visible in power or details [[:basic_concepts:the_lister:view_modes|view modes]]). This command overrides the settings in Preferences (on either the **[[:preferences:preferences_categories:file_display_modes:power_mode|File Display Modes / Power Mode]]** or **[[:preferences:preferences_categories:file_display_modes:details_mode|File Display Modes / Details]]** pages), but changes are only applicable to the current source file display - the global Preferences settings are not modified.
+
+``Set GRIDLINESH on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns horizontal grid lines off in the current file display.
+
+``Set GRIDLINESH off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles horizontal grid lines on or off in the current file display. If the **reset** keyword is also given, the command will toggle between the grid lines specified in the command line, and the current Preferences settings.
+
+``Set GRIDLINESH=toggle``
+$$ 
+$$ 
+$$ **reset**
+$$ Resets the horizontal grid lines settings in the current file display to those defined in Preferences. You can combine this with the **toggle** keyword to toggle between the Preferences settings and another set of custom settings.
+
+``Set GRIDLINESH=reset,toggle,solid``
+$$ 
+$$ 
+$$ //<style>//
+$$ Sets horizontal grid lines to use the specified style. Use this keyword in conjunction with the **on**, **off** or **toggle** keywords to control which style is displayed by the command.
+
+Supported styles are **solid**, **alternate**, **dot**, **dash**, **dashdot**, **dashdotdot** and **fill**. Note that **solid** indicates a solid unbroken single-pixel line, whereas **fill** indicates alternating rows (i.e. thick lines which fill the whole background of every second row).
+
+``Set GRIDLINESH=toggle,solid``
+$$ 
+$$ 
+$$ **color=**//<color>//
+$$ Sets the color of the horizontal grid lines. //<color>// can be specified in either decimal format (**rrr,ggg,bbb**) or hex format (**#rrggbb**). Because the **color=** keyword contains an equals sign, you must enclose the whole value for the **GRIDLINES** argument in quotes to avoid confusing the command parser.
+
+``Set GRIDLINESH "toggle,fill,color=#ff8000"``
+$$ 
+$$ 
+$$ **opacity=**//<opacity>//
+$$ Sets the opacity of the horizontal gridlines. //<opacity>// must be a value from **1** (nearly transparent) to **100** (solid). Because the **opacity=** keyword contains an equals sign, you must enclose the whole value for the **GRIDLINES** argument in quotes to avoid confusing the command parser.
+
+``Set GRIDLINESH "toggle,solid,color=#808080,opacity=50"``
+$$ GRIDLINESV
+$$ /K
+$$ **on**
+$$ Turns vertical grid lines on in the current file display (only visible in power or details [[:basic_concepts:the_lister:view_modes|view modes]]). This command overrides the settings in Preferences (on either the **[[:preferences:preferences_categories:file_display_modes:power_mode|File Display Modes / Power Mode]]** or **[[:preferences:preferences_categories:file_display_modes:details_mode|File Display Modes / Details]]** pages), but changes are only applicable to the current source file display - the global Preferences settings are not modified.
+
+``Set GRIDLINESV on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns vertical grid lines off in the current file display.
+
+``Set GRIDLINESV off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles vertical grid lines on or off in the current file display. If the **reset** keyword is also given, the command will toggle between the grid lines specified in the command line, and the current Preferences settings.
+
+``Set GRIDLINESV=toggle``
+$$ 
+$$ 
+$$ **reset**
+$$ Resets the vertical grid lines settings in the current file display to those defined in Preferences. You can combine this with the **toggle** keyword to toggle between the Preferences settings and another set of custom settings.
+
+``Set GRIDLINESV=reset,toggle,solid``
+$$ 
+$$ 
+$$ //<style>//
+$$ Sets vertical grid lines to use the specified style. Use this keyword in conjunction with the **on**, **off** or **toggle** keywords to control which style is displayed by the command.
+
+Supported styles are **solid**, **alternate**, **dot**, **dash**, **dashdot**, and **dashdotdot**.
+
+``Set GRIDLINESV=toggle,solid``
+$$ 
+$$ 
+$$ **color=**//<color>//
+$$ Sets the color of the vertical grid lines. //<color>// can be specified in either decimal format (**rrr,ggg,bbb**) or hex format (**#rrggbb**). Because the **color=** keyword contains an equals sign, you must enclose the whole value for the **GRIDLINES** argument in quotes to avoid confusing the command parser.
+
+``Set GRIDLINESV "toggle,fill,color=#ff8000"``
+$$ 
+$$ 
+$$ **opacity=**//<opacity>//
+$$ Sets the opacity of the vertical gridlines. //<opacity>// must be a value from **1** (nearly transparent) to **100** (solid). Because the **opacity=** keyword contains an equals sign, you must enclose the whole value for the **GRIDLINES** argument in quotes to avoid confusing the command parser.
+
+``Set GRIDLINESV "toggle,solid,color=#808080,opacity=50"``
+$$ GROUPBY
+$$ /K
+$$ //<column>//
+$$ [[:basic_concepts:sorting_and_grouping|Groups]] the current file display by the specified column. The value must be one of the valid [[..:..:metadata_keywords:keywords_for_columns|column keywords]].
+
+As well as the column keywords, **GROUPBY** recognizes the special keyword synonyms **accessed**, **created**, **date, disksize, modified, path** and **size**. This lets you group by date, size or path without needing to know the exact column that is displayed (e.g. the column could be **size**, **sizekb** or **sizerel** - but the sorting is the same in all cases, and `Set GROUPBY=size` would work for any column). 
+
+If you have any [[:preferences:preferences_categories:file_display_columns:evaluator_groups|evaluator grouping schemes]] defined for the specified column, you can use the **GROUPSCHEME** argument to select one.
+
+The **GROUPBY** argument also recognizes the special keywords **dupes** and **cdstage**. These do not correspond with columns, and are only valid in certain folders.
+
+`Set GROUPBY=dupes` can only be used in a [[:basic_concepts:virtual_file_system:file_collections|file collection]] that has been used as the target of a [[:additional_functionality:duplicate_file_finder|Duplicate Files]] search (to group the list by the duplicate file groups found), and `Set GROUPBY=cdstage` can only be used on a recordable CD/DVD to group the list into files waiting to be burned and files already on the disk.
+
+``Set GROUPBY=picsize``
+
+Within the **Lister Column Header[[:customize:the_customize_dialog:context_menus|Context Menu]]**, you can use **%header%** to refer to the column which was right-clicked.
+
+``Set GROUPBY=%header%,toggle``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles grouping by the specified column on or off. Note that the column name must come first.
+
+``Set GROUPBY=picsize,toggle``
+$$ 
+$$ 
+$$ **off**
+$$ Turns grouping off in the current file display.
+
+``Set GROUPBY=off``
+$$ 
+$$ 
+$$ **grouplist**
+$$ When used on a toolbar or menu, the command will turn into a dynamic list of available columns which can be grouped by. Add the **GROUPSCHEME** argument to display sub-menus for any grouping schemes defined for those columns.
+
+``Set GROUPBY=grouplist GROUPSCHEME``
+$$ GROUPCOLLAPSE
+$$ /K
+$$ **on**
+$$ Turns on the Collapsed option for grouping in the current file display.
+
+You can also combine this with the `GROUPBY` argument to automatically collapse all groups when switching into grouping mode.
+
+``Set GROUPCOLLAPSE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the Collapsed option.
+
+``Set GROUPCOLLAPSE off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the Collapsed option on and off for the current file display. Note that you need to reread the folder to see the result of the change.
+
+``Set GROUPCOLLAPSE=toggle``
+$$ GROUPCOMBINE
+$$ /K
+$$ **normal**
+$$ Sets the **Grouping / Combine** option to **Combine similar values** in the folder format for the current file display. This is the default grouping behaviour. For example, when grouping by filename, you might have groups for names beginning with A-H, I-P and Q-Z.
+
+``Set GROUPCOMBINE=normal GROUPBY=name``
+$$ 
+$$ 
+$$ **never**
+$$ Never combines group values. If this is turned on and the file display is grouped, one group will be created for each distinct value rather than a range of values falling into a single group (e.g. instead of A-H you would have A, B, C, D, E, F, G, H). This is only really useful for text fields like "User description". 
+
+``Set GROUPCOMBINE=never``
+$$ 
+$$ 
+$$ **other**
+$$ Groups will be combined as with the **normal** option, but groups with only one item in them are further combined into a special group called **Other**.
+
+``Set GROUPCOMBINE=other``
+$$ 
+$$ 
+$$ **cycle**
+$$ Cycles through the three grouping modes.
+
+``Set GROUPCOMBINE=cycle``
+$$ GROUPFOLDERSATTOP
+$$ /K
+$$ **on**
+$$ Turns on the **Keep folders at top when grouped** option in the current file display.
+
+``Set GROUPFOLDERSATTOP=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the **Keep folders at top when grouped** option.
+
+``Set GROUPFOLDERSATTOP=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the Keep folders at top when grouped option on or off in the current file display.
+
+``Set GROUPFOLDERSATTOP=toggle``
+$$ GROUPREVERSE
+$$ /K
+$$ **on**
+$$ Reverses the direction of grouping in the current file display. The actual order of the groups is reversed, not the order of files within the groups.
+
+``Set GROUPREVERSE=on GROUPBY=picsize``
+$$ 
+$$ 
+$$ **off**
+$$ Turns reverse grouping off.
+
+``Set GROUPREVERSE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles reverse grouping on or off in the current file display.
+
+``Set GROUPREVERSE=toggle``
+$$ GROUPSCHEME
+$$ /O
+$$ //(no value)//
+$$ When used with the **GROUPBY=grouplist** argument, this displays submenus for any columns that have [[:preferences:preferences_categories:file_display_columns:evaluator_groups|evaluator grouping schemes]] defined.
+
+``Set GROUPBY=grouplist GROUPSCHEME``
+$$
+$$
+$$ //<group>//
+$$ Specifies the name of a grouping scheme to use when enabling grouping with the **GROUPBY** argument.
+
+``Set GROUPBY=name GROUPSCHEME=first_letter``
+$$ HEADING
+$$ /O
+$$ //(no value)//
+$$ When used with commands which generate a list of items (see [[:customize:creating_your_own_buttons:editing_the_toolbar:dynamic_buttons|dynamic buttons]]), the **HEADING** argument adds a small heading at the start of the list. The heading will be hidden when the list is empty. Headings only happen for commands which potentially generate multiple items at the same level as the button itself.
+
+When **HEADING** is used by itself, without specifying a text value, the main button's label text is used for the heading.
+
+``Set COLUMNSTOGGLE=columnlist HEADING``
+$$ 
+$$ 
+$$ //<heading text>//
+$$ You can specify the heading text if you want it to be different to the button's label.
+
+``Set SORTBY=sortlist HEADING="Sort"``
+$$ HIDE
+$$ /S
+$$ //(no value)//
+$$ Hides any **Set** command toolbar button that would ordinarily be disabled because the function is not available. This argument does nothing on its own - it is only used in conjunction with other **Set** command arguments.
+
+For example, the command `Set FTPMODE=ascii` would normally be disabled on the toolbar when not currently in an FTP folder, but the command `Set FTPMODE=ascii HIDE` would cause the button to be removed from the toolbar instead of just being disabled.
+
+``Set FLATVIEW=toggle,grouped HIDE``
+$$ HIDEEXT
+$$ /K
+$$ **on**
+$$ Turns the //Hide file extension in Filename column// option on in the current file display. 
+
+``Set HIDEEXT=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the //Hide file extension// option off.
+
+``Set HIDEEXT=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the //Hide file extension// option on or off in the current file display.
+
+``Set HIDEEXT=toggle``
+$$ HIDEFILTERATTR
+$$ /O
+$$ //(no value)//
+$$ Clears the attributes hide filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Hide Filter / Attributes//.
+
+``Set HIDEFILTERATTR``
+$$ 
+$$ 
+$$ //<attributes>//
+$$ Sets the attributes hide filter in the source file display. Files that have all the specified attributes set will be hidden from the display of the current folder.
+
+The //<attributes>// value is one or more of the following letters: **R** (read-only), **A** (archive), **H** (hidden), **S** (system), **E** (encrypted), **C** (compressed), **O** (offline), **I** (non-indexed), **P** (pinned). See [[:file_operations:changing_attributes|Changing Attributes]] for detailed descriptions.
+
+``Set HIDEFILTERATTR hs``
+
+If the specified attributes are already set as the filter, the filter will be cleared, making the command automatically act as a toggle. You can also specify two sets of attributes, and the command will alternate between them each time it is run.
+
+``Set HIDEFILTERATTR hs,rhs``
+$$ HIDEFILTERFILENAME
+$$ /O
+$$ //(no value)//
+$$ Clears the filename hide filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Hide Filter / Filename//.
+
+``Set HIDEFILTERFILENAME``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the filename hide filter in the source file display to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]]. Files that match the pattern will be hidden from the display of the current folder.
+
+The supplied pattern can be prefixed with **regex:** to specify the pattern is a regular expression.
+
+If the specified pattern is already set as the filter, the filename filter will be cleared, making the command automatically work as a toggle.
+
+``Set HIDEFILTERFILENAME *.(jpg|bmp|png|gif)``
+$$ HIDEFILTERFOLDERATTR
+$$ /O
+$$ //(no value)//
+$$ Clears the folder attributes hide filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Hide Filter / Folder Attributes//.
+
+``Set HIDEFILTERFOLDERATTR``
+$$ 
+$$ 
+$$ //<attributes>// 
+$$ Sets the folder attributes hide filter in the source file display. Folders that have all the specified attributes set will be hidden from the display of the current folder.
+
+The //<attributes>// value is one or more of the following letters: **R** (read-only), **A** (archive), **H** (hidden), **S** (system), **E** (encrypted), **C** (compressed), **O** (offline), **I** (non-indexed), **P** (pinned). See [[:file_operations:changing_attributes|Changing Attributes]] for detailed descriptions.
+
+``Set HIDEFILTERFOLDERATTR h``
+
+If the specified attributes are already set as the filter, the filter will be cleared, making the command automatically act as a toggle. You can also specify two sets of attributes, and the command will alternate between them each time it is run.
+
+``Set HIDEFILTERFOLDERATTR h,ce``\\
+``Set HIDEFILTERFOLDERATTR h,off``
+$$ 
+$$ 
+$$ **off**
+$$ Disables the separate folder attributes hide filter. When the folder attributes filter is disabled, the regular attributes filter will apply to both files and folders.
+
+``Set HIDEFILTERFOLDERATTR off``
+$$ HIDEFILTERFOLDERS
+$$ /O
+$$ //(no value)//
+$$ Clears the folders hide filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Hide Filters / Folder Names//.
+
+``Set HIDEFILTERFOLDERS``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the folders hide filter in the source file display to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]]. Folders whose name matches the pattern will be hidden from the display of the current folder.
+
+The supplied pattern can be prefixed with **regex:** to specify the pattern is a regular expression.
+
+If the specified pattern is already set as the filter, the name filter will be cleared, making the command automatically work as a toggle.
+
+``Set HIDEFILTERFOLDERS .svn``
+$$ HIDEFOLDERTABS
+$$ /K
+$$ **on**
+$$ Temporarily hides the folder tab bar in the current Lister.
+
+``Set HIDEFOLDERTABS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Makes the folder tab bar visible if it has been hidden.
+
+``Set HIDEFOLDERTABS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles folder tab bar hiding on or off.
+
+``Set HIDEFOLDERTABS=toggle``
+$$ HIDESYSTEMFILES
+$$ /K
+$$ **on**
+$$ Turns on the **Hide protected operating system files** option on the **[[preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences. This option causes all files and folders with both the H (hidden) and S (system) attributes to be hidden.
+
+``Set HIDESYSTEMFILES on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the **Hide protected operating system files** option.
+
+``Set HIDESYSTEMFILES=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Hide protected operating system files** option on or off.
+
+``Set HIDESYSTEMFILES=toggle``
+$$ ICONMODESORTHEADER
+$$ /K
+$$ **on**
+$$ Turns on the display of the column header (for sorting) in the icon modes (large icon, thumbnail, etc). This controls the //Show sort header in icon modes// on the **[[:preferences:preferences_categories:file_displays:options|File Displays / Options]]** page in Preferences.
+
+``Set ICONMODESORTHEADER=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the column header in the icon modes.
+
+``Set ICONMODESORTHEADER=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the icon mode column header on and off.
+
+``Set ICONMODESORTHEADER=toggle``
+$$ ICONS
+$$ /K
+$$ **on**
+$$ Enables the display of icons in power and details view modes in the current file display. This overrides the setting on the appropriate page in Preferences (**[[:preferences:preferences_categories:file_display_modes:details_mode|File Display Modes / Details]]** or **[[:preferences:preferences_categories:file_display_modes:power_mode|File Display Modes / Power Mode]]**).
+
+``Set ICONS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the display of icons in power and details modes for the current file display.
+
+``Set ICONS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the display of icons in power and details modes.
+
+``Set ICONS=toggle``
+$$ 
+$$ 
+$$ **reset**
+$$ Resets the icon display to the current Preferences settings.
+
+``Set ICONS=reset``
+$$ IMAGEASPECTOVERLAYS
+$$ /K
+$$ **on**
+$$ Turns on display of thumbnails-mode aspect ratio bars. This modifies the **Overlay aspect ratio bars** option on the **[[:preferences:preferences_categories:file_display_modes:thumbnails_mode|File Display Modes / Thumbnails]]** page in Preferences. As this is a global setting, all currently open Listers will be affected.
+
+``Set IMAGEASPECTOVERLAYS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off display of thumbnails-mode aspect ratio bars.
+
+``Set IMAGEASPECTOVERLAYS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles display of thumbnails-mode aspect ratio bars on or off.
+
+``Set IMAGEASPECTOVERLAYS=toggle``
+$$ INFOTIPS
+$$ /K
+$$ **on**
+$$ Turns on file info tips. This modifies the options on the **[[:preferences:preferences_categories:file_displays:options:info_tips|File Displays / Options / Info Tips]]** page in Preferences.
+
+``Set INFOTIPS=on``
+$$
+$$
+$$ **off**
+$$ Turns off file info tips.
+
+``Set INFOTIPS=off``
+$$
+$$
+$$ **toggle**
+$$ Toggles file info tips on or off.
+
+``Set INFOTIPS=toggle``
+$$
+$$
+$$ **allmodes**
+$$ Enables info tips for all display modes. Combine with `on`/`toggle`.
+
+``Set INFOTIPS=toggle,allmodes``
+$$
+$$
+$$ **details**
+$$ Enables info tips for details mode only. Combine with `on`/`toggle`.
+
+``Set INFOTIPS=toggle,details``
+$$
+$$
+$$ **icons**
+$$ Enables info tips for icon modes only. Combine with `on`/`toggle`.
+
+``Set INFOTIPS=toggle,icons``
+$$
+$$
+$$ **allfolders**
+$$ Enables info tips for all types of folder.
+
+``Set INFOTIPS=allfolders``
+$$
+$$
+$$ **network**
+$$ Enables info tips for network and local drives.
+
+``Set INFOTIPS=network``
+$$
+$$
+$$ **local**
+$$ Enables info tips for local drives only.
+
+``Set INFOTIPS=local``
+$$
+$$
+$$ **fixed**
+$$ Enables info tips for fixed local drives only.
+
+``Set INFOTIPS=fixed``
+$$ INVERT
+$$ /S
+$$ //(no value)//
+$$ Inverts the appearance of toolbar buttons that appear highlighted (or checked) when the **Set** option they control is currently on.
+
+For example, a command like `Set TREE=toggle` will appear highlighted on the toolbar when the folder tree is displayed. Changing the command to `Set TREE=toggle INVERT` would cause the toolbar button to appear highlighted when the tree is not displayed.
+
+``Set HIDESYSTEMFILES=toggle INVERT``
+$$ JOBSBAR
+$$ /K
+$$ **on**
+$$ Displays the [[:file_operations:copying_moving_and_deleting_files:the_jobs_bar|jobs bar]] in the current Lister.
+
+``Set JOBSBAR=on``
+$$ 
+$$ 
+$$ **off**
+$$ Hides the [[:file_operations:copying_moving_and_deleting_files:the_jobs_bar|jobs bar]] in the current Lister.
+
+``Set JOBSBAR=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the [[:file_operations:copying_moving_and_deleting_files:the_jobs_bar|jobs bar]] on and off.
+
+``Set JOBSBAR=toggle``
+$$ KEEPFOLDERSALPHA
+$$ /K
+$$ **on**
+$$ Turns the **Keep folders sorted alphabetically** option on in the source file display. This modifies the **[[:basic_concepts:folder_options|Folder Options]]** for the current folder.
+
+``Set KEEPFOLDERSALPHA=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the **Keep folders sorted alphabetically** option off.
+
+``Set KEEPFOLDERSALPHA off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the state of the **Keep folders sorted alphabetically** option.
+
+``Set KEEPFOLDERSALPHA=toggle``
+$$ LAYOUT
+$$ /K
+$$ **remember**
+$$ Remembers the current layout and appearance of the active Lister.
+
+``Set LAYOUT=remember``
+$$ 
+$$ 
+$$ **restore**
+$$ Restores the previously remembered layout and appearance of the active Lister. For example, if you run the `Set LAYOUT=remember` command, and then make changes to the Lister like closing the tree, opening the viewer pane, or selecting a new [[:basic_concepts:the_lister:styles|style]], the `Set LAYOUT=restore` command would restore the Lister to its original state.
+
+``Set LAYOUT=restore``
+$$ LISTERCMD
+$$ /K
+$$ **minimize**
+$$ Minimizes the currently active Lister window.
+
+``Set LISTERCMD=minimize``
+$$ 
+$$ 
+$$ **maximize**
+$$ Maximizes the currently active Lister window.
+
+``Set LISTERCMD=maximize``
+$$ 
+$$ 
+$$ **restore**
+$$ Restores the original size and position of the window (before it was either minimized or maximized).
+
+``Set LISTERCMD=restore``
+$$ 
+$$ 
+$$ **togglemaximize**
+$$ If the current Lister window is not maximized, it will be maximized, otherwise it will be restored. You could use this to add a hotkey that switches a Lister in and out of "full-screen" mode.
+
+``Set LISTERCMD=togglemaximize``
+$$ 
+$$ 
+$$ **showall**
+$$ Makes all currently open Listers visible. Minimized windows will be restored, and all Lister windows will come to the front.
+
+``Set LISTERCMD=showall``
+$$ 
+$$ 
+$$ **minimizeall**
+$$ Minimizes all currently open Listers.
+
+``Set LISTERCMD=minimizeall``
+$$ 
+$$ 
+$$ **tileh**
+$$ Tiles all currently open Listers horizontally across the screen.
+
+``Set LISTERCMD=tileh``
+$$ 
+$$ 
+$$ **tilev**
+$$ Tiles all Listers vertically across the screen.
+
+``Set LISTERCMD=tilev``
+$$ 
+$$ 
+$$ **cascade**
+$$ Cascades all Lister windows. All windows are made the same size and positioned staggered diagonally down and across the screen.
+
+``Set LISTERCMD=cascade``
+$$
+$$
+$$ **undotilecascade**
+$$ Undoes the previous tile or cascade operation. As much as possible windows are put back to their previous sizes and positions.
+
+``Set LISTERCMD=undotilecascade``
+$$ 
+$$ 
+$$ **toggleminimizeall**
+$$ Minimizes all currently open Lister windows. If all windows are already minimized they will all be restored.
+
+``Set LISTERCMD=toggleminimizeall``
+$$ 
+$$ 
+$$ **tofront**
+$$ Brings the Lister window to the front. This command is most useful when run from a [[:scripting|script]].
+
+``Set LISTERCMD=tofront``
+$$ LISTERPOS
+$$ /K
+$$ //<x>,<y>//
+$$ Sets the position of the active Lister to the specified x and y coordinates. You can also specify a delta to modify the current position.
+
+``Set LISTERPOS=500,200``\\
+``Set LISTERPOS=+100,+50``
+$$ LISTERSIZE
+$$ /K
+$$ //<w>,<h>//
+$$ Sets the size of the currently active Lister to the specified width and height. You can also specify a delta to modify the current size.
+
+``Set LISTERSIZE=1024,768``\\
+``Set LISTERSIZE=+50,+50``
+$$ 
+$$ 
+$$ **auto**
+$$ Automatically resizes the Lister horizontally (as much as possible) to exactly fit the currently displayed columns (only in Details or Power mode).
+
+``Set LISTERSIZE=auto``
+$$ LISTERTITLE
+$$ /O
+$$ //(no value)//
+$$ Resets the title of the current Lister back to its default.
+
+``Set LISTERTITLE``
+$$ 
+$$ 
+$$ //<custom title>//
+$$ Sets a custom title for the currently active Lister. You can use several special "tokens" in the title string to insert various pieces of information:
+
+|**%P**|full path of the current (source) folder|
+|**%N**|name of the current (source) folder|
+|**%R**|drive root of the current (source) folder|
+|**%D**|full path of the destination folder|
+|**%M**|name of the destination folder|
+|**%G**|target if the folder is a junction or softlink|
+|**%1**|full path in the left file display|
+|**%2**|full path in the right file display|
+|**%3**|folder name in the left file display|
+|**%4**|folder name in the right file display|
+|**%L**|name of the Layout the Lister came from (if any)|
+|**%S**|name of the current Style selected in the Lister (if any)|
+|**%T**|complete original title (useful for simply adding a prefix or suffix)|
+|**%!**|hide section|
+
+``Set LISTERTITLE "Directory Opus - %N"``
+
+This command normally act as a toggle, such that the title will be cleared if you run the command when the specified title is already set. You can prevent this by prefixing the title with "notoggle:". This can be useful in event-driven scripts which may make redundant requests to set the title and would have to check its current value to avoid resetting it otherwise.
+
+``Set LISTERTITLE "notoggle:Directory Opus - %N"``
+
+The **%!** code lets you hide sections in the string where all other tokens inside the section are empty.
+
+``Set LISTERTITLE "%!%T - %!Directory Opus"``
+
+That means that if the **%T** token expands to an empty string, the result will be just "Directory Opus" rather than " - Directory Opus".
+$$ MANUALSORT
+$$ /K
+$$ **on**
+$$ Turn on [[:basic_concepts:sorting_and_grouping:manual_sorting|manual sorting]] in the current file display. The default manual sort order will be used unless alternative manual sort names have been configured and you specify the name using the //<name>// parameter.
+
+``Set MANUALSORT=on,MySortOrder``
+$$ 
+$$ 
+$$ **off**
+$$ Turn off manual sorting in the current source file display.
+
+``Set MANUALSORT=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggle the manual sort mode on or off in the current file display.
+
+``Set MANUALSORT=toggle``
+$$ 
+$$ 
+$$ //<name>//
+$$ Specifies an alternative name for the sort order to use, which must first have been configured using the **manual_sort_names** option on the **[[:preferences:preferences_categories:miscellaneous:advanced_options|Miscellaneous / Advanced]]** page in Preferences.
+
+``Set MANUALSORT=MySortOrder,toggle``
+$$ MANUALSORTRESET
+$$ /O
+$$ //(no value)//
+$$ Resets the current manual sort order for the folder in the source file display. The file list will be resorted using the current (non-manual) sort method and your old manual sort order will be discarded.
+
+``Set MANUALSORTRESET``
+$$ 
+$$ 
+$$ //<name>//
+$$ Resets the named manual sort order for the current folder. The name must first have been configured using the **manual_sort_names** option on the **[[:preferences:preferences_categories:miscellaneous:advanced_options|Miscellaneous / Advanced]]** page in Preferences.
+
+``Set MANUALSORTRESET=MySortOrder``
+$$ 
+$$ 
+$$ **!default**
+$$ Resets the default manual sort order for the current folder.
+
+``Set MANUALSORTRESET=!default``
+$$ 
+$$ 
+$$ **!all**
+$$ Resets all manual sort orders (default and named) for the current folder.
+
+``Set MANUALSORTRESET=!all``
+$$ MANUALSORTSAVE
+$$ /S
+$$ //(no value)//
+$$ Saves the current manual sort order in the current folder. You would only need to use this command if you don't have automatic saving of manual sort orders enabled.
+
+``Set MANUALSORTSAVE``
+$$ METAPANE
+$$ /K
+$$ **on**
+$$ Turns the [[:basic_concepts:the_lister:metadata_pane|metadata pane]] on in the currently active Lister.
+
+``Set METAPANE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the metadata pane off in the active Lister.
+
+``Set METAPANE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the metadata pane on or off.
+
+``Set METAPANE=toggle``
+$$ 
+$$ 
+$$ **horiz**
+$$ Forces the metadata pane to horizontal layout when it is opened.
+
+``Set METAPANE=toggle,horiz``
+$$ 
+$$ 
+$$ **vert**
+$$ Specifies vertical layout for the metadata pane.
+
+``Set METAPANE=on,vert``
+$$ 
+$$ 
+$$ **togglelayout**
+$$ Toggles the layout of the metadata pane between vertical and horizontal.
+
+``Set METAPANE=togglelayout``
+$$ METAPANESIZE
+$$ /K
+$$ //<size>[,<size>]//
+$$ Adjusts the size of the metadata pane in the active Lister. The size is given as a percentage of the total size of the Lister, and applies in the appropriate dimension based on the current layout of the metadata pane (so for example, when the pane is horizontal this affects its height).
+
+It is also possible to specify two separate sizes, and the command will toggle between them.
+
+``Set METAPANESIZE 25,50``
+$$ MINIMIZEPROGRESS
+$$ /K
+$$ **on**
+$$ Turns on the //Minimize progress indicators automatically// option from the [[preferences:preferences_categories:file_operations:progress_indicators|Progress Indicators]] page in Preferences.
+
+``Set MINIMIZEPROGRESS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the //Minimize progress indicators automatically// option off.
+
+``Set MINIMIZEPROGRESS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles //Minimize progress indicators automatically// on or off.
+
+``Set MINIMIZEPROGRESS=toggle``
+$$ NAVLOCK
+$$ /K
+$$ **on**
+$$ Turns [[:basic_concepts:the_lister:dual_display:navigation_lock|navigation lock]] on in the current Lister. This command is only available if the Lister is in [[:basic_concepts:the_lister:dual_display|dual-display]] mode.
+
+``Set NAVLOCK=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns navigation lock off in the active Lister.
+
+``Set NAVLOCK=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles navigation lock on or off in the active Lister.
+
+``Set NAVLOCK=toggle``
+$$ NOOP
+$$ /O
+$$ //(no value)//
+$$ Guaranteed not to do anything. If specified, other arguments are ignored. Can be used to create a hotkey which does nothing, so pushing that key won't trigger Find-As-You-Type or anything else.
+
+In a multi-line function, the command will be considered "failed" and subsequent commands will not run.
+
+``Set NOOP``
+$$
+$$
+$$ **success**
+$$ Does nothing, but the command is considered successful. In a multi-line function, subsequent commands will still get to run.
+
+This can be useful if you want to suppress behaviors which you get automatically when buttons have certain commands on their first lines.
+
+``Set NOOP=success``
+$$ NOSCRIPT
+$$ /S
+$$ //(no value)//
+$$ Use the **NOSCRIPT** argument to prevent [[:scripting:script_add-ins|script events]] from firing in response to the Set command. Currently this only works with the `Set LISTERCMD=ToFront` command, to prevent the **[[..:..:scripting_reference:scripting_events:onactivatelister|OnActivateLister]]** event from being triggered.
+
+``Set LISTERCMD=ToFront NOSCRIPT``
+$$ PAIREDFOLDERS
+$$ /K
+$$ **on**
+$$ Enables the [[:preferences:preferences_categories:frequently_used_paths:paired_folders|Paired Folders]] system for the current Lister. Note that Paired Folders are enabled by default; this command has no effect if they haven't been previously disabled in the Lister using the `off` or `toggle` arguments.
+
+``Set PAIREDFOLDERS=on`` 
+$$ 
+$$ 
+$$ **off**
+$$ Turns paired folders off in the current Lister. This lets you temporarily disable paired folder diversion for a Lister.
+
+``Set PAIREDFOLDERS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles paired folders on or off in the current Lister.
+
+``Set PAIREDFOLDERS=toggle``
+$$ PERMANENTHIDEFILENAME
+$$ /O
+$$ //(no value)//
+$$ Clears the permanent hide filter filename setting.
+
+``Set PERMANENTHIDEFILENAME``
+$$ $$ $$ //<pattern>//
+$$ Sets the wildcard pattern for files for the permanent hide filter. Files matching the pattern will be permanently hidden from file displays and the folder tree.
+
+``Set PERMAMENTHIDEFILENAME=*.tmp``
+$$ PERMANENTHIDEFILTER
+$$ /K
+$$ **on**
+$$ Turns the permanent hide filter on. Files and folders matching the configured patterns will be permanently hidden from file displays and the folder tree.
+
+``Set PERMANENTHIDEFILTER=on``
+$$ $$ $$ **off**
+$$ Turns the permanent hide filter off. 
+
+``Set PERMANENTHIDEFILTER=off``
+$$ $$ $$ **toggle**
+$$ Toggles the permanent hide filter on or off.
+
+``Set PERMANENTHIDEFILTER=toggle``
+$$ PERMANENTHIDEFOLDER
+$$ /O
+$$ //(no value)//
+$$ Clears the permanent hide filter folder setting.
+
+``Set PERMANENTHIDEFOLDER``
+$$ $$ $$ //<pattern>//
+$$ Sets the wildcard pattern for folders for the permanent hide filter. Folders matching the pattern will be permanently hidden from file displays and the folder tree.
+
+``Set PERMANENTHIDEFOLDER=.svn``
+$$ PRESET
+$$ /K
+$$ //<preset name>//
+$$ When used in conjunction with the **UTILITY** argument, this lets you open the Find/Duplicates/Synchronize panel and automatically load the specified preset.
+
+``Set UTILITY=Find,Toggle PRESET=WorkDocuments``
+$$ PROGRESSCMD
+$$ /K
+$$ minimize
+$$ Sends a "minimize" command to all current progress dialogs. Any that are currently visible will be minimized.
+
+``Set PROGRESSCMD=minimize``
+$$ $$ $$ restore
+$$ Sends a "restore" command to all progress dialogs. Any that are currently minimized will be restored to visibility.
+$$ $$ $$ show
+$$ Brings all non-minimized progress dialogs to the front.
+$$ $$ $$ pause
+$$ Sends a "pause" command to all progress dialogs. All running operations that support pause will be paused.
+$$ $$ $$ resume
+$$ Sends a "resume" command to all progress dialogs. All paused operations will be resumed.
+$$ $$ $$ abort
+$$ Sends an "abort" command to all progress dialogs. All running **and** queued operations will be aborted.
+$$ QUICKFILTER
+$$ /O
+$$ //(no value)//
+$$ Displays the [[:basic_concepts:searching_and_filtering:filter_bar|Filter Bar]] and gives keyboard focus to the pattern field on it. Similar to pushing the * key under the default keyboard configuration.
+
+``Set QUICKFILTER``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the quick filter in the current source file display to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]]. This is the same filter edited by the [[:basic_concepts:searching_and_filtering:filter_bar|Filter Bar]]. Files that do not match the pattern will be hidden from the display.
+
+Normally, if the filter is already set to the specified pattern, it will be cleared, making the command work as a toggle automatically.
+
+``Set QUICKFILTER=*.jpg``
+
+You can prevent the automatic toggling by prefixing the pattern with "notoggle:".
+
+``Set QUICKFILTER="notoggle:Hello World.*"``
+$$ 
+$$ 
+$$ **!clear**
+$$ Clears the quick filter pattern in the current file display. Note that this does not clear the **QUICKFILTERFLAGS** value, and so it's possible that files may remain filtered out even after the filter pattern is cleared. Use the **QUICKFILTERCLEAR** argument to clear the quick filter completely.
+
+``Set QUICKFILTER=!clear``
+$$ 
+$$ 
+$$ **!prev**
+$$ Restores the previous quick filter in the current file display. By default the quick filter is cleared when changing folders (although this can be changed with the **Clear Quick filter automatically when changing folders** option on the **[[:basic_concepts:searching_and_filtering:filter_bar|File Displays / Filter Bar]]** page in Preferences). For example, you could assign a hotkey to restore the previous filter after having gone into a sub-directory and then back again to the parent.
+
+``Set QUICKFILTER=!prev``
+$$ QUICKFILTERCLEAR
+$$ /S
+$$ //(no value)//
+$$ Clears the quick filter in the current source file display. Both the filter pattern and the flags are cleared. This does not affect filtering caused by folder options or the global filters in Preferences.
+
+``Set QUICKFILTERCLEAR``
+$$ QUICKFILTERFLAGS
+$$ /O
+$$ //(no value)//
+$$ Resets and clears the quick filter flags in the current source file display. The flags are as listed below. Clearing the flags does not clear the filter pattern, so it's possible that files may remain filtered out even after the flags are cleared.
+
+``Set QUICKFILTERFLAGS``
+
+Alternatively, use the **QUICKFILTERCLEAR** argument to clear the quick filter completely, both pattern and flags.
+$$ 
+$$ 
+$$ **set**
+$$ When combined with other flags, ensures they are only ever turned on. Without **set** or **clear**, the other specified tags will be //toggled//, i.e. turned on if off and off if on.
+
+``Set QUICKFILTERFLAGS=set,showfiles``
+$$ 
+$$ 
+$$ **clear**
+$$ When combined with other flags, ensures they are only ever turned off. Without **set** or **clear**, the other specified tags will be //toggled//, i.e. turned on if off and off if on.
+
+``Set QUICKFILTERFLAGS=clear,showfiles``
+$$ 
+$$ 
+$$ **showfiles**
+$$ Shows all files, even if they are hidden by the filter pattern. This does not override folder format or global filters.
+
+``Set QUICKFILTERFLAGS=showfiles``
+
+Turning on **showfiles** will automatically turn off **hidefiles**.
+$$ 
+$$ 
+$$ **showdirs**
+$$ Shows all folders, even if they are hidden by the filter pattern.
+
+``Set QUICKFILTERFLAGS=showdirs QUICKFILTER="a*"``
+
+Turning on **showdirs** will automatically turn off **hidedirs**.
+$$ 
+$$ 
+$$ **hidefiles**
+$$ Hides all files, even if they match the filter pattern.
+
+``Set QUICKFILTERFLAGS=hidefiles``
+
+Turning on **hidefiles** will automatically turn off **showfiles**, and also turns off **hidedirs** unless **set** is also specified.
+$$ 
+$$ 
+$$ **hidedirs**
+$$ Hides all folders, even if they match the filter pattern.
+
+``Set QUICKFILTERFLAGS=hidedirs``
+
+Turning on **hidedirs** will automatically turn off **showdirs**, and also turns off **hidefiles** unless **set** is also specified.
+$$ 
+$$ 
+$$ **disable**
+$$ Temporarily disables the quick filter, leaving the filter pattern intact.
+
+``Set QUICKFILTERFLAGS=disable``
+$$ 
+$$ 
+$$ **flatviewon**
+$$ Enables filtering of folders when in Flat View, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=flatviewon``
+$$ 
+$$ 
+$$ **flatviewoff**
+$$ Disables filtering of folders when in Flat View, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=flatviewoff``
+$$ 
+$$ 
+$$ **regexpon**
+$$ Turns on regular expressions (instead of wildcards), overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=regexpon``
+$$ 
+$$ 
+$$ **regexpoff**
+$$ Turns off regular expressions (i.e. forces wildcards), overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=regexpoff``
+$$ 
+$$ 
+$$ **ignorediacriticson**
+$$ Turns on the "ignore diacritics" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=ignorediacriticson``
+$$ 
+$$ 
+$$ **ignorediacriticsoff**
+$$ Turns off the "ignore diacritics" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=ignorediacriticsoff``
+$$ 
+$$ 
+$$ **anywordon**
+$$ Turns on the "match any word" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=anywordon``
+$$ 
+$$ 
+$$ **anywordoff**
+$$ Turns off the "match any word" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=anywordoff``
+$$ 
+$$ 
+$$ **partialon**
+$$ Turns on the "partial matching" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=partialon``
+$$ 
+$$ 
+$$ **partialoff**
+$$ Turns off the "partial matching" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=partialoff``
+$$ 
+$$ 
+$$ **evalon**
+$$ Turns on the "evaluator" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=evalon``
+$$ 
+$$ 
+$$ **evaloff**
+$$ Turns off the "evaluator" option, overriding the global Preferences setting.
+
+``Set QUICKFILTERFLAGS=evaloff``
+$$ READONLY
+$$ /K
+$$ **on**
+$$ Makes the current file display read-only. Currently this is only supported by Zip archives. When the file display is marked as read-only, attempts to modify the contents of the current Zip archive will fail. This command has no affect when not viewing a Zip archive.
+
+``Set READONLY=on``
+$$ 
+$$ 
+$$ **off**
+$$ Clears the read-only flag from the current file display. The **Open Zip files as read-only by default** option on the **[[:preferences:preferences_categories:zip_and_other_archives:zip_file_options|Zip & Other Archives / Zip Files]]** page in Preferences can make Zip archives read-only by default, and you can then use this command to make them writeable.
+
+``Set READONLY=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the read-only flag on or off in the current file display.
+
+``Set READONLY=TOGGLE``
+$$ RECYCLEBINEMPTY
+$$ /S
+$$ //(no value)//
+$$ This has no effect as a command - its only use is with the **@ifset** and **@icon** [[:customize:creating_your_own_buttons:command_modifiers|command modifiers]]. It lets you test if the recycle bin is currently empty.
+
+//Example://
+<code>
+@ifset:RECYCLEBINEMPTY
+@confirm The recycle bin is 
+ empty!
+@ifset:else
+Delete EMPTYRECYCLE</code>
+$$ RELATIVEDATEGRAPHS
+$$ /K
+$$ **on**
+$$ Turns on the **Show graphs behind modified and created date and time columns** option on the [[:preferences:preferences_categories:file_display_columns:options|File Display Columns / Options]] page in Preferences. As this is a global setting, all currently open Listers will be affected.
+
+``Set RELATIVEDATEGRAPHS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the **Show graphs behind date columns** option.
+
+``Set RELATIVEDATEGRAPHS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Show graphs behind date columns** option on or off.
+
+``Set RELATIVEDATEGRAPHS=toggle``
+$$ RELATIVESIZEGRAPHS
+$$ /K
+$$ **on**
+$$ Turns on the **Show graphs behind size columns** option on the [[:preferences:preferences_categories:file_display_columns:options|File Display Columns / Options]] page in Preferences. As this is a global setting, all currently open Listers will be affected.
+
+``Set RELATIVESIZEGRAPHS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the **Show graphs behind size columns** option.
+
+``Set RELATIVESIZEGRAPHS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Show graphs behind size columns** option on or off.
+
+``Set RELATIVESIZEGRAPHS=toggle``
+$$ RELDIMENSIONOVERLAYS
+$$ /K
+$$ **on**
+$$ Turns the display of thumbnails-mode relative dimension bars on. This modifies the **Overlay relative dimension bars** option on the **[[:preferences:preferences_categories:file_display_modes:thumbnails_mode|File Display Modes / Thumbnails]]** page in Preferences. As this is a global setting, all currently open Listers will be affected.
+
+``Set RELDIMENSIONOVERLAYS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the display of thumbnails-mode relative dimension bars off.
+
+``Set RELDIMENSIONOVERLAYS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the display of thumbnails-mode relative dimension bars on or off.
+
+``Set RELDIMENSIONOVERLAYS=toggle``
+$$ SAVEFORMAT
+$$ /O
+$$ //(no value)//
+$$ Displays the //Save Folder Format// dialog, which lets you save the [[:basic_concepts:folder_options|folder format]] in the source file display.
+
+``Set SAVEFORMAT``
+$$ 
+$$ 
+$$ **folder**
+$$ Saves the folder format for the current folder (without displaying the //Save Folder Format// dialog). You can combine this with the **replace** and **subfolders** arguments, or with the **clear** argument.
+
+``Set SAVEFORMAT=folder``
+$$ 
+$$ 
+$$ **all**
+$$ Saves the current format for all folders (i.e. this makes it the new **User default** format). You can combine this with the **clear**, **replace** and **quiet** arguments.
+
+``Set SAVEFORMAT=all``
+$$ 
+$$ 
+$$ **favorite**
+$$ Saves the current format as a **Favorite Format**. You can specify the format name using the **FORMAT** argument. 
+
+``Set SAVEFORMAT=favorite FORMAT "My Fave Format"``
+$$ 
+$$ 
+$$ **subfolders**
+$$ Use with the **folder** argument to save the folder format for the current folder and all sub-folders.
+
+``Set SAVEFORMAT=folder,subfolders``
+$$ 
+$$ 
+$$ **replace**
+$$ Use with the **folder** or **all** arguments to replace any existing folder formats within layouts and styles with the new format.
+
+``Set SAVEFORMAT=all,replace``
+$$ 
+$$ 
+$$ **clear**
+$$ Use with the **folder** argument to delete the saved format (if any) for the current folder.
+
+``Set SAVEFORMAT=folder,clear``
+
+Use with the **all** argument to clear any existing saved folder formats (so that the new **User default** format will be used).
+
+``Set SAVEFORMAT=all,clear``
+
+After clearing formats, you can tell a folder tab to re-evaluate the format for its current path via `Set FORMAT=!folder` or similar.
+$$ 
+$$ 
+$$ **quiet**
+$$ Use with the **all** argument to suppress the warning dialog before replacing all existing folder formats.
+
+``Set SAVEFORMAT=all,replace,quiet``
+$$ SHOWEVERYTHING
+$$ /K
+$$ **on**
+$$ Turns the //[[:basic_concepts:searching_and_filtering:show_everything|Show Everything]]// mode on in the source file display. This overrides any active filters and ensures that all files and folders are visible.
+
+``Set SHOWEVERYTHING=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the //Show Everything// mode off in the source file display.
+
+``Set SHOWEVERYTHING=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles Show Everything mode on or off.
+
+``Set SHOWEVERYTHING=toggle``
+$$ SHOWFILTERATTR
+$$ /O
+$$ //(no value)//
+$$ Clears the attributes show filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Show Filter / Attributes//.
+
+``Set SHOWFILTERATTR``
+$$ 
+$$ 
+$$ //<attributes>//
+$$ Sets the attributes show filter in the source file display. Only files that have the specified attributes set will be displayed - all others will be hidden.
+
+The //<attributes>// value is one or more of the following letters: **R** (read-only), **A** (archive), **H** (hidden), **S** (system), **E** (encrypted), **C** (compressed), **O** (offline), **I** (non-indexed), **P** (pinned). See [[:file_operations:changing_attributes|Changing Attributes]] for detailed descriptions.
+
+``Set SHOWFILTERATTR e``
+
+If the specified attributes are already set as the filter, the filter will be cleared, making the command automatically act as a toggle. You can also specify two sets of attributes, and the command will alternate between them each time it is run.
+
+``Set SHOWFILTERATTR e,ra``
+$$ SHOWFILTERFILENAME
+$$ /O
+$$ //(no value)//
+$$ Clears the filename show filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Show Filter / Filename//.
+
+``Set SHOWFILTERFILENAME``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the filename show filter in the source file display to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]]. Only files that match the pattern will be shown - all other files will be hidden from the display.
+
+The supplied pattern can be prefixed with **regex:** to specify the pattern is a regular expression.
+
+If the specified pattern is already set as the filter, it will be cleared, making the command work as a toggle automatically.
+
+``Set SHOWFILTERFILENAME *.(doc|xls)``
+$$ SHOWFILTERFOLDERATTR
+$$ /O
+$$ //(no value)//
+$$ Clears the folder attributes show filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Show Filter / Folder Attributes//.
+
+``Set SHOWFILTERFOLDERATTR``
+$$ 
+$$ 
+$$ //<attributes>//
+$$ Sets the folder attributes show filter in the source file display. Only folders that have the specified attributes set will be displayed - all others will be hidden.
+
+The //<attributes>// value is one or more of the following letters: **R** (read-only), **A** (archive), **H** (hidden), **S** (system), **E** (encrypted), **C** (compressed), **O** (offline), **I** (non-indexed), **P** (pinned). See [[:file_operations:changing_attributes|Changing Attributes]] for detailed descriptions.
+
+``Set SHOWFILTERFOLDERATTR o``
+
+If the specified attributes are already set as the filter, the filter will be cleared, making the command automatically act as a toggle. You can also specify two sets of attributes, and the command will alternate between them each time it is run.
+
+``Set SHOWFILTERFOLDERATTR o,off``
+$$ 
+$$ 
+$$ **off**
+$$ Disables the separate folder attributes show filter. When the folder attributes filter is disabled, the regular attributes filter will apply to both files and folders.
+
+``Set SHOWFILTERFOLDERATTR off``
+$$ SHOWFILTERFOLDERS
+$$ /O
+$$ //(no value)//
+$$ Clears the folders show filter in the source file display. This modifies the folder options for the current folder - the equivalent setting in the **[[:basic_concepts:folder_options|Folder Options]]** dialog is //Filters / Show Filters / Folder Names//.
+
+``Set SHOWFILTERFOLDERS``
+$$ 
+$$ 
+$$ //<pattern>//
+$$ Sets the folders show filter in the source file display to the specified [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]]. Only folders whose name matches the pattern will be shown - all other folders will be hidden from the display.
+
+The supplied pattern can be prefixed with **regex:** to specify the pattern is a regular expression.
+
+If the specified pattern is already set as the filter, it will be cleared, making the command work as a toggle automatically.
+
+``Set SHOWFILTERFOLDERS "* Reports *"``
+$$ SHOWMILLIS
+$$ /K
+$$ **on**
+$$ Turns on the display of milliseconds in file time columns. This controls the **Show milliseconds** option on the [[:preferences:preferences_categories:file_display_columns:options|File Display Columns / Options]] Preferences page. Note that seconds must also be displayed for this command to have any effect.
+
+``Set SHOWMILLIS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the display of milliseconds in file time columns.
+
+``Set SHOWMILLIS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the display of milliseconds on or off.
+
+``Set SHOWMILLIS=toggle``
+$$ SHOWSECONDS
+$$ /K
+$$ **on**
+$$ Turns on the display of seconds in file time columns. This controls the **Show seconds** option on the [[:preferences:preferences_categories:file_display_columns:options|File Display Columns / Options]] Preferences page.
+
+``Set SHOWSECONDS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the display of seconds in file time columns.
+
+``Set SHOWSECONDS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the display of seconds on or off.
+
+``Set SHOWSECONDS=toggle``
+$$ SIDE
+$$ /K
+$$ **left**
+$$ When tested as a condition, returns true if the command is on a [[:basic_concepts:the_lister:navigation:file_display_border|location bar toolbar]] attached to the left (or top) file display.
+
+``@icon:copysourcedest_right,Set SIDE=left``
+$$ 
+$$ 
+$$ **right**
+$$ True when attached to the right (or bottom) file display.
+
+``@icon:copysourcedest_left,Set SIDE=right``
+$$ SORTBY
+$$ /K
+$$ //<column>, ...//
+$$ [[:basic_concepts:sorting_and_grouping|Sorts]] the current file display by the specified column. The value must be one of the valid [[..:..:metadata_keywords:keywords_for_columns|column keywords]], and the column must also be displayed in the file display.
+
+As well as the column keywords, **SORTBY** recognizes the special keyword synonyms **accessed**, **created**, **date, disksize, modified, path** and **size**. This lets you sort by date, size or path without needing to know the exact column that is displayed (e.g. the column could be **size**, **sizekb** or **sizerel** - but the sorting is the same in all cases, and `Set SORTBY=size` would work for any column).
+
+It is possible to sort the list by multiple columns, by specifying more than one comma-separated keyword. You can also specify that the sort order for a particular column should be reversed by prefixing its keyword with a hyphen.
+
+The `Set SORTBY` command can also be used to automatically add the specified columns to the file display (since a column needs to be displayed in the list in order to sort by it). Prefix the column with a **+** sign to enable this. If the column is not already in the list it will be added to the end of the existing columns. You can also specify the position where the column should be added if it doesn't already exist - see the description of the `Set COLUMNSADD` command for details on this.
+
+``Set SORTBY=picsize,-modified``\\
+``Set SORTBY=+datetaken``
+$$ 
+$$ 
+$$ **sortlist**
+$$ When used on a toolbar or menu, the command will turn into a dynamic list of available columns which can be sorted by.
+
+``Set SORTBY=sortlist``
+$$ SORTNAMEEXTSEPARATELY
+$$ /K
+$$ **on**
+$$ Turns the **Sort name and extension separately** option on in the source file display. This modifies the **[[:basic_concepts:folder_options|Folder Options]]** for the current folder.
+
+``Set SORTNAMEEXTSEPARATELY=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the **Sort name and extension separately** option off.
+
+``Set SORTNAMEEXTSEPARATELY=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Sort name and extension separately** option on or off in the current file display.
+
+``Set SORTNAMEEXTSEPARATELY=toggle``
+$$ SORTNEWFILES
+$$ /K
+$$ **on**
+$$ Turns on the **Sort newly created and copied files** option in the source file display. This modifies the **[[:basic_concepts:folder_options|folder format]]** for the current folder.
+
+``Set SORTNEWFILES=on``
+$$ $$ $$ **off**
+$$ Turns off the **Sort newly created and copied files** option in the source file display.
+
+``Set SORTNEWFILES=off``
+$$ $$ $$ **toggle**
+$$ Toggles the **Sort newly created and copied files** option on or off in the source file display.
+
+``Set SORTNEWFILES=toggle``
+$$ $$ $$ **reset**
+$$ Resets the **Sort newly created and copied files** option for the source file display to the default setting from the [[:preferences:preferences_categories:filtering_and_sorting:sorting]] Preferences page.
+
+``Set SORTNEWFILES=reset``
+$$ SORTNUMERIC
+$$ /K
+$$ **on**
+$$ Turns the **Numeric order filename sorting** option on in the source file display. This modifies the **[[:basic_concepts:folder_options|Folder Options]]** for the current folder.
+
+``Set SORTNUMERIC=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the **Numeric order filename sorting** option off.
+
+``Set SORTNUMERIC=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Numeric order filename sorting** option on or off in the current file display.
+
+``Set SORTNUMERIC=toggle``
+$$ SORTORDER
+$$ /K
+$$ **folders**
+$$ Changes the sort order in the source file display so that folders are listed before files. This modifies the **[[:basic_concepts:folder_options|Folder Options]]** for the current folder.
+
+``Set SORTORDER=folders``
+$$ 
+$$ 
+$$ **files**
+$$ Lists files before folders in the current file display.
+
+``Set SORTORDER=files``
+$$ 
+$$ 
+$$ **mixed**
+$$ Sorts files and folders together in the current file display.
+
+``Set SORTORDER=mixed``
+$$ 
+$$ 
+$$ **cycle**
+$$ Cycles through the three different ordering options in the current file display.
+
+``Set SORTORDER=cycle``
+$$ SORTREVERSE
+$$ /K
+$$ **on**
+$$ Reverses the sort order in the current file display. If the list is only sorted by one column, the direction of that column sort is reversed. If multiple columns are selected for sorting, their directions are not altered but the overall result is reversed as the final step in the sorting.
+
+This modifies the **[[:basic_concepts:folder_options|Folder Options]]** for the current folder.
+
+``Set SORTREVERSE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the reverse sort flag off for the current folder, restoring the sort order to normal.
+
+``Set SORTREVERSE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles reverse sort on or off in the current folder.
+
+``Set SORTREVERSE=toggle``
+$$ 
+$$ 
+$$ **togglesmart**
+$$ Toggles reverse sort on or off in the current folder. If used with the **SORTBY** argument on the same command line, this argument operates slightly differently to **toggle**. If the column specified for **SORTBY** is already sorted, the sort order will be reversed, but if the specified column is not already sorted, the sort order will not be reversed.
+
+To illustrate this, imagine the list is currently sorted forwards by name, and the command `Set SORTBY=size SORTREVERSE=toggle` is run multiple times. The resulting sort orders after each iteration would be:
+  - Sorted by name, forwards 
+  - Sorted by size, backwards 
+  - Sorted by size, forwards
+
+Contrast this with the command `Set SORTBY=size SORTREVERSE=togglesmart`:
+  - Sorted by name, forwards 
+  - Sorted by size, forwards 
+  - Sorted by size, backwards 
+
+``Set SORTBY=desc SORTREVERSE=togglesmart``
+$$ SORTWORDS
+$$ /K
+$$ **on**
+$$ Turns the **Word sort **option on in the source file display. This modifies the **[[:basic_concepts:folder_options|Folder Options]]** for the current folder.
+
+``Set SORTWORDS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the **Word sort** option in the source file display.
+
+``Set SORTWORDS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Word sort** option in the current folder.
+
+``Set SORTWORDS=toggle``
+$$ SOUNDS
+$$ /K
+$$ **on**
+$$ Turns on the **Enable Sound Events** option on the **[[:preferences:preferences_categories:miscellaneous:sounds|Miscellaneous / Sounds]]** page in Preferences.
+
+``Set SOUNDS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the **Enable Sound Events** option.
+
+``Set SOUNDS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the **Enable Sound Events** option on or off.
+
+``Set SOUNDS=toggle``
+$$ SOURCE
+$$ /K
+$$ **left**
+$$ Sets the left (or top) file display in a dual-display Lister to be the source.
+
+``Set SOURCE=left``
+$$ 
+$$ 
+$$ **right**
+$$ Sets the right (or bottom) file display to be the source.
+
+``Set SOURCE=right``
+$$ 
+$$ 
+$$ **focus**
+$$ Sets the file display that currently has the input focus to be the source.
+
+``Set SOURCE=focus``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the state (source/destination) of the left and right file displays.
+
+``Set SOURCE=toggle``
+$$ SPACING
+$$ /K
+$$ //<item>**:**<value>//
+$$ Modifies the spacing of various user interface elements (those that can be changed by a [[:preferences:preferences_categories:user_interface:spacing|user interface spacing scheme]]).
+
+You can specify one or more items, separated by commas, and provide either new absolute values or positive or negative deltas, for each item.
+
+The item keywords are:\\
+**detailslinespacing**, **detailslinepadding**, **powerlinespacing**, **powerlinepadding**, **pathiconleft**, **pathiconright**, **pathlabelleft**, **pathlabelright**, **thumbnailspacingh**, **thumbnailspacingv**, **tilespacingh**, **tilespacingv**, **treepadding**, **toolbarspacingh**, **toolbarspacingv**, **dragdistance**, **dblclkdistance**.
+
+``Set SPACING detailslinespacing:+16,powerlinespacing:+16``\\
+``Set SPACING tilespacingv:20,tilespacingh:32``
+$$ SPACINGSCHEME
+$$ /O
+$$ //(no value)//
+$$ Generates a list of configured [[:preferences:preferences_categories:user_interface:spacing|user interface spacing schemes]]. Selecting an item from the list will switch to that scheme.
+
+``Set SPACINGSCHEME``
+$$
+$$
+$$ //<scheme name>//
+$$ Switches to the specified UI spacing scheme.
+
+``Set SPACINGSCHEME=CouchFriendly``
+$$
+$$
+$$ **!default**
+$$ Resets to the default UI spacing values.
+
+``Set SPACINGSCHEME=!default``
+$$ STATE
+$$ /K
+$$ **source**
+$$ Sets the currently active Lister to be the source. When a Lister becomes the source, the previous source (if any) becomes the destination, and the previous destination (if any) is turned off. In a dual-display Lister, this command has no effect, because the currently active file display is by definition already the source.
+
+``Set STATE=source``
+$$ 
+$$ 
+$$ **dest**
+$$ Sets the currently active Lister to be the destination. In a dual-display Lister, this is equivalent to `Set SOURCE=toggle` - the source will become the destination and vice versa.
+
+``Set STATE=dest``
+$$ 
+$$ 
+$$ **lockoff**
+$$ Locks the active Lister as off. When a Lister is locked off, clicking in it will not make it the source or destination - only another `Set STATE` command can unlock it. This command has no effect in a dual-display Lister.
+
+``Set STATE=lockoff``
+$$ STATUSBAR
+$$ /K
+$$ **on**
+$$ Turns the [[:basic_concepts:the_lister:status_bar|status bar]] on in the active Lister.
+
+``Set STATUSBAR=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the status bar off in the active Lister.
+
+``Set STATUSBAR=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the status bar on or off in the active Lister.
+
+``Set STATUSBAR=toggle``
+$$ STATUSBARSTYLE
+$$ /K
+$$ **single**
+$$ Sets the status bar style to one single status bar even in a dual-display Lister.
+
+``Set STATUSBARSTYLE=single``
+$$ 
+$$ 
+$$ **dual**
+$$ One single status bar, with a separate definition in dual-display mode.
+
+``Set STATUSBARSTYLE=dual``
+$$ 
+$$ 
+$$ **independent**
+$$ Separate status bars for left/right file displays, with separate definitions for left and right.
+
+``Set STATUSBARSTYLE=independent``
+$$ 
+$$ 
+$$ **independentsame**
+$$ Separate status bars for left/right file displays, with the same definition for both.
+
+``Set STATUSBARSTYLE=independentsame``
+$$ 
+$$ 
+$$ **bottom**
+$$ Puts the status bar at the bottom of the Lister rather than at the bottom of the file display.
+
+``Set STATUSBARSTYLE=dual,bottom``
+$$ 
+$$ 
+$$ **nobottom**
+$$ Puts the status bar at the bottom of the file display rather than the bottom of the Lister.
+
+``Set STATUSBARSTYLE=independentsame,nobottom``
+$$ 
+$$ 
+$$ **glass**
+$$ Enable glass when the status bar is at the bottom of the Lister.
+
+``Set STATUSBARSTYLE=bottom,glass``
+$$ 
+$$ 
+$$ **noglass**
+$$ Disable glass when the status bar is at the bottom of the Lister.
+
+``Set STATUSBARSTYLE=bottom,single,noglass``
+$$ TABPOSITION
+$$ /K
+$$ **above**
+$$ Set folder tabs in the current Lister to display above the file displays. This overrides the default folder tab position as configured on the **[[:preferences:preferences_categories:folder_tabs:folder_tab_bar|Folder Tab Bar]]** page in Preferences.
+
+``Set TABPOSITION=above``
+$$ 
+$$ 
+$$ **below**
+$$ Folder tabs in the current Lister will display below the file displays.
+
+``Set TABPOSITION=below``
+$$ 
+$$ 
+$$ **left **
+$$ Folder tabs will display to the left of the file displays.
+
+``Set TABPOSITION=left``
+$$ 
+$$ 
+$$ **right**
+$$ Folder tabs will display to the right of the file display.
+
+``Set TABPOSITION=right``
+$$ 
+$$ 
+$$ **together**
+$$ In a dual file display Lister, the folder tabs for each file display will display together (e.g. when set to above or below, a horizontal dual-display Lister would have the two folder tab bars together between the two file displays). This overrides the default setting configured on the **[[:preferences:preferences_categories:folder_tabs:folder_tab_bar|Folder Tab Bar]]** page in Preferences.
+
+You can use this keyword by itself or in conjunction with one of the above positional arguments, to change both settings simultaneously.
+
+``Set TABPOSITION=above,together``
+$$ 
+$$ 
+$$ **apart**
+$$ In a dual display Lister, folder tabs will be apart from each other (e.g. when set to above or below, a horizontal dual-display Lister would have tabs above the top file display and below the bottom file display).
+
+``Set TABPOSITION=apart``
+$$ 
+$$ 
+$$ **normal**
+$$ In a dual display Lister the folder tab position will be as configured (e.g. when set to above, both tab bars would be above their respective displays).
+
+``Set TABPOSITION=above,normal``
+$$ 
+$$ 
+$$ **reset**
+$$ Resets the folder tab position in this Lister to the defaults as configured in Preferences.
+
+``Set TABPOSITION=reset``
+$$
+$$
+$$ **save**
+$$ Makes the changes made by this command permanent (and applies them to any other open Listers).
+
+``Set TABPOSITION=above,normal,save``
+$$ TABWIDTH
+$$ /K
+$$ //<size>//
+$$ Set the width of the folder tab bar, if it is displayed to the left or right of the file display. (All `Set TABWIDTH` variants have no effect on the folder tab bar if it is above or below the file display.)
+
+``Set TABWIDTH=250``
+
+The width you specify will normally be DPI scaled, but you can specify a negative number if you want an absolute pixel width without scaling:
+
+``Set TABWIDTH=-300``
+$$ 
+$$ 
+$$ **auto**
+$$ Auto-size the folder tab bar to fit the labels of the current tabs. (Similar to double-clicking the tab bar's splitter.)
+
+``Set TABWIDTH=auto``
+
+When **auto** and **both** are combined, the two tab bars auto-size to an equal width, wide enough for both sides.
+
+``Set TABWIDTH=auto,both``
+
+(If you want to auto-size both sides indepdently, run `Set TABWIDTH=auto,left` and then `Set TABWIDTH=auto,right`.)
+$$ 
+$$ 
+$$ **source**
+$$ Specifies that you want to resize the tab bar for the //source// file display in a dual-display window. (This is usually implicit and does not need specifying, but can override which file display is affected by buttons on the File Display Toolbar.)
+
+``Set TABWIDTH=auto,source``
+$$ 
+$$ 
+$$ **dest**
+$$ Specifies that you want to resize the tab bar for the //destination// file display in a dual-display window.
+
+``Set TABWIDTH=auto,dest``
+$$ 
+$$ 
+$$ **left**
+$$ Specifies that you want to resize the tab bar for the //left// (or //top//) file display.
+
+``Set TABWIDTH=auto,left``
+$$ 
+$$ 
+$$ **right**
+$$ Specifies that you want to resize the tab bar for the //right// (or //bottom//) file display.
+
+``Set TABWIDTH=auto,right``
+$$ 
+$$ 
+$$ **both**
+$$ Specifies that you want to resize the tab bars for both the //left// and //right// (or //top// and //bottom//) file displays at once.
+
+``Set TABWIDTH=300,both``
+
+Combining **both** and **auto** will resize both sides to the maximum needed by either side. See **auto**, above, for more detail.
+$$ 
+$$ 
+$$ **thinnest**
+$$ In a dual-display window, makes both tab bars the same width as the thinnest one.
+
+``Set TABWIDTH=thinnest``
+$$ 
+$$ 
+$$ **widest**
+$$ In a dual-display window, makes both tab bars the same width as the widest one.
+
+``Set TABWIDTH=widest``
+$$ THUMBNAILBORDERS
+$$ /K
+$$ **on**
+$$ Turns the display of thumbnail borders on. This is a global setting - it modifies the state of the option on the **[[:preferences:preferences_categories:colors_and_fonts:directory_opus_colors|Directory Opus Colors / Borders]]** page in Preferences.
+
+The Preferences page has four separate options, for the display modes thumbnails, tiles, details and power. By default this command modifies the thumbnails mode setting - but keywords can be used to change the setting for other modes, or for all modes.
+
+``Set THUMBNAILBORDERS=on``
+$$ $$ $$ **off**
+$$ Turns thumbnail borders off.
+
+``Set THUMBNAILBORDERS=off``
+$$ $$ $$ **toggle**
+$$ Toggles thumbnail borders on and off.
+
+``Set THUMBNAILBORDERS=toggle``
+$$ $$ $$ **thumbnails**
+$$ Affects the border setting for thumbnails mode. This is the default if no other mode is specified.
+
+``Set THUMBNAILBORDERS=toggle,thumbnails,tiles``
+$$ $$ $$ **tiles**
+$$ Affects the setting for tiles mode.
+
+``Set THUMBNAILBORDERS=tiles,on``
+$$ $$ $$ **details**
+$$ Affects the setting for details mode (when the Thumbnail column is visible).
+
+``Set THUMBNAILBORDERS=toggle,details``
+$$ $$ $$ **power**
+$$ Affects the setting for power mode.
+
+``Set THUMBNAILBORDERS=power,details,off``
+$$ $$ $$ **all**
+$$ Changes the setting for all modes.
+
+``Set THUMBNAILBORDERS=toggle,all``
+$$ THUMBNAILLABELS
+$$ /K
+$$ **on**
+$$ Turns the display of thumbnail labels on. This is a global setting - it modifies the state of the **Display labels** option on the **[[:preferences:preferences_categories:file_display_modes:thumbnails_mode|File Display Modes / Thumbnails]]** page in Preferences.
+
+``Set THUMBNAILLABELS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns thumbnail labels off.
+
+``Set THUMBNAILLABELS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles thumbnail labels on or off.
+
+``Set THUMBNAILLABELS=toggle``
+$$ THUMBNAILRATINGS
+$$ /K
+$$ **on**
+$$ Turns the thumbnail overlay of rating stars on or off. This is a global setting - it modifies the state of the **Overlay rating** option on the **[[:preferences:preferences_categories:file_display_modes:thumbnails_mode|File Display Modes / Thumbnails]]** page in Preferences.
+
+``Set THUMBNAILRATINGS=on`` 
+$$ 
+$$ 
+$$ **off**
+$$ Turns the ratings overlay off.
+
+``Set THUMBNAILRATINGS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the ratings overlay on or off.
+
+``Set THUMBNAILRATINGS=toggle``
+$$ THUMBSTRETCH
+$$ /K
+$$ **reset**
+$$ Turns off any override of the thumbnail stretch mode which the current folder format is applying. The stretch mode defined in Preferences for the current file display mode will then be used instead.
+
+``Set THUMBSTRETCH=reset`` 
+$$ 
+$$ 
+$$ //<mode>//
+$$ Applies an override of the thumbnail stretch mode, via the current folder format.
+
+Valid modes: **FitReduce**, **FitSmooth**, **FitPixelated**, **FillCropSmooth**, and **FillCropPixelated**.
+
+While the override is in effect, all file display modes that can display thumbnails are affected, within the current folder tab only. (Sub-images in folder thumbnails are not affected.)
+
+``Set THUMBSTRETCH=FitPixelated``
+$$ TITLEBARTOOLBARS
+$$ /K
+$$ **on**
+$$ Turns on the Preferences option to move the top-row toolbars into the window title bar (i.e. gives the Lister a custom title bar including one or more toolbars).
+
+``Set TITLEBARTOOLBARS=on``
+$$
+$$
+$$ **off**
+$$ Turns the custom titlebar option off.
+
+``Set TITLEBARTOOLBARS=off``
+$$
+$$
+$$ **toggle**
+$$ Toggles the custom titlebar on or off.
+
+``Set TITLEBARTOOLBARS=toggle``
+$$ TREE
+$$ /K
+$$ **on**
+$$ Turns the folder tree on in the active Lister. In a dual-display Lister, the **Open second Folder Tree in dual display mode** option on the **[[:preferences:preferences_categories:folder_tree:options|Folder Tree / Options]]** page in Preferences controls whether a second tree opens automatically - if that option is off, you can use the **dual** keyword to force a second tree to open as well.
+
+``Set TREE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the folder tree off in the active Lister.
+
+``Set TREE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the folder tree on or off in the active Lister.
+
+``Set TREE=toggle``
+$$ 
+$$ 
+$$ **left**
+$$ Controls the left (or top) folder tree in a dual-display Lister.
+
+``Set TREE=left,toggle``
+$$ 
+$$ 
+$$ **right**
+$$ Controls the right (or bottom) folder tree in a dual-display Lister.
+
+``Set TREE=right,toggle``
+$$ 
+$$ 
+$$ **dual**
+$$ In a dual-display Lister, controls both trees at once.
+
+``Set TREE=dual,toggle``
+$$ 
+$$ 
+$$ **source**
+$$ Controls the folder tree that "belongs" to the source file display.
+
+``Set TREE=source,on``
+$$ 
+$$ 
+$$ **dest**
+$$ Controls the folder tree that belongs to the destination file display.
+
+``Set TREE=dest,toggle``
+$$ TREELOCK
+$$ /K
+$$ **on**
+$$ Turns the folder tree lock on for the active Lister (or when there are two trees, for the source file display). This is equivalent to clicking the padlock icon in the folder tree's header, but can be used even if the tree header is turned off in Preferences. When the folder tree is locked it no longer changes selection automatically to follow the current source path.
+
+``Set TREELOCK=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the folder tree lock off for the active Lister.
+
+``Set TREELOCK=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the folder tree lock on and off.
+
+``Set TREELOCK=toggle``
+$$ TREESHOWPATHTOSEL
+$$ /K
+$$ **on**
+$$ Turns the folder tree's **Highlight path to selected folder** option on. This is a global setting and so affects all Listers. When turned on, the additional options on the **[[:preferences:preferences_categories:folder_tree:appearance|Folder Tree / Appearance]]** Preferences page apply.
+
+``Set TREESHOWPATHTOSEL=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns tree path highlighting off.
+
+``Set TREESHOWPATHTOSEL=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles tree path highlighting on or off.
+
+``Set TREESHOWPATHTOSEL=toggle``
+$$ TYPEFILTERMENU
+$$ /S
+$$ //(no value)//
+$$ Displays a dropdown menu letting you quickly filter the current view by file type. This is the same menu shown by the [[:basic_concepts:searching_and_filtering:filter_bar|filter bar]] filetypes button.
+
+``Set TYPEFILTERMENU``
+$$ UTILITY
+$$ /K
+$$ **find**
+$$ Displays the [[:basic_concepts:the_lister:utility_panel|utility panel]] in [[:basic_concepts:searching_and_filtering:find_files|Find Files]] mode. The panel will open in its Simple or Advanced state, depending on which was used the last time the panel was closed.
+
+``Set UTILITY=find``
+$$ 
+$$ 
+$$ **findsimple**
+$$ Displays the [[:basic_concepts:the_lister:utility_panel|utility panel]] in [[:basic_concepts:searching_and_filtering:find_files|Find Files]] (Simple) mode.
+
+``Set UTILITY=findsimple``
+$$ 
+$$ 
+$$ **findadvanced**
+$$ Displays the [[:basic_concepts:the_lister:utility_panel|utility panel]] in [[:basic_concepts:searching_and_filtering:find_files|Find Files]] (Advanced) mode.
+
+``Set UTILITY=findadvanced``
+$$ 
+$$ 
+$$ **sync**
+$$ Displays the utility panel in [[:file_operations:copying_moving_and_deleting_files:copying_updated_files:synchronize|Synchronize]] mode.
+
+``Set UTILITY=sync``
+$$ 
+$$ 
+$$ **dupe**
+$$ Displays the utility panel in [[:additional_functionality:duplicate_file_finder|Duplicate File Finder]] mode.
+
+``Set UTILITY=dupe``
+$$ 
+$$ 
+$$ **undo**
+$$ Displays the utility panel showing the undo list (file operations that can be undone).
+
+``Set UTILITY=undo``
+$$ 
+$$ 
+$$ **filelog**
+$$ Displays the utility panel showing the [[:file_operations:tracking_and_undoing_file_operations|file operations log]].
+
+``Set UTILITY=filelog``
+$$ 
+$$ 
+$$ **ftplog**
+$$ Displays the utility panel showing the [[:ftp:ftp_log|FTP logs]].
+
+``Set UTILITY=ftplog``
+$$ 
+$$ 
+$$ **scriptlog**
+$$ Displays the utility panel showing the "script log" page.
+
+``Set UTILITY=scriptlog``
+
+(You may see **otherlog** used in older toolbars and commands. This still works but is deprecated.)
+$$ 
+$$ 
+$$ **email**
+$$ Displays the utility panel showing the outgoing email log.
+
+``Set UTILITY=email``
+$$ 
+$$ 
+$$ **on**
+$$ Turns the utility panel on in the active Lister.
+
+``Set UTILITY=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the utility panel off.
+
+``Set UTILITY=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the utility panel on or off in the active Lister.
+
+``Set UTILITY=ftplog,toggle``
+$$ 
+$$ 
+$$ **focus**
+$$ Gives focus to the utility panel if it's open. If used with **toggle**, the utility panel will only be toggled closed if it has focus.
+
+``Set UTILITY=find,toggle,focus``
+$$ 
+$$ 
+$$ **expand**
+$$ If the utility panel is in a shrunken state, this argument in conjunction with **toggle** will cause the panel to expand rather than close.
+
+``Set UTILITY=find,toggle,expand``
+$$ 
+$$ 
+$$ **noexpand**
+$$ When used with **toggle** (or other keywords that turn the panel on), **noexpand** prevents the utility panel from being expanded if it was previously saved in a shrunken state. That is, it will turn on but remain shrunken.
+
+``Set UTILITY=find,toggle,noexpand``
+$$
+$$
+$$ **float**
+$$ When used with modes that support it, lets you turn on the panel and float it as a separate window with a single command.
+
+``Set UTILITY=scriptlog,toggle,float``
+$$ VIEW
+$$ /K
+$$ //<mode>[,<mode>]//
+$$ Changes the [[:basic_concepts:the_lister:view_modes|view mode]] in the current file display. The valid mode keywords are **largeicons**, **smallicons**, **list**, **details**, **power**, **thumbnails** and **tiles**.
+
+You can specify two different view modes to create a command that toggles from one mode to the other. With this usage, you can append an asterisk (*) to the view mode keyword to specify that the button should appear highlighted when in that mode.
+
+The **cycle** keyword can be used to cycle through more than two modes.
+
+``Set VIEW=details,thumbnails``*
+
+Note that the change does not take place until after the whole command (not just this line) has completed. This usually does not matter, but does if you want to change the view mode and also save it as the folder's new format. Running `Set VIEW=thumbnails` and then `Set SAVEFORMAT=folder` in the same command will not work. However, you can combine them into a single line which will work correctly:
+
+``Set VIEW=thumbnails SAVEFORMAT=folder``
+$$ 
+$$ 
+$$ **cycle**
+$$ Cycles through the view modes. If used by itself, this will cycle through all the available view modes - otherwise, combine with the appropriate view mode keywords to create a command that cycles through specific modes.
+
+``Set VIEW=largeicons,smallicons,details,cycle``
+$$ VIEWERTOOLBAR
+$$ /O
+$$ //<name>//
+$$ This command lets you change which toolbar is used for the [[:additional_functionality:viewing_images:viewer_keys_and_toolbar|Viewer Toolbar]]. If you don't specify a name the default Viewer Toolbar is selected.
+
+``Set VIEWERTOOLBAR "My Viewer Toolbar"``
+$$ VIEWPANE
+$$ /K
+$$ **on**
+$$ Turns the [[:basic_concepts:the_lister:viewer_pane|viewer pane]] on in the currently active Lister.
+
+``Set VIEWPANE=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns the viewer pane off in the active Lister.
+
+``Set VIEWPANE=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the viewer pane on or off in the active Lister.
+
+``Set VIEWPANE=toggle``
+$$ 
+$$ 
+$$ **horiz**
+$$ Forces the viewer pane to horizontal layout when it is opened.
+
+``Set VIEWPANE=toggle,horiz``
+$$ 
+$$ 
+$$ **vert**
+$$ Specifies vertical layout for the viewer pane.
+
+``Set VIEWPANE=on,vert``
+$$ 
+$$ 
+$$ **togglelayout**
+$$ Toggles the layout of the viewer pane between vertical and horizontal.
+
+``Set VIEWPANE=togglelayout``
+$$ VIEWPANELOCK
+$$ /K
+$$ **on**
+$$ Turns on the [[:basic_concepts:the_lister:viewer_pane|viewer pane]] lock in the current Lister. When the viewer pane lock is turned on, it will continue to display its current image even if the file selection is changed in the Lister.
+
+``Set VIEWPANELOCK=on``
+$$ 
+$$ 
+$$ **off**
+$$ Turns off the viewer pane lock.
+
+``Set VIEWPANELOCK=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles the viewer pane lock on or off.
+
+``Set VIEWPANELOCK=toggle``
+$$ VIEWPANESHELLICONS
+$$ /K
+$$ **on**
+$$ Enables shell icons in the [[:basic_concepts:the_lister:viewer_pane|viewer pane]]. See **[[:preferences:preferences_categories:viewer:viewer_pane|Preferences / Viewer / Viewer Pane]] / Display shell icons**.
+
+``Set VIEWPANESHELLICONS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Disables shell icons in the viewer pane.
+
+``Set VIEWPANESHELLICONS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles shell icons in the viewer pane on or off.
+
+``Set VIEWPANESHELLICONS=toggle``
+$$ VIEWPANESHELLTHUMBS
+$$ /K
+$$ **on**
+$$ Enables shell thumbnails in the [[:basic_concepts:the_lister:viewer_pane|viewer pane]]. See **[[:preferences:preferences_categories:viewer:viewer_pane|Preferences / Viewer / Viewer Pane]] / Display shell thumbnails**.
+
+``Set VIEWPANESHELLTHUMBS=on``
+$$ 
+$$ 
+$$ **off**
+$$ Disables shell thumbnails in the viewer pane.
+
+``Set VIEWPANESHELLTHUMBS=off``
+$$ 
+$$ 
+$$ **toggle**
+$$ Toggles shell thumbnails in the viewer pane on or off.
+
+``Set VIEWPANESHELLTHUMBS=toggle``
+$$ VIEWPANESIZE
+$$ /K
+$$ //<size>[,<size>]//
+$$ Adjusts the size of the viewer pane in the active Lister. The size is given as a percentage of the total size of the Lister, and applies in the appropriate dimension based on the current layout of the viewer pane (so for example, when the pane is horizontal this affects its height).
+
+It is also possible to specify two separate sizes, and the command will toggle between them.
+
+``Set VIEWPANESIZE 25,50``
+</commandtable2>
+
+

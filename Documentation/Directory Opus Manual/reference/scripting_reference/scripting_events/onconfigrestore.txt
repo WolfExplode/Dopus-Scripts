@@ -1,0 +1,17 @@
+~~Title: OnConfigRestore~~
+<pageheader/>
+
+The **OnConfigRestore** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when the Opus configuration is being restored from a backup.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnConfigRestore
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:configrestoredata|ConfigRestoreData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **ConfigRestoreData.location** property identifies the staging folder that the Opus configuration is being restored from. You can make changes to files in this folder before returning, and any modifications you make will be imported into the current configuration.
+</commandtable>
+

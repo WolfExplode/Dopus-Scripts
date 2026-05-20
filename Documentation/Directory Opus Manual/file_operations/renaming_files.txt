@@ -1,0 +1,17 @@
+~~Title: Renaming Files ~~
+<pageheader/>
+
+There are three main ways to rename files in Opus:
+
+  * [[~inline_rename|Inline Rename]] refers to editing the names of files directly in the Lister (inline). This is the standard method Explorer uses and may be the one you're most familiar with. You can enter inline rename mode by slow double-clicking a filename (left-click, wait //longer// than the system double-click speed, then left-click again), by selecting a file and pressing F2, or by right-clicking a file and choosing Rename from the context menu. 
+  * [[~simple_wildcard_rename|Simple Wildcard Rename]] is a simple way to perform batch renaming. It lets you use a wildcard character to specify one or more parts of the existing filename that are to be retained in the new name. This mode isn't accessible by default, because the Advanced Rename function supports everything this can do and much more. 
+  * [[~advanced_rename|Advanced Rename]] is the most powerful way of performing batch renames in Opus. Using this tool you can use complicated wildcard expressions, rename using file metadata, create rename macros, automatically number files, write complex scripts and much more. 
+
+
+
+More:
+
+[[~inline_rename|Inline Rename]]\\
+[[~simple_wildcard_rename|Simple Wildcard Rename]]\\
+[[~advanced_rename|Advanced Rename]]\\
+

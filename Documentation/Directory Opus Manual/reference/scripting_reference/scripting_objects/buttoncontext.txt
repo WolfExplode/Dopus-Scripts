@@ -1,0 +1,21 @@
+~~Title: ButtonContext~~
+<pageheader/>
+
+The **ButtonContext** object is used to update the context-sensitive state of a script command button. It's obtained from the `ctx` property of the **[[buttoncontextdata|ButtonContextData]]** object.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ checked
+$$ //bool//
+$$ Set to **True** to have the button appear checked/highlighted.
+$$ disabled
+$$ //bool//
+$$ Set to **True** to disable the button.
+$$ radio
+$$ //bool//
+$$ Set to **True** to use a radio button rather than a checkmark.
+</commandtable>
+

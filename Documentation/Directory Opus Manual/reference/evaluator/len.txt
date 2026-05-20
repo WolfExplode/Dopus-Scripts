@@ -1,0 +1,17 @@
+~~Title: Len~~
+<evalcmd>
+Len && int && Length of the string or size of the array. &&
+string/array && string/array && Input string or array.
+</evalcmd>
+
+For strings, returns the length of the //string// in characters.
+For arrays, returns the number of elements in the array.
+
+//Example://
+<code>
+Output( Len("Hello") );
+--> 5
+Output( Len( ArrayCreate(1, 2, 3, 4) ) );
+--> 4
+</code>
+

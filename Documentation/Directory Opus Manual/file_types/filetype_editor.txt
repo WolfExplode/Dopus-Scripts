@@ -1,0 +1,33 @@
+~~Title: Filetype Editor ~~
+<pageheader/>
+
+The File Type Editor dialog is used to make changes to individual file types or [[file_type_groups|file type groups]]. It is accessed by double-clicking on a file type in the list on the **[[:file_types|File Types]]** dialog, or selecting the file type and clicking the **Edit** button at the bottom of that dialog.
+
+{{:media:filetype_editor_-_top.png?nolink|}} 
+
+The top portion of the file type editor lets you define the basic properties for the file type.
+
+  * **Change Icon**: This lets you change the icon that is used to represent files of this type. This is a global setting (it affects the whole system, not just Opus). Because Windows manages file icons itself, File type groups and the special Opus file types do not have configurable icons. 
+  * **Description**: This is the description of the file type or group. For file types, this changes the string displayed in the Type column for files of this type. For groups, this specifies the name of the group. 
+  * **Extensions**: This drop-down list lets you edit the file extensions assigned to the file type or group. To add a new extension, type it into the field and then click the **Add** button. To remove an extension, select it from the drop-down list and click the **Del** button. For file types this is a global setting (it affects the whole system). 
+  * **MIME Type**: This lets you edit the MIME association for the file type, which lets you associate file extensions with Internet [[http://en.wikipedia.org/wiki/Internet_media_type|MIME]] types. This is a global setting. 
+
+
+
+The tabs at the top of the file type editor let you access the **[[~info_tip|Info Tip]]** and **[[~tiles_mode|Tiles Mode]]** settings for the file type.
+
+{{:media:filetype_editor_-_tabs.png?nolink|}} 
+
+Below the **MIME Type** field is another set of tabs that let you access the **[[~actions|Actions]]**, **[[~events|Events]]**, **[[~context_menu|Context Menu]]**, **[[~drop_menu|Drop Menu]]** and **[[~replace_menu|Replace Menu]]** settings for the file type.
+
+
+
+More:
+
+[[~actions|Actions]]\\
+[[~events|Events]]\\
+[[~context_menu|Context Menu]]\\
+[[~drop_menu|Drop Menu]]\\
+[[~replace_menu|Replace Menu]]\\
+[[~info_tip|Info Tip]]\\
+[[~tiles_mode|Tiles Mode]]\\

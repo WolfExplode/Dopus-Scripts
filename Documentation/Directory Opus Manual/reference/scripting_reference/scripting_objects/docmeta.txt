@@ -1,0 +1,16 @@
+~~Title: DocMeta ~~
+<pageheader/>
+
+The **DocMeta** object is retrieved from the **[[metadata|Metadata]].doc** or **[[metadata|Metadata]].doc_text** properties. It provides access to metadata relating to document files.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<column keyword>//
+$$ //variant//
+$$ Returns the value of the specified column, as listed in the //Documents// section of the [[..:..:metadata_keywords:keywords_for_columns|Keywords for Columns]] page.
+</commandtable>
+
+

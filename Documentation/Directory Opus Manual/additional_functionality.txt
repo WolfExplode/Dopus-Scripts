@@ -1,0 +1,16 @@
+~~Title: Additional Functionality ~~
+<pageheader/>
+
+This section describes the non-core functionality that Opus provides - that is, functions that aren't directly related to everyday file management tasks, including:
+
+  * [[:additional_functionality:viewing_images|Viewing images]] and [[:additional_functionality:playing_sounds|playing sound files]] 
+  * Simple [[:additional_functionality:image_conversion|image conversion]] functions 
+  * Printing and exporting [[:additional_functionality:print_folder|folder listings]] 
+  * Searching for [[:additional_functionality:duplicate_file_finder|duplicate files]] 
+  * [[:additional_functionality:splitting_files|Splitting]] and [[:additional_functionality:joining_files|joining]] files 
+  * Creating [[:additional_functionality:making_links_and_junctions|links, shortcuts and junctions]] 
+  * Using [[:additional_functionality:floating_toolbars|floating toolbars]] as a program launcher 
+  * Configuring [[:additional_functionality:system-wide_hotkeys|system-wide hotkeys]] 
+  * Exporting Opus to [[:additional_functionality:exporting_to_usb|run from a USB drive]] 
+  * Integration with the indexing utility [[:additional_functionality:everything_integration|Everything]]
+  * Viewing a [[:additional_functionality:filetype_summary|summary of file types]] in a folder

@@ -1,0 +1,24 @@
+~~Title: PermanentFilters ~~
+<pageheader/>
+
+The **PermanentFilters** object provides information about the permanent file and folder filter settings (configured on the **[[:preferences:preferences_categories:filtering_and_sorting:permanent_filters|Permanent Filters]]** page in Preferences). It is obtained from the **[[globalfilters|GlobalFilters]].permanent** property.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ enable
+$$ //bool//
+$$ Returns **True** if the permanent wildcard filters are enabled.
+$$ file
+$$ //string//
+$$ Returns the permanent filename filter wildcard pattern. If the wildcard is configured to use regular expressions, it will have a **regex:** prefix in front of the pattern.
+$$ folder
+$$ //string//
+$$ Returns the permanent folder filter wildcard pattern. If the wildcard is configured to use regular expressions, it will have a **regex:** prefix in front of the pattern.
+</commandtable>
+
+
+
+

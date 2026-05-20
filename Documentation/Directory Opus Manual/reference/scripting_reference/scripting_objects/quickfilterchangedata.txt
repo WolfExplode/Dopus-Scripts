@@ -1,0 +1,16 @@
+~~Title: QuickFilterChangeData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onquickfilterchange|OnQuickFilterChange]]** event, the method receives a **QuickFilterChangeData** object when the [[:basic_concepts:searching_and_filtering:filter_bar|quick filter]] is changed in a tab.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ tab
+$$ //object://**[[tab|Tab]]** 
+$$ Returns a **[[tab|Tab]]** object representing the tab the quick filter changed in.
+</commandtable>
+
+

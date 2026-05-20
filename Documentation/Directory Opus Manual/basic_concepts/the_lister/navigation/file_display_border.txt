@@ -1,0 +1,55 @@
+~~Title: Location Bar~~
+<pageheader/>
+
+The location bar is a title bar that appears at the top of the file display area in the Lister. By default the location bar contains a toolbar, the [[..:toolbars:the_default_toolbars:file_display_toolbar|File Display]] toolbar:
+
+{{:media:13:file_display_toolbar.png?nolink|}}
+
+==Default location bar toolbar==
+
+The main component of the default toolbar is the [[breadcrumbs_location_field|breadcrumbs location field]] which shows you the current folder and lets you navigate within the current hierarchy.
+
+To the left of the location field the buttons are:
+
+  * {{:media:13:location_toolbar_-_back.png?nolink|}} **Back**: Go [[up_forwards_back|back]] to the previous folder. Right-click to show a drop-down list of previous folders.
+  * {{:media:13:location_toolbar_-_forward.png?nolink|}} **Forward**: Go [[up_forwards_back|forward]] to the next folder (if you've previously gone back). Right-click to show a drop-down list of next folders.
+  * {{:media:13:location_toolbar_-_up.png?nolink|}} **Up**: Go [[up_forwards_back|up]] in the folder hierarchy. Right-click to show a drop-down menu with several different options.
+  * {{:media:13:location_toolbar_-_refresh.png?nolink|}} **Refresh**: Refresh the current folder (both file display and tree are refreshed by default).
+  * {{:media:13:location_toolbar_-_home.png?nolink|}} **Home**: Go to your [[home_folder|home folder]]. Right-click to show a drop-down menu.
+
+To the right of the location field the buttons are:
+
+  * **Duplicate**: Duplicates this folder display in the other file display. The Lister will be switched to dual-display mode if it isn't already.
+  * **Swap**: Swap this folder with the other file display. This button isn't visible in single display mode.
+  * **Close**: Close the current tab. If this is the only tab in a dual-display Lister, it will close the second file display. In a single display Lister with only one tab open this button isn't visible.
+
+This is a fully [[:customize:creating_your_own_buttons:editing_the_toolbar|configurable toolbar]], and as such you can add your own buttons and modify or remove the default ones. See the page on the [[..:toolbars:the_default_toolbars:file_display_toolbar|File Display toolbar]] for more information about these buttons.
+
+==Source / destination state==
+
+Some operations, like copying files, inherently require two folders to be involved - the source and the destination.
+
+In a dual display Lister, one display is always designated the source and the other the destination. The location bar changes color to indicate this.
+
+Single display Listers by default do not have a source/destination state as such, although you can enable this in Preferences if you prefer to work that way.
+
+See the **[[..:..:source_and_destination|Source and Destination]]** topic for more information about the source/destination concept.
+
+==Static header mode==
+
+In **[[:preferences:preferences_categories:location_bar:toolbars|Location Bar / Toolbars]]** you can choose to turn the File Display toolbar off, in which case the location bar reverts to a simpler, static header:
+
+{{:media:13:fdb1.png?nolink|}}
+
+In static header mode, in a single file display Lister the location bar is optional - you can choose whether it is shown or not using the **Show header in single display mode** option. In a dual file display Lister the location bar is always shown. 
+
+The elements of the static header, from left-to-right, are:
+
+  * **Location**: Shows the current location. The individual segments of the location are clickable links.
+  * **Back**: Go [[up_forwards_back|back]] to the previous folder.
+  * **Forward**: Go [[up_forwards_back|forward]] to the next folder (if you've previously gone back).
+  * **Up**: Go [[up_forwards_back|up]] in the folder hierarchy.
+  * **Duplicate**: Duplicates this folder display in the other file display.
+  * **Swap**: Swap this folder with the other file display.
+  * **Close**: Close the current tab.
+

@@ -1,0 +1,58 @@
+~~Title: GetInfo~~
+<evalcmd>
+GetInfo && various && Requested information from the specified tab. &&
+item && string && Information item to retrieve. &&
+[flags] && string && Flags.
+</evalcmd>
+
+Returns an item of information from the specified tab. The return type depends upon the information requested.
+
+The available information is:
+
+|AvailableSpace|Available space on the drive|
+|CheckCount|Number of checked items|
+|CheckSize|Size of checked items|
+|Count|Number of items|
+|DirCheckCount|Number of checked directories|
+|DirCheckSize|Size of checked directories|
+|DirCount|Number of directories|
+|DirHiddenCount|Number of hidden directories|
+|DirHiddenSize|Size of hidden directories|
+|DirSelCount|Number of selected directories|
+|DirSelSize|Size of selected directories|
+|DirSize|Total size of directories|
+|DiskSize|Total size of the drive|
+|DriveLabel|Drive label|
+|FileCheckCount|Number of checked files|
+|FileCheckSize|Size of checked files|
+|FileCount|Number of files|
+|FileHiddenCount|Number of hidden files|
+|FileHiddenSize|Size of hidden files|
+|FileSelCount|Number of selected files|
+|FileSelSize|Size of selected files|
+|FileSize|Total size of files|
+|FileSystem|File system the drive is formatted with|
+|FilterActive|Is a filter currently active?|
+|FilterPattern|Current filter pattern|
+|FreeSpace|Free space on the drive|
+|HiddenCount|Number of hidden items|
+|HiddenSize|Size of hidden items|
+|SelCount|Number of selected items|
+|SelSize|Size of selected items|
+|Size|Total size of items|
+|SongLengthChecked|Total length of checked music files|
+|SongLengthSel|Total length of selected music files|
+|SongLengthTotal|Total length of music files|
+|UsedSpace|Used space on the drive|
+
+By default the information is returned from the source file display.
+
+The optional //flags// argument should be a string containing one or more of the following flags:
+|l|Get information from left file display.|
+|r|Get information from right file display.|
+|d|Get information from destination file display.|
+
+This function can also be used in the standalone viewer, although the range of available information is more limited.
+
+|slideshowspeed|Current slideshow speed in seconds.|
+|selectaspectratio|Current selection aspect ratio as a fraction.|

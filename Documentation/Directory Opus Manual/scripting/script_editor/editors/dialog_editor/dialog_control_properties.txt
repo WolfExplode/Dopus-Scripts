@@ -1,0 +1,23 @@
+~~Title: Dialog Control Properties ~~
+<pageheader/>
+
+{{:media:image059.png?nolink|}}
+
+Every control (and the dialog itself) has a number of properties that controls how it appears and functions. To edit the properties of a control, simply click it to select it. The properties appropriate to the control will appear in the //Properties// panel at the bottom-right of the dialog.
+
+  * [[~common_dialog_properties|Common Dialog Properties]]
+  * [[~dialog_properties|Dialog Properties]]
+  * [[~static_text_properties|Static Text Properties]]
+  * [[~markup_text_properties|Markup Text Properties]]
+  * [[~edit_control_properties|Edit Control Properties]]
+  * [[~button_properties|Button Properties]]
+  * [[~check_box_properties|Check Box Properties]]
+  * [[~radio_button_properties|Radio Button Properties]]
+  * [[~combo_box_properties|Combo Box Properties]]
+  * [[~list_box_properties|List Box Properties]]
+  * [[~list_view_properties|List View Properties]]
+  * [[~list_edit_properties|List Edit Properties]]
+  * [[~date_time_picker_properties|Date/Time Picker Properties]]
+  * [[~palette_properties|Palette Properties]]
+  * [[~tab_control_properties|Tab Control Properties]]
+  * [[~group_box_properties|Group Box Properties]]

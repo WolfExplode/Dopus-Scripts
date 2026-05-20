@@ -1,0 +1,18 @@
+~~Title: ArraySort~~
+<evalcmd>
+ArraySort && none && &&
+array && array && Array to sort.
+</evalcmd>
+
+Sorts the elements in the specified array.
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]

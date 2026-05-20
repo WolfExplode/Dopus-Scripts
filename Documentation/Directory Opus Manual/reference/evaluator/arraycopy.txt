@@ -1,0 +1,32 @@
+~~Title: ArrayCopy~~
+<evalcmd>
+ArrayCopy && array && New copy of existing array. &&
+source && array && Existing array to copy from. &&
+[index1] && int && Start of range of elements to copy. &&
+[index2] && int && End of range of elements to copy.
+</evalcmd>
+
+Creates a new copy of an existing array.
+
+By default the entire array is copied. You can optionally specify a range of elements to copy with the index parameters.
+
+If only //index1// is specified, the array is copied from that element to the end.
+
+//Examples://
+<code>
+arr = ArrayCreate(1,2,3,5,8,13,21);
+arr2 = ArrayCopy(arr, 2, 4);
+Output(arr2);
+-> {3, 5, 8}
+</code>
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

@@ -1,0 +1,68 @@
+~~Title: Signature~~
+<pageheader/>
+
+The **Signature** object is returned by the **[[fsutil|FSUtil]].GetSignature** method to provide information about the signature used to digitally sign an executable file.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ certissuer
+$$ //object:CertInfo//
+$$ Information about the issuer of the certificate used to sign the file.
+$$ certsigner
+$$ //object:CertInfo//
+$$ Information about the certificate used to sign this file.
+$$ certtimestamp
+$$ //object:CertInfo//
+$$ Information about the certificate used to timestamp the signature (only if `timestamped` is true).
+$$ moreinfo
+$$ //string//
+$$ More information (optional string provided by the publisher).
+$$ progname
+$$ //string//
+$$ Returns the name of the program.
+$$ publink
+$$ //string//
+$$ Returns the publisher's link.
+$$ selfsigned
+$$ //bool//
+$$ Returns **True** if the file is self-signed.
+$$ timestamp
+$$ //date//
+$$ Returns the signature's timestamp (if `timestamped` is true).
+$$ timestamped
+$$ //bool//
+$$ Returns **True** if the signature was timestamped.
+$$ valid
+$$ //bool//
+$$ Returns **True** if the signature validation was successful. Note that the signature is only validated if the **verify** parameter is set to **True** or one of the other validation flags when the **GetSignature** method is called.
+</commandtable>
+
+
+==Signature.CertInfo==
+
+The **Signature.CertInfo** object is returned by the `certissuer`, `certsigner` and `certtimestamp` properties.
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ issuer
+$$ //string//
+$$ The party that issued the certificate.
+$$ serial
+$$ //string//
+$$ The signature's serial number (in text form).
+$$ serialdata
+$$ //object:**[[blob|Blob]]**//
+$$ The signature's serial number in binary form.
+$$ subject
+$$ //string//
+$$ The signature's subject name.
+$$ valid
+$$ //bool//
+$$ Returns **True** if the certificate is valid.
+</commandtable>
+

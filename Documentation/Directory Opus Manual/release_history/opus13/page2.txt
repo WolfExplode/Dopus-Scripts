@@ -1,0 +1,61 @@
+~~Title: Directory Opus 13 - Highlights - Page 2~~
+Previous: [[release_history:opus13:page1|Opus 13 Highlights - Page 1]]
+<pageheader/>
+
+=== Expandable Folders ===
+
+Open sub-folders and work on multiple levels at once!
+
+<WRAP indent>{{:release_history:expandable.gif?nolink|}}</WRAP>\\
+
+----
+
+=== Favorites Bar ===
+
+Like a web browser. Drag to make shortcuts. Middle-click to open in a new tab:
+
+<WRAP indent>{{:release_history:favebardrag.gif?nolink|}}</WRAP>\\
+
+----
+
+=== Automatic Formats ===
+
+Automatically remember changes to how folders are displayed:
+
+<WRAP indent>{{:release_history:autoformats.png?nolink|}}</WRAP>\\
+
+----
+
+=== Paired Folders ===
+
+Define two folder paths (or regular expressions)...
+
+<WRAP indent>{{:release_history:pairedfoldercfg.png?nolink|}}</WRAP>
+
+...then automatically open one from the other:
+
+<WRAP indent>{{:release_history:pairedfolders.gif?nolink|}}</WRAP>\\
+
+----
+
+=== Selection Summaries ===
+
+Status bar can show selected extension counts:
+
+<WRAP indent>{{:release_history:selsum.png?nolink|}}</WRAP>\\
+
+Click them for an interactive pie chart:
+
+<WRAP indent>{{:release_history:selpie.png?nolink|}}</WRAP>\\
+
+----
+
+=== Lister Defaults ===
+
+Settings > Set Lister Defaults is now a one-stop shop for defining your default window layout, columns, and toolbars:
+
+<WRAP indent>{{:release_history:setdefaults.png?nolink|}}</WRAP>\\
+
+----
+
+Next: [[release_history:opus13:page3|Opus 13 Highlights - Page 3]]

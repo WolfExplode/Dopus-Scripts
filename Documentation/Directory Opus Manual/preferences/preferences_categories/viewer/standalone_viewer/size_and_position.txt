@@ -1,0 +1,15 @@
+~~Title: Size And Position~~
+<pageheader/>
+
+These options affect the [[:additional_functionality:viewing_images|standalone image viewer]].
+
+  * **Auto-size viewer window**: Normally the viewer will remember the size and position of its window from one use to the next. If you turn this option on then when the viewer opens it will automatically resize itself; the options available for this are:
+    * **Fit every picture + zoom/rotate**: The viewer will resize to fit the first picture, and resize itself for every subsequent picture as well. It will also resize when the image is magnified and/or rotated.
+    * **Fit every picture**: The viewer will resize to fit the first picture, and resize itself for every subsequent picture as well. 
+    * **Fit the first picture**: The viewer will resize itself to fit the first picture only. 
+    * **Full screen**: The viewer will always open in full-screen mode.
+  * **Auto-size Lister-linked viewer**: These sizing options affect viewers that are [[:additional_functionality:viewing_images:viewer_lister_linked|linked]] to a Lister.
+  * **Minimum window width**: If the viewer is auto-sized, this option lets you specify a minimum width below which it won't go. You can save this from a existing viewer using the **View / Save Minimum Width** command in the menu. 
+  * **Center viewer window**: This causes the viewer window to be centred on the screen. If this is turned off you can position the viewer where you like and it will remember its position in future.
+  * **Center Lister-linked viewer**: Viewers that open [[:additional_functionality:viewing_images:viewer_lister_linked|linked]] to a Lister will be centred on the screen.
+

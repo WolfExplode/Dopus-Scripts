@@ -1,0 +1,18 @@
+~~Title: QuickShow~~
+<pageheader/>
+
+This page controls the [[:additional_functionality:viewing_images:quickshow|QuickShow]] feature, that lets you quickly view images in a popup window.
+
+==Trigger key==
+  * **Trigger QuickShow with the <kbd>Space</kbd> key**: Turn this on to trigger QuickShow by pressing the <kbd>Space</kbd> key. You can also trigger QuickShow by creating your own hotkey to run the `Show QUICKSHOW` command.
+  * **Dismiss by pressing the trigger key again**: If QuickShow was launched via a keypress (e.g. <kbd>Space</kbd>), pressing the same key again will dismiss the QuickShow window. You can also press <kbd>Esc</kbd> to dismiss it.
+  * **Hold and release trigger key to dismiss**: If the **Dismiss by pressing the trigger key again** option is on, this option lets you keep the trigger key held down and dismiss QuickShow by releasing it.
+
+
+==Options==
+  * **Trigger with the mouse**: Trigger QuickShow by clicking and holding the left button over a file, and then clicking and releasing the right button.
+  * **Frameless window**: Displays the QuickShow window without a titlebar or window frame.
+  * **Link QuickShow window to the Lister**: If you use the cursor keys in the QuickShow window to browse to another image, the selection in the Lister will update to match.
+  * **Add all files to next/previous list (instead of only pictures)**: Includes all files in the next/previous list (e.g. PDFs, Word documents) rather than just recognised pictures.
+  * **Maximum size**: Lets you limit the size of the QuickShow window to a percentage of the screen size.
+  * **Zoom with mouse wheel**: Zoom (magnify) the image using the mouse wheel. If turned off, the mouse wheel can be used to scroll (pan) the image and you can zoom by holding down the <kbd>Ctrl</kbd> key.

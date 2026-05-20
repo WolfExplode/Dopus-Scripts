@@ -1,0 +1,21 @@
+~~Title: TypeOf~~
+<evalcmd>
+TypeOf && string && Type of the supplied variable. &&
+variable && var && Any variable.
+</evalcmd>
+
+Returns a string indicating the type of the passed-in variable.
+
+Types are: **bool**, **int**, **uint**, **int64**, **uint64**, **double**, **date**, **str**, **path** and **map**.
+
+See the page on [[:evaluator:variable_types|evaluator variables]] for information about the different types.
+
+//Example://
+<code>
+a = -5;
+Output( TypeOf(a) );
+--> int
+</code>
+
+//See also:// [[as]]
+

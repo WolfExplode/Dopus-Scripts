@@ -1,0 +1,6 @@
+~~Title: SpecialMeta ~~
+<pageheader/>
+
+The **SpecialMeta** object is retrieved from the **[[metadata|Metadata]].special** property. It provides access to any folder-specific properties.
+
+For example, in file collections you can access the `dateadded` property this way to see when an item was added to the collection.

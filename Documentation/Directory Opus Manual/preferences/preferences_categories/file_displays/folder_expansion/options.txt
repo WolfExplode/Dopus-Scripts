@@ -1,0 +1,14 @@
+~~Title: Options~~
+<pageheader/>
+
+==Drag and drop==
+
+  * **Expand folders when dragging over them**: If turned on, you can drag files over an unexpanded folder and it will pop open, letting you drop the files into one of its sub-folders.
+  * **Collapse after drag (spring-loaded)**: If the previous option is turned on, this option makes the folders that you've dragged over close again after the drop is complete.
+  * **Expansion delay**: Configure the time (in milliseconds) that you need to hover the mouse over a folder during drag and drop before it expands.
+
+==Remember==
+
+  * **Remember expanded folders when going back and forward**: Any expanded folders will be re-expanded when moving back/forward in the history list.
+  * **Remember expanded folders when refreshing**: Any expanded folders will be re-expanded after the folder is refreshed (e.g. after pressing <kbd>F5</kbd>). Also has the side effect of preserving the file display's selection and scroll position refreshing.
+

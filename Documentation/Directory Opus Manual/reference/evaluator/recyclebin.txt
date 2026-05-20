@@ -1,0 +1,20 @@
+~~Title: RecycleBin~~
+<evalcmd>
+RecycleBin && result && Result depends on the mode. &&
+[mode] && string && Mode flags. &&
+[drive] && string && Specific drive letter to query.
+</evalcmd>
+
+With no arguments, returns **true** if the recycle bin is non-empty, or **false** if empty.
+
+If //mode// is set to "s", returns the size of the recycle bin in bytes.\\
+If //mode// is set to "c", returns the count of items in the recycle bin.
+
+If //drive// is specified, only information for that particular drive is returned.
+
+//Example://
+<code>
+Output("Recycle bin on drive C contains " + RecycleBin("c","c") + " items.");
+--> Recycle bin on drive C contains 198 items.
+</code>
+

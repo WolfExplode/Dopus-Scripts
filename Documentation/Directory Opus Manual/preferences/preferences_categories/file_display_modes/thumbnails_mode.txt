@@ -1,0 +1,21 @@
+~~Title: Thumbnails~~
+<pageheader/>
+
+This page contains options that affects the appearance of thumbnails in file displays.
+
+  * **Thumbnail size**: Specify the size in pixels of thumbnail images (//width// x //height//). Thumbnails will be scaled down to fit within these boundaries, preserving their aspect ratio. The {{:media:13:pathlink-linked.png?nolink|}} **Make square** button provides a quick way to set the width and height to the same values. 
+  * **Spacing**: Specify the spacing between thumbnails (//horizontal// x //vertical//). (Note that if labels are enabled and set to more than one line, the vertical spacing shares its space with the extra label lines and will not have much effect on the actual spacing until the value is very large.) 
+  * **Spread excess space between columns**: Leftover space will be shared between each thumbnail column instead of appearing to the right of the last column.
+  * **Resize mode**: Let's you choose how images are resized to fit the space available in the thumbnail. Note that pixelated upscaling, if selected, will only be used when increasing images to at least 3x their original size.
+  * **Rotate images automatically using EXIF metadata**: Most modern digital cameras contain an orientation sensor that records into the image the orientation of the camera when the picture was taken. If this option is turned on Opus will read the orientation information from the image and automatically rotate the displayed thumbnail so that it appears the right way up.
+
+\\
+==Labels==
+
+If the **Labels** option is turned on, the filename will be displayed below each thumbnail. 
+
+  * **Lines**: Specify the maximum number of lines of text that the thumbnail's label can display. 
+  * **Display date taken or modified**: Opus will display the date taken (in the case of digital photos), or the last modified file date, in a smaller font below the thumbnail's label. 
+  * **Display image dimensions and file size**: Opus will display the dimensions of an image file, and the size of files in general, in a smaller font below the thumbnail's label.
+  * **Expand thumbnail with focus if name doesn't fit**: When on, the thumbnail with focus (usually the last one selected) will grown larger if needed to display its full name. When off, longer names will always be truncated.
+

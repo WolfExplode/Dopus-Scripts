@@ -1,0 +1,25 @@
+~~Title: IsLower~~
+<evalcmd>
+IsLower && bool && **True** if //string// consists only of lowercase letters. &&
+string && string && String to test.
+</evalcmd>
+
+Returns **True** if //string// consists entirely of lowercase letters, otherwise returns **False**.
+
+//Example://
+<code>
+Output(IsLower("abcde"))
+--> true
+
+Output(IsLower("abCde"))
+--> false
+</code>
+
+//See also://\\
+[[isalpha]]\\
+[[isdigit]]\\
+[[ispunct]]\\
+[[isspace]]\\
+[[isupper]]\\
+
+

@@ -1,0 +1,73 @@
+~~Title: Icon Categories ~~
+<pageheader/>
+
+Directory Opus groups its internal icon set into categories to make it easier for the user to find a particular icon. The //Select Icon// dialog lets the user filter by category as well as by icon name.
+
+The internal icons all have pre-assigned categories. If your icons use the same names as the internal ones, they will be placed in the same categories automatically. For example, the `copy` icon is pre-assigned to the `file` category, so if your icon set provides an icon called `copy` it will be placed in the `file` category as well. The icon names used by internal icons cannot be moved into different categories, and you must give your icons different icon names if you want them in different categories.
+
+If your icon has a name that is not used by the internal icon set, it will in the //Uncategorized// category by default. It is possible, but not obligatory, to specify your own categories for your icons.
+
+The default icon categories used by Opus are:
+
+<commandtable columns="2" id="cattable_1">
+$$ Category Name
+$$ English Display Name
+$$ config
+$$ //Configuration//
+$$ edit
+$$ //Edit//
+$$ file
+$$ //File//
+$$ ftp
+$$ //FTP//
+$$ go
+$$ //Navigation//
+$$ imageviewer
+$$ //Image Viewer//
+$$ misc
+$$ //Miscellaneous//
+$$ tools
+$$ //Tools//
+$$ view
+$$ //View//
+$$ window
+$$ //Window//
+</commandtable>
+
+The **category name** is what you should use to specify a category in your icon set XML. The **English display name** is how the category is displayed to the user, if they are using English. The display name will be different in other languages.
+
+For each icon, you can optionally specify one of the default categories, or define your own custom category. 
+
+You can assign categories to your icons on an icon-by-icon basis, using the **icon** node, or to a number of icons at once, using the `set` node. For example,
+
+
+<code>
+<set size="small" width="20" height="20" filename="UtilIcons.png">
+    <icon name="burncd" row="2" col="8" category="Tools"/>
+    <icon name="ftpimage" row="3" col="1" category="Image"/>
+</set></code>
+
+
+
+This would define an icon called “burncd” in the “Tools” default category, and another called “ftpimage” in a custom category called “Image”.
+
+
+
+Alternatively, both these icons could be placed in the “File” category as follows:
+<code>
+<set size="small" width="20" height="20" filename="UtilIcons.png">
+    <category name="File">
+        <icon name="burncd" row="2" col="8" />
+        <icon name="ftpimage" row="3" col="1" />
+    </category>
+</set></code>
+
+
+
+You must use one style or the other within a given `set`. If any `category` nodes are present then all `icon` nodes should be under a `category`. If you want to use the second style but also want some uncategorized icons, you should put them in a `category` node that does not have a `name` attribute.
+
+
+
+Again, it is not essential to categorize your icons. If you use the default icon names they will be categorized automatically (although you can override the automatic categorization if desired), and if not they will still work, but be listed as “Uncategorized” in the //Select Icon// dialog.
+
+\\

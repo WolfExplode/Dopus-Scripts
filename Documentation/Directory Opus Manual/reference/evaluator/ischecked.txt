@@ -1,0 +1,29 @@
+~~Title: IsChecked~~
+<evalcmd>
+IsChecked && bool or int && Result of the test. &&
+command && string && Command string to test the state of. &&
+[command...] && string && Second command string...
+</evalcmd>
+
+When a single command string is provided, returns **True** or **False** to indicate whether a button running the specified //command// would appear checked (highlighted) or not.
+
+//Example://
+<code>
+if (IsChecked("Set FLATVIEW=mixed")) { ... } // Is FlatView - Mixed mode currently on?
+</code>
+
+\\
+If two or more commands are provided, returns **0** if no commands are checked, otherwise returns the index of the first checked command.
+
+By default the test is applied to the source file display, but you can prefix the command you're testing with `left:`, `right:`, `dest:` or `both:` to test conditions in specific file displays.
+
+//Example://
+<code>
+flatViewMode = IsChecked("Set FLATVIEW=Grouped", "Set FLATVIEW=Mixed", "Set FLATVIEW=MixedNoFolders");
+// flatViewMode will equal 0, 1, 2 or 3 depending on the current FlatView mode
+eitherThumbs = IsChecked("both:Set VIEW=Thumbnails");
+// eitherThumbs will be true if either file display is in thumbnails mode
+</code>
+
+//See also://
+[[isenabled]]

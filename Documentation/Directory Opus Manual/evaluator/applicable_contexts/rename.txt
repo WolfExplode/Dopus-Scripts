@@ -1,0 +1,37 @@
+~~Title: Rename~~
+<pageheader/>
+
+You can use the evaluator in the [[:file_operations:renaming_files:advanced_rename|advanced rename]] tool to insert text returned by the evaluation.
+
+Use the `{= ... =}` code to insert an evaluation expression. The return value of the expression is inserted into the new filename.
+
+In this evaluation context, the following variables are available:
+
+<commandtable columns="3">
+$$ Variable
+$$ Type
+$$ Description
+$$ <nobr>//column name//</nobr>
+$$ //varies//
+$$ All the [[:reference:metadata_keywords:keywords_for_columns|column keywords]] are available as variables in this evaluation context.
+
+Note that some keywords may use characters like a `:` that aren't valid in variable names - to access them, use the [[:reference:evaluator:val]] function.
+
+Additionally, the [[:file_operations:renaming_files:advanced_rename:renaming_with_metadata|rename-specific keywords]] like **parent** and **parentbase** are supported.
+$$ file_name
+$$ //string//
+$$ Returns the full name of the file the expression is being run for. This may be different from **file** which (as a column keyword), returns the value of the //Name// column (which e.g. may have file extensions hidden).
+$$ is_dir
+$$ //bool//
+$$ **True** if the expression is being run for a folder, **false** if it's being run for a file.
+$$ oldname
+$$ //str//
+$$ The value of the "old name" field.
+$$ newname
+$$ //str//
+$$ The value of the "new name" field.
+</commandtable>
+
+The return value should be a //str// that will be inserted into the new filename.
+
+In this context you can call the `Cancel()` function in order to skip the current file (e.g. if a regex doesn't match).

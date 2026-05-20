@@ -1,0 +1,14 @@
+~~Title: Miscellaneous ~~
+<pageheader/>
+
+The Miscellaneous category contains pages that wouldn't fit comfortably in the other categories.
+
+  * **[[~advanced_options|Advanced]]**: This is the scariest page in the whole Preferences system. You don't need to look in here. Really. 
+  * **[[~external_tools|External Tools]]**: Configure various external tools that some functions in Opus can use.
+  * **[[~privacy|Privacy]]**: Privacy options including clearing the history of various functions.
+  * **[[~shell_extensions|Shell Extensions]]**: Selectively enable and disable external shell extensions in Opus to solve problems.
+  * **[[~sounds|Sounds]]**: Lets you configure sound effects for various events. 
+  * **[[~windows_integration|Windows Integration]]**: Various options that affect how Opus integrates with Windows. 
+    * **[[~windows_integration:jump_list|Jump List]]**: Configure the items that Opus adds to its "jump list".
+  * **[[~windows_startup_delay|Windows Startup Delay]]**: Control the startup delay introduced by Windows 8.
+

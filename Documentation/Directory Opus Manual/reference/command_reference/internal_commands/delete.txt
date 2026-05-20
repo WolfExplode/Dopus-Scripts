@@ -1,0 +1,188 @@
+~~Title: Delete ~~
+<pageheader/>
+
+The **Delete** internal command can be used to:
+
+  * Recycle files and folders (delete them to the recycle bin) 
+  * Delete files and folders permanently (bypassing the recycle bin) 
+  * [[:file_operations:copying_moving_and_deleting_files:deleting_files:secure_delete|Securely erase]] files so they can't ever be recovered 
+  * Empty the recycle bin 
+  * Remove items from a [[:basic_concepts:virtual_file_system:file_collections|file collection]] 
+
+
+
+**Command Arguments:**
+<commandtable2 columns="4" id="cmdtable_1" hdrcols="2">
+$$ Argument
+$$ Type
+$$ Possible values
+$$ Description
+$$ ALL
+$$ /S
+$$ //(no value)//
+$$ Delete all files and folders without prompting. This can be used to override the **Ask for confirmation for each file before deleting** and **Ask for confirmation for each folder before deleting** options on the **[[:preferences:preferences_categories:file_operations:deleting_files|File Operations / Delete Files]]** page in Preferences.
+
+``Delete ALL``
+$$ EMPTYRECYCLE
+$$ /O
+$$ //(no value)//
+$$ Empty the system recycle bin. You can combine with the **FORCE** argument to suppress the confirmation prompt, and the **QUIET** argument to suppress the progress dialog.
+
+``Delete EMPTYRECYCLE FORCE QUIET``
+$$ 
+$$ 
+$$ //<drive letter>//
+$$ Empty the recycle bin for a specific drive.
+
+``Delete EMPTYRECYCLE=C:``
+$$ ERASEEMPTYSPACE
+$$ /O
+$$ //(no value)//
+$$ Erase empty space on the current drive. Empty space will be overwritten with random data to ensure deleted files cannot be recovered. This can take a long time, and generally only makes sense with HDDs, not SSDs. (To secure-erase a single file (that hasn't been deleted yet) instead, see the **SECURE** argument instead.)
+
+``Delete ERASEEMPTYSPACE``
+$$ 
+$$ 
+$$ //<drive letter>//
+$$ Erase empty space on the specified drive. Must be the first parameter.
+
+``Delete ERASEEMPTYSPACE=D:``
+$$ 
+$$ 
+$$ //passes:<n>//
+$$ Specifies the number of erase passes, from 1 to 32. If omitted, the previous number of passes will be remembered, and a single pass will be used if no previous number exists.
+
+``Delete ERASEEMPTYSPACE=passes:1``
+
+If both a drive letter and pass count are given, the drive letter must be the first parameter.
+
+``Delete ERASEEMPTYSPACE=D:,passes:2``
+$$ FAILNOTEMPTY
+$$ /S
+$$ //(no value)//
+$$ Fail when attempting to delete a non-empty folder, or any file. Must be combined with the **NORECYCLE** argument.
+
+``Delete FAILNOTEMPTY NORECYCLE``
+
+Use **SKIPNOTEMPTY** instead if you want the command to continue considering other items after encountering a file or non-empty folder.
+$$ FILE
+$$ /M
+$$ //<filename> ...//
+$$ Specifies the name of the file or files to delete. If you don't provide this argument the command will delete all selected items in the source Lister. This is the default argument for the **Delete** command - you don't need to specify the **FILE** keyword.
+
+If you only specify the filename instead of the full path of the file or files, Opus will look in the current source folder. You can also specify a [[..:..:wildcard_reference:pattern_matching_syntax|wildcard pattern]]. Remember that if the filename contains spaces you need to enclose it in quotes.
+
+``Delete *.tmp``
+$$ FILTER
+$$ /O
+$$ //(no value)//
+$$ Delete with filtering enabled (without having to activate the [[:file_operations:filtered_operations|delete filter]] in the Lister first). Opus will prompt you to define the filter.
+
+``Delete FILTER``
+$$ 
+$$ 
+$$ //<filter>//
+$$ Delete using the specified filter. This must have previously been created from the **[[:preferences:preferences_categories:filtering_and_sorting:filters|Filters]]** page in Preferences.
+
+You can also directly specify a [[..:..:wildcard_reference:pattern_matching_syntax|simple wildcard pattern]]. When specifying a simple wildcard pattern as the filter, it only affects which files are deleted; all selected folders and sub-folders are deleted unless they contain a file which doesn't match the filter and thus isn't deleted.
+
+``Delete FILTER "temp files"``
+$$ 
+$$ 
+$$ **shift**
+$$ Delete with filtering enabled if the <kbd>Shift</kbd> key is held down. Opus will prompt you to define the filter.
+
+``Delete FILTER=shift``
+$$ 
+$$ 
+$$ **alt**
+$$ Delete with filtering enabled if the <kbd>Alt</kbd> key is held down.
+
+``Delete FILTER=alt``
+$$ 
+$$ 
+$$ **ctrl**
+$$ Delete with filtering enabled if the <kbd>Ctrl</kbd> key is held down.
+
+``Delete FILTER=ctrl``
+$$ FILTERDEF
+$$ /K/R
+$$ //<filter>//
+$$ Lets you define a filter in [[:file_operations:filtered_operations:textual_filters|text format]] to only delete matching files from selected folders. This is similar to the **FILTER** argument, however the filter does not need to be predefined.
+
+This is a **/R** argument and so everything after the **FILTERDEF** keyword will be treated as the argument's value.
+
+``Delete FILTERDEF name match *.zip and size match > 2 mb``
+$$ FORCE
+$$ /S
+$$ //(no value)//
+$$ Force the deletion of any files that are marked as read-only (have the **R** attribute set). This overrides the **Delete read-only files automatically (without asking)** option on the **[[:preferences:preferences_categories:file_operations:deleting_files|File Operations / Delete Files]]** page in Preferences.
+
+``Delete FORCE``
+$$ NOFROMFOCUS
+$$ /S
+$$ //(no value)//
+$$ The default behaviour for the **Delete** command is to operate on either the source file display, or the Folder Tree, depending on which one has the input focus. This lets you use the same command to delete folders in the tree as well as items in the file display. Specify this argument to force the command to always operate on the source file display and ignore the folder tree.
+
+``Delete NOFROMFOCUS``
+$$ NORECYCLE
+$$ /S
+$$ //(no value)//
+$$ Prevent the use of the recycle bin - files will be permanently deleted. This overrides the **Delete to Recycle Bin where possible** option on the **[[:preferences:preferences_categories:file_operations:deleting_files|File Operations / Delete Files]]** page in Preferences.
+
+``Delete NORECYCLE``
+$$ QUIET
+$$ /S
+$$ //(no value)//
+$$ Prevent the display of any confirmation dialogs or error messages.
+
+``Delete FORCE QUIET``
+$$ RECYCLE
+$$ /S
+$$ //(no value)//
+$$ Delete files by moving them to the recycle bin (if possible - not all drives support the recycle bin). Deletes to the recycle bin are not permanent - the files can be recovered until the bin is emptied. This overrides the **Delete to Recycle Bin where possible** option on the **[[:preferences:preferences_categories:file_operations:deleting_files|File Operations / Delete Files]]** page in Preferences.
+
+``Delete RECYCLE``
+$$ REMOVECOLLECTION
+$$ /O
+$$ //(no value)//
+$$ Remove selected files and folders from the file collection. If used outside of a file collection this command will do nothing.
+
+``Delete REMOVECOLLECTION``
+$$ 
+$$ 
+$$ **auto**
+$$ When used on files and folders in a file collection, the items will be removed from the collection. When used outside of a file collection, the items will be deleted as normal.
+
+``Delete REMOVECOLLECTION=auto``
+$$ SECURE
+$$ /O
+$$ //(no value)//
+$$ Perform a secure delete using the number of passes specified on the **[[:preferences:preferences_categories:file_operations:deleting_files|File Operations / Delete Files]]** page in Preferences.
+
+``Delete SECURE``
+$$ 
+$$ 
+$$ //<passes>//
+$$ Perform a secure delete using the specified number of passes (from 1 to 32 depending on your level of paranoia :) 
+
+``Delete SECURE=5``
+$$ SHIFT
+$$ /S
+$$ //(no value)//
+$$ Modifies the behaviour of the **Delete** command if the <kbd>Shift</kbd> key is held down.
+  * If the **Delete to Recycle Bin** option is selected on the **[[:preferences:preferences_categories:file_operations:deleting_files|File Operations / Delete Files]]** page in Preferences, holding the <kbd>Shift</kbd> key down will disable the use of the recycle bin. 
+  * If the **Delete to Recycle Bin** option is not selected, the command acts as if the **ALL** and **FORCE** arguments are specified. In either case, if the <kbd>Shift</kbd> key is not held down, the **SHIFT** argument has no effect on the normal operation of the command. This argument is used to emulate the behaviour of Explorer.
+
+``Delete SHIFT``
+$$ SKIPNOTEMPTY
+$$ /S
+$$ //(no value)//
+$$ Skip over non-empty folders, and all files, without deleting them, while still considering subsequent items for deletion. Must be combined with **NORECYCLE**.
+
+``Delete NORECYCLE SKIPNOTEMPTY``
+
+Use **FAILNOTEMPTY** instead if you want the command to stop completely as soon as it encounters any file or non-empty folder.
+</commandtable2>
+
+

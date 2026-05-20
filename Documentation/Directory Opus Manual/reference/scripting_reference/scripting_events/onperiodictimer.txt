@@ -1,0 +1,16 @@
+~~Title: OnPeriodicTimer~~
+<pageheader/>
+
+The **OnPeriodicTimer** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to have Opus call your script at regular intervals. The **[[..:scripting_objects:dopus|DOpus]].SetTimer** method can be used to create timers, and your **OnPeriodicTimer** method will be called regularly for each timer you create.
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnPeriodicTimer
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:periodictimerdata|PeriodicTimerData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **id** property indicates which timer your method is being called for.
+</commandtable>
+

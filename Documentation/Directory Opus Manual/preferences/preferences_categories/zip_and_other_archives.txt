@@ -1,0 +1,10 @@
+~~Title: Zip and Other Archives ~~
+<pageheader/>
+
+This category contains options relating to Opus's handling of archive files. Opus provides built-in support for Zip files, and the supplied 7-Zip plugin provides support for many other common archive formats. You can add additional plugins to extend the archive handling capabilities even further.
+
+  * **[[~archive_and_vfs_plugins]]**: View and configure your installed VFS plugins (third-party components that can add additional archiving formats to Opus). 
+  * **[[~archive_options]]**: General options relating to archive files. 
+  * **[[~archive_context_menu]]**: Control which archive-related options Opus will display in the context menu for files and folders. 
+  * **[[~zip_file_options]]**: Options specifically relating to the built-in Zip support. 
+

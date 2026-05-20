@@ -1,0 +1,13 @@
+~~Title: Viewer Pane Options~~
+<pageheader/>
+
+  * **Display shell thumbnails**: If nothing else (except the hex viewer) can display a file, ask the Windows shell to generate a thumbnail for it and display that in the viewer pane. Explorer's viewer pane also does this and it is useful for file formats that have thumbnail providers but no viewers. Shell thumbnails and icons are unavailable within archives and VFS plugins. Changes to the setting affect the next file loaded by the viewer pane.
+  * **Display shell icons**: Similar to the **Display shell thumbnails** option, except it displays the file's icon instead of its thumbnail. Thumbnails are given priority if both options are enabled.
+  * **Gamma-correct pictures**: Use this option if you need to adjust the gamma of images for proper color reproduction on your monitor.
+  * **Hide scrollbars**: The viewer won't display scrollbars even if the image is too large to fit in the display. You can pan around an image with the cursor keys, and using the mouse (depending on the option set below). Some viewer plugins may not support this option.
+  * **Scroll with left mouse button**: Modifies the default behavior of the left mouse button when you click on the image. If this option is turned on you can click the left mouse button on the image and drag it to pan around the display, and if you hold the <kbd>Shift</kbd> key down when you click, you can drag an area of the image to select it for copying to the clipboard. With this option turned off, these behaviors are reversed - you would need to hold the <kbd>Shift</kbd> key down to pan the image.
+    * **Expand and scroll**: If the image is displayed at a reduced size (e.g. the zoom level is set to //Fit to Page//) then clicking and holding the mouse button will expand the image to full size. 
+    * **Expand and scroll (Left double-click)**: The expand/scroll mode will be triggered on a double-click instead of a single click.
+  * **Scroll images with mouse wheel**: If turned on, the mouse wheel will zoom the internal image viewer by default (instead of only when <kbd>Ctrl</kbd> is pressed).
+  * **Use EXIF information to auto-rotate pictures**: Most modern digital cameras contain an orientation sensor that records into the image the orientation of the camera when the picture was taken. If this option is turned on Opus will read the orientation information from the image and automatically rotate the displayed picture so that it appears the right way up. The actual image file on disk is not modified, only the display in the viewer.
+

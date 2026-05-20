@@ -1,0 +1,20 @@
+~~Title: OnOpenTab ~~
+<pageheader/>
+
+The **On** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when a new tab opens.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnOpenTab
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:opentabdata|OpenTabData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **OpenTabData.tab** property identifies the newly opened tab. Note that this method is not called when a new Lister is opened, irrespective of how many tabs it contains - instead, you can identify all the tabs in the newly opened Lister by implementing the **OnOpenLister** event.
+</commandtable>
+
+
+
+

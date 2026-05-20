@@ -1,0 +1,37 @@
+~~Title: GetCopyQueueNameData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:ongetcopyqueuename|OnGetCopyQueueName]]** event, the method receives a **GetCopyQueueNameData** object whenever a copy operation begins that uses automatically-managed copy queues (i.e. the //Automatically manage file copy queues// option on the **[[:preferences:preferences_categories:file_operations:copying_files|Copying Files]]** page in Preferences is turned on).
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ dest
+$$ //object://**[[path|Path]]** 
+$$ Returns a **[[path|Path]]** object representing the destination path of the copy operation.
+$$ desttab
+$$ //object://**[[tab|Tab]]**
+$$ Returns a **[[tab|Tab]]** object representing the destination folder tab.
+$$ dest_drives
+$$ //string//
+$$ Returns a binary string indicating the physical drive indices that the destination path is located on (if any). For example, 00100000000000000000000000 indicates that drive C: is the destination drive.
+$$ move
+$$ //bool//
+$$ Returns **True** if the operation is a move instead of a copy. 
+$$ name
+$$ //string//
+$$ Returns the default queue name for this operation.
+$$ source
+$$ //object://**[[path|Path]]**  
+$$ Returns a **[[path|Path]]** object representing the source path of the copy operation.
+$$ sourcetab
+$$ //object://**[[tab|Tab]]**
+$$ Returns a **[[tab|Tab]]** object representing the source folder tab.
+$$ source_drives
+$$ //string//
+$$ Returns a binary string indicating the physical drive indices that the source path is located on (if any). For example, 00001000000000000000000000 indicates that drive E: is the source drive.
+</commandtable>
+
+

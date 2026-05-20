@@ -1,0 +1,13 @@
+~~Title: Example Scripts ~~
+<pageheader/>
+
+The following are several example scripts:
+
+  * **[[~example_rename_script|Example Rename Script]]**: An example of a [[rename_scripts|rename script]] that adds the resolution of images to the filename. 
+  * **[[~simple_script_function|Simple Script Function]]**: A simple [[script_functions|script function]] that displays the name of the largest file in the current folder. 
+  * **[[~adding_a_new_internal_command|Adding a new Internal Command]]**: A [[script_add-ins|script add-in]] that adds an enhanced GetSizes command to Opus. 
+  * **[[~extending_the_fayt]]**: A [[script_add-ins|script add-in]] that extends the [[:basic_concepts:the_lister:find-as-you-type_field]].
+  * **[[~adding_a_new_column|Adding a new Column]]**: A [[script_add-ins|script add-in]] that adds an **Is Modified?** column to Opus. 
+  * **[[~simple_dialogs_and_popup_menus|Dialogs and Popup Menus]]**: Example showing how to display simple dialogs and popup menus from a script. 
+  * **[[~responding_to_events|Responding to Events]]**: An example script add-in that responds to several events. 
+

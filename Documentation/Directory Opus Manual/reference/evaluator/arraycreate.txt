@@ -1,0 +1,24 @@
+~~Title: ArrayCreate~~
+<evalcmd>
+ArrayCreate && array && New array. &&
+[el1] && anything && The first element for the new array. &&
+[el2...] && anything && The second (and subsequent) elements for the new array.
+</evalcmd>
+
+Creates a new array. If arguments are provided the array is initialised with those values.
+
+//Examples://
+<code>
+arr = ArrayCreate(1,2,3,5,8,13,21);
+</code>
+
+
+//See also://\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arrayset|ArraySet]]\\
+[[arraysort|ArraySort]]

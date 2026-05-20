@@ -1,0 +1,29 @@
+~~Title: QuickShow~~
+<pageheader/>
+
+QuickShow (similar to "Quick Look" on OsX) opens a very simple cut-down image viewer without toolbars or menus, hard-coded to appear as large as possible to display the image at its original size.
+
+If the image is larger than the screen it will be reduced in size and you can click and hold the mouse button to enlarge it. In this mode, the only keys that do anything are <kbd>Esc</kbd> (close the viewer), and the cursor keys to move to next/previous images.
+
+==Accessing QuickShow==
+
+You can access QuickShow in several ways:
+
+  * Via the <kbd>Space</kbd> key, by turning on the **Viewer > Standalone Viewer > QuickShow > Trigger QuickShow with the Space key** [[:preferences:preferences_categories:viewer:standalone_viewer:quickshow|Preferences option]].
+  * Via the mouse, by turning on the **Viewer > Standalone Viewer > QuickShow > Trigger with the mouse** [[:preferences:preferences_categories:viewer:standalone_viewer:quickshow|Preferences option]] (see below for a description of how mouse triggering works).
+  * By creating your own [[:customize:the_customize_dialog:keys|hotkeys]] to run the `Show QUICKSHOW` command.
+
+The options on the **QuickShow** [[:preferences:preferences_categories:viewer:standalone_viewer:quickshow|Preferences page]] control QuickShow's default behavior. You can override the default settings using the arguments for the `Show QUICKSHOW` command - this way you could  have multiple QuickShow configurations assigned to different keys if you wanted.
+
+==Dismissing the QuickShow window==
+
+Depending on your Preferences settings, QuickShow will automatically dismiss when you release the key or mouse button that opened it. You can also dismiss the QuickShow window by pressing <kbd>Esc</kbd>.
+
+==Triggering with the mouse==
+
+To trigger QuickShow with the mouse (assuming the **Trigger with the mouse** Preferences option is turned on):
+
+  - Press the left mouse button on the file you want to view, *and keep the button held down*
+  - With the left button still held down, press and release the right mouse button.
+
+The QuickShow window will stay open for as long as you keep the left button held down.

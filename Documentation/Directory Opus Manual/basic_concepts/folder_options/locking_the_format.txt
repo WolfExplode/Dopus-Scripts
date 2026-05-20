@@ -1,0 +1,28 @@
+~~Title: Locking the Format ~~
+<pageheader/>
+
+Opus lets you **lock** the format in the file display. When the format is locked, automatic changes to the format are disabled - the display format won't change at all as you navigate from one folder to another, unless you manually change it using the [[.|Folder Options]] dialog.
+
+By default the format lock applies to all tabs, but if you turn on the **Per-tab format lock** option on the [[:preferences:preferences_categories:folder_tabs:options|Folder Tabs / Options]] Preferences page, the lock state will be remembered individually for each tab.
+
+==Toggling the format lock==
+
+Right-click the {{:media:13:info.png?nolink|}} information icon on the status bar, and choose **Format Lock** from the context menu to toggle the lock. You can also use the **Format Lock** command from the **Folder** drop-down menu in the default toolbars.
+
+==Padlock icon==
+
+When the format is locked, the information icon on status bar turns into a {{:media:13:tab_-_locked.png?nolink|}} padlock icon instead.
+
+When the format lock is on the current folder format is preserved. You can still make manual changes using the [[.|Folder Format]] dialog (or by clicking the column headers in details mode, etc.), but it won't automatically change again until after you turn the lock off.
+
+==Turning off the lock==
+
+Click the padlock icon, or use the **Format Lock** menu commands, to unlock the format.
+
+==Showing the padlock all the time==
+
+If you find you use the format lock feature a lot, you can turn on the **Enable format lock padlock icon** option on the [[:preferences:preferences_categories:file_displays:status_bar|File Displays / Status Bar]] Preferences page. The {{:media:13:info.png?nolink|}} icon will change to show the padlock permanently, and you can toggle the lock on and off simply by clicking it.
+
+==The status bar icon can be removed==
+
+The information icon (or its padlock equivalent) are generated on the status bar using the `{fl}` code. Since the status bar is configurable via Preferences, it's possible this code can be removed - in which case the icon won't be visible any more. You can still use the format lock using the menu commands mentioned above.

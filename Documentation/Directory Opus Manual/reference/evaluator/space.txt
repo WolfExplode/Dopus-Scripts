@@ -1,0 +1,16 @@
+~~Title: Space~~
+<evalcmd>
+Space && string && String of spaces. &&
+count && int && Number of spaces.
+</evalcmd>
+
+Returns a string consisting of //count// spaces.
+
+//Example://
+<code>
+Output("Hello" + Space(10) + "World");
+--> Hello          World
+</code>
+
+//See also://
+[[string]]

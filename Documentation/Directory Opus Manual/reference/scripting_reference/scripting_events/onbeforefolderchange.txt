@@ -1,0 +1,24 @@
+~~Title: OnBeforeFolderChange ~~
+<pageheader/>
+
+The **OnBeforeFolderChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification before a new folder is read in a tab. Use the **OnAfterFolderChange** event if you want notification //after// a folder has been read.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnBeforeFolderChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:beforefolderchangedata|BeforeFolderChangeData]]** 
+$$ (#)**Return Type:**
+$$ //bool// or //string//
+$$ (#)**Description:**
+$$ The **BeforeFolderChangeData.tab** property identifies the tab, and the **path** property identifies the folder about to be read. The **initial** property indicates if this is the first folder read into this tab - if **True**, it means the tab was previously empty or newly opened.
+
+You can return two different types from this event:
+  * //bool//: If you return **True**, the folder read will be blocked and the tab will be unchanged. If you return **False** the read will be allowed to continue (this is the default). 
+  * //string//: You can return a //string// (or a **[[..:scripting_objects:path|Path]]** object) to change the folder path to be read. \\
+</commandtable>
+
+
+
+

@@ -1,0 +1,31 @@
+~~Title: Dialog Editor Commands ~~
+<pageheader/>
+
+{{:media:image059.png?nolink|}}
+
+
+
+The commands on the dialog editor toolbar are:
+
+  * **Edit**: Contains the standard cut/copy/paste/undo edit commands.
+
+  * {{:media:image092.png?nolink|}} (**Test**): Lets you test your design as a real dialog from within the editor.
+
+  * {{:media:image094.png?nolink|}} (**Align Left**, **Right**, **Top**, **Bottom**): Align multiple controls to the same edge.
+
+  * {{:media:image096.png?nolink|}} (**Center Horizontally**, **Vertically**): Center multiple controls in the dialog.
+
+  * {{:media:image098.png?nolink|}} (**Space Evenly Across**, **Down**): Evenly space multiple controls.
+
+  * {{:media:image100.png?nolink|}} (**Make Same Width**, **Height**, **Size**): Make multiple controls the same size.
+
+  * {{:media:image102.png?nolink|}} (**Grid**): Display a grid. By default, control positions will snap to this grid. The grid size is configurable through the **Edit** menu.
+
+  * {{:media:image104.png?nolink|}} (**Tab Order**): Define the tab order of the controls in the dialog.
+
+  * {{:media:image106.png?nolink|}} (**Check Mnemonics**): Check for clashing **&** mnemonics in the dialog controls, and auto-assign them if wanted.
+
+  * {{:media:image108.png?nolink|}} (**Language Overlays**): Create one or more language overlays for the dialog (lets you provide different versions of the same dialog in other languages).
+
+
+

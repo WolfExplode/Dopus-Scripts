@@ -1,0 +1,24 @@
+~~Title: External control codes ~~
+<pageheader/>
+
+The external control codes are used to pass information like the names of selected files to external programs. For example, the command `notepad.exe {f}` would launch Notepad, and pass the name of the first selected file as an argument on its command line.
+
+External control codes can (despite the name) also be used with the internal commands. For example, the command `CreateFolder {date|yyyyMMdd}` will create a new folder automatically named after the current date.
+
+Most control codes have both a short and a long form. The short form requires less typing and produces a smaller function definition, while the long form is more descriptive and may make the function more understandable. Note that, unlike the arguments for internal commands, the external control codes are case-sensitive.
+
+All control codes begin with a `{` character. If you want to include a literal `{` character in your command line, you can escape it like this: `{{`.
+
+See the page on [[:customize:creating_your_own_buttons:passing_files_to_external_programs|passing files to external programs]] for more information about the external control codes.
+
+
+
+
+
+More:
+
+[[~codes_for_passing_filenames|Codes for passing filenames]]\\
+[[~codes_for_passing_paths|Codes for passing paths]]\\
+[[~codes_to_display_dialogs|Codes to display dialogs]]\\
+[[~codes_for_date_and_time|Codes for date and time]]\\
+[[~codes_for_clipboard_and_variables|Codes for clipboard and variables]]\\

@@ -1,0 +1,20 @@
+~~Title: OnClipboardChange ~~
+<pageheader/>
+
+The **OnClipboardChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification whenever the contents of the system clipboard change.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnClipboardChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:clipboardchangedata|ClipboardChangeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ Your event method will be called whenever the clipboard contents change.
+</commandtable>
+
+
+
+

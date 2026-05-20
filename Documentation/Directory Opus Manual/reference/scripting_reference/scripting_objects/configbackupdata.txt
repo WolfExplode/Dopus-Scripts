@@ -1,0 +1,22 @@
+~~Title: ConfigBackupData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] implements the **[[..:scripting_events:onconfigbackup|OnConfigBackup]]** event, the method receives a **ConfigBackupData** object when the Opus configuration is backed up.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ location
+$$ //object//:**[[path|Path]]**
+$$ Returns the path of the staging area that the Opus configuration has been written to. The configuration backup file will be created from the files in this folder. Any changes your script makes to files in the staging folder will be included in the backup.
+$$ output_dir
+$$ //object//:**[[path|Path]]**
+$$ Returns the path that the configuration backup is being saved to.
+$$ output_name
+$$ //string//
+$$ Returns the name the configuration backup is being saved as.
+</commandtable>
+
+

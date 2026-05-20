@@ -1,0 +1,17 @@
+~~Title: TabPath~~
+<evalcmd>
+TabPath && path && The specified tab's path. &&
+index && numeric && The index of the desired tab (0-based). &&
+[side] && string && Specific file display (defaults to source).
+</evalcmd>
+
+In the context of [[:evaluator:applicable_contexts:functions|buttons and functions]], returns the current path from a specified tab in the Lister.
+
+//index// is the tab index, and //side// should be one of the following characters to specify the file display:
+
+|l|left/top|
+|r|right/bottom|
+|s|source|
+|d|destination|
+
+If //side// isn't specified, the source file display is the default.

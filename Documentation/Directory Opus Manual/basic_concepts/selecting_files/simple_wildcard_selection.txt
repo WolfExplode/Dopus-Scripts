@@ -1,0 +1,18 @@
+~~Title: Simple Wildcard Selection ~~
+<pageheader/>
+
+The **Select Files** dialog has two modes; //simple// and //advanced//. It is accessed with the **Edit / Select by Pattern** command (or push <kbd>Ctrl+S</kbd>). The dialog remembers which mode it was last used in and will open in that mode the next time it is used; you can switch modes using the **Advanced** or **Simple** button at the bottom of the dialog.
+
+{{:media:13:select_files_-_simple.png?nolink|}} 
+
+The simple mode **Select Files** dialog lets you select files in the current file display by typing in a wildcard string using the [[:reference:wildcard_reference:pattern_matching_syntax|standard pattern matching syntax]]. In the example shown above, the string `*.(mp3|m4a)` will select all files that end in either **.mp3** or **.m4a**, when you click the **OK** button.
+
+
+  * **Partial match**: Enables partial matching of the string you enter - for example, `kit` would match **Cute Kitten.jpg** if that option was turned on.
+  * **Deselect on no match**: Causes any currently selected items to be deselected if they don't match the pattern.
+
+Click the **Advanced** button to go to [[advanced_selection|advanced mode]], which lets you use more complex filters to select files.
+
+
+
+

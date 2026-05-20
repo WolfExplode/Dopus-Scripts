@@ -1,0 +1,13 @@
+~~Title: AbortFunc~~
+<evalcmd>
+AbortFunc && none
+</evalcmd>
+
+When called from within a [[:evaluator:applicable_contexts:functions:commands|function]], aborts the execution of the remainder of the function.
+
+//Example://
+<code>
+=if ("%USERNAME%" == "jon") AbortFunc();
+@confirm Hi there, person who isn't Jon!
+</code>
+

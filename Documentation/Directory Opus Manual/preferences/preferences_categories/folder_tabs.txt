@@ -1,0 +1,11 @@
+~~Title: Folder Tabs ~~
+<pageheader/>
+
+This category contains options that control how Folder Tabs work.
+
+  * **[[~dimensions]]**: Options that control the sizes of Folder Tabs. 
+  * **[[~edge_colors]]**: Lets you configure colors that folder tabs display along their edges to identify specific folders.
+  * **[[~folder_tab_bar]]**: Options that control how the bars containing Folder Tabs behave, and where and when they appear. 
+  * **[[~groups]]**: Lets you define "groups" of multiple folder tabs that can be opened at once. 
+  * **[[~locking]]**: Options relating to locked tabs.
+  * **[[~options]]**: General options that affect the behavior of Folder Tabs. 

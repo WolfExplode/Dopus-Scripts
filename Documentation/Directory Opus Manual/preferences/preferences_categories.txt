@@ -1,0 +1,33 @@
+~~Title: Preferences Categories ~~
+<pageheader/>
+
+The various Preferences pages have been categorized in an attempt to group conceptually-related topics. Another advantage of dividing the pages into categories is that individual categories can be collapsed to hide their contents, which is very useful with so many different pages of options!
+
+{{ :media:13:prefs_categories.png?nolink|}}
+  * **[[~colors_and_fonts]]**: Options relating to the appearance of Opus (colors, fonts, etc.) including dark mode and themes. 
+  * **[[~file_displays]]**: Options that control the behavior of the area of the Lister that displays files.
+  * **[[~file_display_columns]]**: Options relating to information columns in details mode (including creating your own custom columns).
+  * **[[~file_display_modes]]**: Options specific to certain display modes (Thumbnails, Details, etc.). 
+  * **[[~file_operations]]**: Options that control file operations (copying, deleting, etc.). 
+  * **[[~filtering_and_sorting]]**: Controls relating to filtering and sorting file lists.
+  * **[[~folders]]**: Options that relate to the display of specific folders (a certain folder can always appear sorted by size, that sort of thing). 
+  * **[[~folder_tabs]]**: Controls relevant to the behavior of Folder Tabs.
+  * **[[~folder_tree]]**: Options that relate to the Folder Tree. 
+  * **[[~frequently_used_paths]]**: Options relating to favorite folders or folders that are otherwise important.
+  * **[[~internet]]**: Email, proxy, update checking, other settings relating to how Opus uses the Internet. 
+  * **[[~labels]]**: Labels and status icons that you can assign to your files.
+  * **[[~launching_opus]]**: How Opus is launched, what it does when it's launched, and whether to replace Explorer or not.
+  * **[[~layouts_and_styles]]**: Options to control saved Lister Layouts (arrangements of one or more pre-defined Listers) and Styles (pre-defined configuration of an existing Lister). 
+  * **[[~location_bar]]**: Options that control the appearance and behavior of the [[basic_concepts:the_lister:navigation:breadcrumbs_location_field|location bar]].
+  * **[[~miscellaneous]]**: These are the options that wouldn't fit anywhere else.
+  * **[[~toolbars]]**: Options relating to toolbars, and toolbar icons. 
+  * **[[~user_interface]]**: Change the language or spacing of the user interface, and adjust transition animations.
+  * **[[~viewer]]**: Options relevant to viewing images either in the Lister or in the standalone image viewer. 
+  * **[[~zip_and_other_archives]]**: Options that relate to various archive formats that Opus supports. 
+
+When the input focus is on the category / page list, you can navigate it using the keyboard in the same way as you can with a tree control:
+  * <kbd>Up</kbd>/<kbd>Down</kbd> to move up and down
+  * <kbd>Left</kbd>/<kbd>Right</kbd> to collapse or expand a category
+  * <kbd>*</kbd> to expand all categories at once
+  * <kbd>-</kbd> //twice// to collapse all categories
+

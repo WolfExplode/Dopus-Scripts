@@ -1,0 +1,31 @@
+~~Title: AddButtonsData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in]] adds dynamic toolbar buttons via the the **[[..:scripting_events:onaddbuttons|OnAddButtons]]** event, the method receives an **AddButtonsData** object whenever it needs to generate or update the list of buttons.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ args
+$$ [[args|Args]]
+$$ Returns an **Args** object representing the function's parsed arguments.
+$$ buttons
+$$ [[addbuttonhelper|AddButtonHelper]]
+$$ Returns an **AddButtonHelper** object that is used to add buttons.
+$$ cmdline
+$$ //string//
+$$ Provides the command line being used to generate the buttons.
+$$ embedded
+$$ //string//
+$$ Provides the embedded function body, if supplied by the user.
+$$ lister
+$$ [[lister|Lister]]
+$$ Lister whose toolbar the commands are being added to (`0` if not applicable).
+$$ viewer
+$$ [[viewer|Viewer]]
+$$ Viewer whose toolbar the commands are being added to (`0` if not applicable).
+</commandtable>
+
+

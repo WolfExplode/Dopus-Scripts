@@ -1,0 +1,11 @@
+~~Title: OrderedMap~~
+<pageheader/>
+
+The **OrderedMap** object is an [[http://en.wikipedia.org/wiki/Associative_container|associative container]] and is identical to the **[[map|Map]]** object except for the ordering of items within the map.
+
+Whereas the regular **Map** object sorts items alphabetically by key, the **OrderedMap** preserves the order that items are added.
+
+You can create a new **OrderedMap** using the **[[dopusfactory|DOpusFactory]].OrderedMap** method. All Opus script methods documented as accepting a **Map** object can also accept an **OrderedMap**.
+
+See the documentation of the **[[map|Map]]** object for more information.
+

@@ -1,0 +1,158 @@
+~~Title: ButtonData~~
+<pageheader/>
+
+The **ButtonData** object is used to initialise a dynamic toolbar button. It's obtained from the various methods of the **[[addbuttonhelper|AddButtonHelper]]** object. The properties of this object are used to configure the button.
+
+
+==Common to all types==
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ backcol
+$$ //string//
+$$ Sets the background color of the button, in the format `#RRGGBB` (hexadecimal) or `RRR,GGG,BBB` (decimal).
+$$ desc
+$$ //string//
+$$ The button's description (tooltip).
+$$ image
+$$ //string//
+$$ The main icon for the button; you can specify either an internal icon name (e.g. `#copy`) or the full path of an external image file or icon. You can extract icons from DLLs etc by appending a comma and the icon index to the file name.
+$$ image2
+$$ //string//
+$$ The secondary icon for the button.
+$$ label
+$$ //string//
+$$ The button's label.
+$$ nohighlight
+$$ //bool//
+$$ Set to **True** if the button should not highlight when the mouse moves over it.
+$$ notablabel
+$$ //bool//
+$$ Set to **True** to disable interpreting of tabs in the button's label.
+$$ separator
+$$ //bool//
+$$ Set to **True** to display a separator following this button.
+$$ showimage
+$$ //bool// or
+//string//
+$$ Controls the button image visibility. Valid values are **True** or **False**, "dual", "large", or "largedual".
+$$ showlabel
+$$ //bool// or
+//string//
+$$ Controls the button label visibility. Valid values are **True** or **False**, "left", "right", "top", "bottom".
+$$ textcol
+$$ //string//
+$$ Sets the text color of the button, in the format `#RRGGBB` (hexadecimal) or `RRR,GGG,BBB` (decimal).
+
+</commandtable>
+
+
+==Normal buttons==
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ checked
+$$ //bool//
+$$ Set to **True** to have the button appear checked/highlighted.
+$$ disabled
+$$ //bool//
+$$ Set to **True** to disable the button.
+$$ func
+$$ //string//
+$$ The full function to run when the button is clicked. Multiple lines can be provided, with cr/lf separators. Any
+*@modifiers* need to go at the top of the function.
+$$ type
+$$ //string//
+$$ Sets the function type; valid values are "batch", "script", "wsl". Leave empty for a standard Opus function.
+$$ radio
+$$ //bool//
+$$ Set to **True** to use a radio button rather than a checkmark.
+</commandtable>
+
+
+==Menus==
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ arrow
+$$ //bool// or
+//string//
+$$ Display a dropdown arrow on the menu. Valid values are **True** or **False**, "normal", or "slim".
+$$ children
+$$ [[addbuttonhelper|AddButtonHelper]]
+$$ This returns another **AddButtonHelper** object, which lets you add child buttons to the menu.
+$$ childimages
+$$ //string//
+$$ Controls the visibility of images in the menu. Valid values are "off", "on", "large".
+$$ minimize
+$$ //bool//
+$$ Set to **True** to minimize the menu width.
+$$ popout
+$$ //string//
+$$ Control where the menu pops open. Valid values are "left", "right", "top", "bottom".
+</commandtable>
+
+
+==Menu buttons==
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ alwaysenable
+$$ //bool//
+$$ Set to **True** to always enable the dropdown even if the button itself is disabled.
+$$ checked
+$$ //bool//
+$$ Set to **True** to have the button appear checked/highlighted.
+$$ children
+$$ [[addbuttonhelper|AddButtonHelper]]
+$$ This returns another **AddButtonHelper** object, which lets you add child buttons to the menu component of the menu button.
+$$ childimages
+$$ //string//
+$$ Controls the visibility of images in the menu. Valid values are "off", "on", "large".
+$$ disabled
+$$ //bool//
+$$ Set to **True** to disable the button.
+$$ func
+$$ //string//
+$$ The full function to run when the button is clicked. Multiple lines can be provided, with cr/lf separators. Any
+*@modifiers* need to go at the top of the function.
+$$ holdright
+$$ //bool//
+$$ Set to **True** to enable the "hold/right button to pop open" option.
+$$ hoverpopout
+$$ //bool//
+$$ Set to **True** to have the menu open when you hover over it with the mouse. Only applies to menu buttons inside sub-menus.
+$$ type
+$$ //string//
+$$ Sets the function type; valid values are "batch", "script", "wsl". Leave empty for a standard Opus function.
+$$ radio
+$$ //bool//
+$$ Set to **True** to use a radio button rather than a checkmark.
+</commandtable>
+
+
+==Three-button buttons==
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ children
+$$ [[addbuttonhelper|AddButtonHelper]]
+$$ This returns another **AddButtonHelper** object, which lets you add child buttons to the menu. The first button is designated left, the second is right and the third is middle.
+$$ childimages
+$$ //string//
+$$ Controls the visibility of images for the three-button's child buttons. Valid values are "off", "on", "large".
+$$ dynamicfromchild
+$$ //bool//
+$$ Enables dynamic icons/labels for the button parent based on the child buttons.
+</commandtable>
+

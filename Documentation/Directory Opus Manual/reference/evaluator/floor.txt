@@ -1,0 +1,17 @@
+~~Title: Floor~~
+<evalcmd>
+Floor && double && Rounded input value. &&
+value && double && Input value.
+</evalcmd>
+
+Rounds the input value down to the nearest integer (toward negative infinity).
+
+//Example://
+<code>
+Output( Floor(1.6) );
+--> 1.000000
+</code>
+
+//See also://\\
+[[ceil]]\\
+[[round]]\\

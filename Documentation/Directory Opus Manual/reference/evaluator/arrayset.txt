@@ -1,0 +1,20 @@
+~~Title: ArraySet~~
+<evalcmd>
+ArraySet && int && New size of the array. &&
+array && array && Array to store element in. &&
+index && int && Index of element to set. &&
+value && anything && Value to store in array.
+</evalcmd>
+
+Stores the value in the array at the specified index. If the array isn't large enough it's automatically resized.
+
+
+//See also://\\
+[[arraycreate|ArrayCreate]]\\
+[[arraycopy|ArrayCopy]]\\
+[[arrayerase|ArrayErase]]\\
+[[arrayget|ArrayGet]]\\
+[[arraypop|ArrayPop]]\\
+[[arraypush|ArrayPush]]\\
+[[arrayrev|ArrayRev]]\\
+[[arraysort|ArraySort]]

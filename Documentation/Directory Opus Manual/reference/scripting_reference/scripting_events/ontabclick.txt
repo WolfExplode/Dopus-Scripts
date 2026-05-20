@@ -1,0 +1,20 @@
+~~Title: OnTabClick ~~
+<pageheader/>
+
+The **OnTabClick** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when a tab is clicked with a qualifier key held down. You can use this to override the default behavior (e.g. control-clicking tabs normally links them).
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnTabClick
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:tabclickdata|TabClickData]]** 
+$$ (#)**Return Type:**
+$$ //bool//
+$$ (#)**Description:**
+$$ The **TabClickData.tab** property identifies the tab that was clicked. You can return **True** from this event to prevent the default action, or **False** (which is the default) to allow it to proceed.
+</commandtable>
+
+
+
+

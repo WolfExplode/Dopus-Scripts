@@ -1,0 +1,22 @@
+~~Title: Val~~
+<evalcmd>
+Val && var && Value of the named argument. &&
+varname && string && Name of the argument. &&
+[deref] && bool && Dereference argument value.
+</evalcmd>
+
+Returns the value of a variable; //varname// is provided as a quoted string. This is useful for variables which contain characters that would confuse the Evaluator's parser (e.g. if the name begins with a number).
+
+//Example://
+<code>
+flag = Val("35mmfocallength"); // get value of the 35mmfocallength field
+</code>
+
+If the //deref// parameter is set to **true**, it causes the variable (if any) named by the first value to be dereferenced and returns its value instead of the value of the named value. For example,
+
+<code>
+a = "b";
+b = "c";
+Output(Val(a)); // -> "b"
+Output(Val(a, true)); // -> "c"
+</code>

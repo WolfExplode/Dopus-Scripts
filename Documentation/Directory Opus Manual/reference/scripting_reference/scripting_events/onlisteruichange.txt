@@ -1,0 +1,20 @@
+~~Title: OnListerUIChange ~~
+<pageheader/>
+
+The **OnListerUIChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when the state of certain user interface elements in the Lister changes.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnListerUIChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:listeruichangedata|ListerUIChangeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **ListerUIChangeData.lister** property identifies the Lister, and the **change** property is a //string// indicating the element that changed. You can discover the actual state of the element using the **[[..:scripting_objects:command|Command]].IsSet** method.
+</commandtable>
+
+
+
+

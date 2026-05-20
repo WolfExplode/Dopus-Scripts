@@ -1,0 +1,16 @@
+~~Title: FAYTCloseData~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onfaytclose|OnFAYTClose]]** event, the method receives an **FAYTCloseData** object when the FAYT closes (assuming it has been used with a script FAYT command).
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ tab
+$$ //object://**[[tab|Tab]]** 
+$$ Returns a **[[tab|Tab]]** object representing the tab that the FAYT closed in.
+</commandtable>
+
+

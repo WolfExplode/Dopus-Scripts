@@ -1,0 +1,20 @@
+~~Title: OnSystemSettingChange~~
+<pageheader/>
+
+The **OnSystemSettingChange** event can be implemented by a [[:scripting:script_add-ins|script add-in]] to receive notification when various system settings change.
+
+
+<commandtable columns="2" id="cmdtable_1">
+$$ (#)**Method Name:**
+$$ OnSystemSettingChange
+$$ (#)**Argument Type:**
+$$ **[[..:scripting_objects:systemsettingchangedata|SystemSettingChangeData]]** 
+$$ (#)**Return Type:**
+$$ //none//
+$$ (#)**Description:**
+$$ The **SystemSettingChangeData.type** property identifies the setting that changed.
+</commandtable>
+
+
+
+

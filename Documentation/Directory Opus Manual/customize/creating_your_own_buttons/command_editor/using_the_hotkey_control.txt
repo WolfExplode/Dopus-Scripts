@@ -1,0 +1,102 @@
+~~Title: Using the Hotkey Control ~~
+<pageheader/>
+
+The [[:customize:creating_your_own_buttons:command_editor|Command Editor]] and the Keys page in the [[:customize|Customize]] dialog both use a special field, the //Hotkey Control//, to make entering hotkey sequences easier.
+
+{{:media:hotkey_control_0.png?nolink|}}
+
+To assign a simple key press, simply click in it to activate it like a normal string field, and then press the desired key combination. For example, to assign <kbd>Alt+D</kbd> to a function, click in the field and press the <kbd>Alt</kbd> and <kbd>D</kbd> keys together.
+
+Note that a few special keys like <kbd>Enter</kbd> cannot be typed as normal into the control, but can be accessed via the control's dropdown menu.
+
+==Dropdown menu==
+
+If you click the drop-down arrow with the mouse, a menu is displayed with several commands relating to the hotkey.
+
+{{:media:hotkey_control_2.png?nolink|}}
+
+  * **Left** / **Right**: In a button located in the [[:basic_concepts:the_lister:toolbars:the_default_toolbars:file_display_toolbar|File Display Toolbar]] (as shown above), the **Left** and **Right** items let you assign a key that applies only to the left or right file display. See below for an example of how to use this. 
+  * <kbd>Enter</kbd> / <kbd>Escape</kbd> / <kbd>Tab</kbd>: Allows you to assign a hotkey to those keys. For example, to assign a function to <kbd>Ctrl+Enter</kbd>, click the menu dropdown, then hold the <kbd>Ctrl</kbd> key down and select <kbd>Enter</kbd> from the menu.
+  * **Original** / **Previous**: If you have changed the key, these two commands let you revert to the previous setting, and the original key assigned when the dialog first opened. 
+  * **Add Alternative**: This command lets you add an alternative key sequence to the same command. For example, the default [[:basic_concepts:the_lister:navigation:breadcrumbs_location_field|location field]] can be activated by pressing either <kbd>Alt+D</kbd> or the <kbd>F4</kbd> key. See below for an example of how to use this. 
+  * **Add To Sequence**: This command lets you add an additional key to the current key sequence. You can use this to create hotkeys where you have to press two or more keys in sequence (rather than at the same time) to activate the function. 
+  * **Remove**: This removes (clears out) the hotkey from the control. 
+
+==Media keys==
+
+When editing a hotkey function (as opposed to a toolbar button's hotkey), the drop-down will also let you select from a sub-menu of //Media keys//.
+
+{{:media:hotkey_control_14.png?nolink|}}
+
+These are special input events that aren't associated with the traditional keys on the keyboard. For example, you could use this to assign a function to the //Play// button on your keyboard, or the //Back// button on your mouse.
+
+
+==Adding alternative key sequences==
+
+In the above screenshot, <kbd>Alt+D</kbd> is the only current key assignment. Selecting the **Add Alternative** command displays a **+** sign indicating that the next key press will add an alternative sequence.
+
+{{:media:hotkey_control_3.png?nolink|}}
+
+If you then press another key, it is added as the beginning of an alternative sequence. For example, if you press <kbd>F4</kbd>:
+
+{{:media:hotkey_control_4.png?nolink|}}
+
+Pressing either <kbd>Alt+D</kbd> or <kbd>F4</kbd> would now activate the function. You can add as many alternate key sequences as you like. When a control with alternate key sequences is active, it displays a separate drop-down listing each alternate sequence separately.
+
+==Editing existing key sequences==
+
+{{:media:hotkey_control_6.png?nolink|}}
+
+The sequence shown in the main edit field (<kbd>F4</kbd> in the above image) is the //current sequence//, and is the only one that can be edited. For example, if you pressed <kbd>F3</kbd> at this point, <kbd>F4</kbd> would be replaced by <kbd>F3</kbd> but the <kbd>Alt+D</kbd> sequence would be unaffected. If you want to edit a sequence other than the current one you can remove it by clicking its //**Remove**// link and add it back again.
+
+==Multiple key sequences (chords)==
+
+Depending on how much you use hotkeys, you may find yourself running out of keys on the keyboard to assign functions to. Multiple key sequences can let you create additional hotkeys that require two or more keys to be pressed in sequence to activate the function, which can dramatically increase the number of hotkey functions you can define.
+
+The procedure for adding a key to the sequence is similar to adding an alternative. Select the **Add To Sequence** command, which will display a **&** sign indicating that the next key press will add to the current sequence.
+
+{{:media:hotkey_control_5.png?nolink|}}
+
+Press the key you want to add to the sequence, and the control will update to show the new assignment. For example, if you press <kbd>1</kbd> at this point:
+
+{{:media:hotkey_control_7.png?nolink|}}
+
+To activate this hotkey you would now need to press <kbd>Alt+D</kbd> followed by <kbd>1</kbd>. Different hotkeys can use the same keys up until the last one in the sequence. For example, you could therefore create multiple hotkeys that all start with <kbd>Alt+D</kbd>, followed by a different number.
+
+For example, <kbd>Alt+D</kbd> followed by <kbd>1</kbd> could run one function, whereas <kbd>Alt+D</kbd> followed by <kbd>2</kbd> could run another.
+
+You can add as many keys as you like to a sequence. In the Lister, when you press a key that matches the start of a multi-key sequence, Opus displays a small popup in the bottom-left corner as a visual cue that you need to press another key to run a function.
+
+{{:media:hotkey_control_8.png?nolink|}}
+
+==Hotkeys for dual file displays==
+
+The [[:basic_concepts:the_lister:toolbars:the_default_toolbars:file_display_toolbar|File Display Toolbar]] is handled slightly differently to all other toolbars, because in [[:basic_concepts:the_lister:dual_display|dual-display mode]] there are two copies of it. Normally, pressing a hotkey bound to a button in the file display toolbar will activate the function in the source file display.
+
+However, you can assign hotkeys that will specifically activate the function in the left (or top) or the right (or bottom) file display, irrespective of which is the source.
+
+For example, you could activate the left file display's location field by pressing <kbd>Shift+F4</kbd>, and the right file display's location field by pressing <kbd>Ctrl+F4</kbd>.
+
+Start with the first key sequence that you want to assign:
+
+{{:media:hotkey_control_11.png?nolink|}}
+
+Then from the drop-down menu select the **Left** command. This will bind that key sequence to the left file display.
+
+{{:media:hotkey_control_9.png?nolink|}}
+
+Then, follow the steps above to add an alternative key sequence for the right file display. Select the **Add Alternative** command from the drop-down:
+
+{{:media:hotkey_control_10.png?nolink|}}
+
+And press the key for the right file display:
+
+{{:media:hotkey_control_12.png?nolink|}}
+
+Finally, select the **Right** command from the drop-down menu to bind the new sequence to the right file display.
+
+{{:media:hotkey_control_13.png?nolink|}}
+
+
+
+

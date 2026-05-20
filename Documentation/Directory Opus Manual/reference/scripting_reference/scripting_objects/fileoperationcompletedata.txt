@@ -1,0 +1,50 @@
+~~Title: FileOperationCompleteData ~~
+<pageheader/>
+
+If a [[:scripting:script_add-ins|script add-in ]]implements the **[[..:scripting_events:onfileoperationcomplete|OnFileOperationComplete]]** event, the method receives a **FileOperationCompleteData** object whenever a supported file operation begins. If you return **True** to indicate that you want to be notified about the operation, you'll receive another call when the operation is complete.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ action
+$$ //string//
+$$ Returns a string that indicates the type of file operation. Currently the only supported value is **"rename"**.
+$$ cmdline
+$$ //string//
+$$ Returns a string that provides the entire command line that launched this operation.
+$$ data
+$$ //variant//
+$$ Used only when the **query** property (described below) is **False**. Provides further information about the operation that completed.\\
+\\
+For **action = "rename"**:
+
+  * Returns a **[[map|Map]]** object that provides a map of all items that were renamed and their new names.
+  * The map keys are the full paths of the renamed files.
+  * The map values will be either the new filename on its own (if the file was renamed in place), or the new full path to the file (if the file was moved to a new directory as part of the rename).
+$$ dest
+$$ //object://**[[path|Path]]**
+$$ Returns a **[[path|Path]]** object representing the destination path of the operation, if any.
+$$ qualifiers
+$$ //string//
+$$ Returns a string indicating any qualifier keys that were held down by the user when the operation was initiated.\\
+\\
+The string can contain any or all of the following: //shift//, //ctrl//, //alt//, //lwin//, //rwin//\\
+\\
+If no qualifiers were down, the string will be: //none//
+$$ query
+$$ //bool//
+$$ Returns **True** the first time the **[[..:scripting_events:onfileoperationcomplete|OnFileOperationComplete]]** event is called.\\
+\\
+When called the first time, you should examine the action and other properties and return **True** if you decide you want notification about this operation and **False** otherwise.\\
+\\
+The **query** property will be **False** when you are called the second time, when the operation is complete.
+$$ source
+$$ //object://**[[path|Path]]**
+$$ Returns a **[[path|Path]]** object representing the source path of the operation.
+$$ tab
+$$ //object://**[[tab|Tab]]**
+$$ Returns a **[[tab|Tab]]** object representing the source folder tab.
+</commandtable>
+

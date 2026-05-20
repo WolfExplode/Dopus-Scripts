@@ -1,0 +1,54 @@
+~~Title: Var ~~
+===Var===
+
+The **Var** object represents an individual user or script-defined variable. Individual **Var** objects can be accessed or enumerated from the **[[vars|Vars]]** object.
+
+
+<commandtable columns="3" id="cmdtable_1">
+$$ Property Name
+$$ Return Type
+$$ Description
+$$ (#)//<default value>//
+$$ //variant//\\
+or //string//
+$$ The default value of the **Var** object returns the value of the variable itself, with one exception. If the **Var** object is being accessed as part of an enumeration of the **[[vars|Vars]]** collection, the default value returns the variable name.
+
+So for instance,
+
+For Each Var in DOpus.Vars\\
+DOpus.Output("Variable name = " & Var)\\
+Next
+
+Versus:
+
+Set Var = DOpus.Vars("myvar")\\
+DOpus.Output("Variable value = " & Var)\\
+$$ exists
+$$ //bool//
+$$ Returns **True** if the variable exists, or **False** if it doesn't. When you index the **[[vars|Vars]]** object by name, it will return a **Var** object event for non-existent values. You can use this property to check if they exist before attempting to read the value.
+$$ name
+$$ //string//
+$$ Returns the name of the variable. You cannot change the name of a variable once it has been assigned - instead, delete the variable from its collection and add a new one.
+$$ persist
+$$ //bool//
+$$ Returns **True** if the variable is persistent (saved) or **False** if not. You can set this property to change the persistence state.
+$$ value
+$$ //variant//
+$$ Returns the value of the variable. You can set this property to change the value of the variable.
+
+You can store any type of variable in a **Var** object, although not all types can be saved to disk. If you want your variable to be persistent you should only use //bool//, //int//, //string//, //date//, //currency// or a **[[vector|Vector]]** of those types.
+</commandtable>
+
+
+<commandtable columns="4" id="cmdtable_2">
+$$ Method Name
+$$ **Arguments**
+$$ Return Type
+$$ Description
+$$ Delete
+$$ //none//
+$$ //none//
+$$ Deletes this variable from its parent collection.
+</commandtable>
+
+
