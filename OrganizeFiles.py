@@ -7,7 +7,7 @@ Also: read `Copy and Transfer.txt` in the source folder; each line is a `.mp4.jp
 Also: strip chosen characters from filenames under the target (stem only), trim spaces, remove trailing dots before the extension,
 collapse a duplicated final extension (e.g. ``.mp4.mp4`` → ``.mp4``; case-insensitive),
 and remove trailing copy suffixes like `` (1)`` / `` (23)`` (1–3 digits; avoids `` (2024)``-style years).
-Also: under the target tree, normalize or append a chosen `` [tag]`` before the file extension, or strip every ``[...]`` tag from names.
+Also: under the target tree, append a chosen `` [tag]`` before the file extension, or strip every ``[...]`` tag from names.
 
 GUI (Dear PyGui): edit source paths (folders and/or files), target folder, and strip characters; drag files/folders from Explorer onto the path fields (Windows); settings are stored under %APPDATA%\\OrganizeFiles.
 """
@@ -23,7 +23,7 @@ import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 CHECK = "\u2714"  # HEAVY CHECK MARK ✔
 
@@ -44,7 +44,6 @@ DEFAULT_LAST_ACTION = "mark"
 DEFAULT_LAST_MODE = "preview"
 
 # GUI collapsing-section keys (saved under settings.json → gui_sections).
-GUI_SECTION_KEYS = ("folders", "mark", "title", "bracket", "jpg", "copy")
 GUI_SECTION_DEFAULTS: dict[str, bool] = {
     "folders": True,
     "mark": True,
@@ -53,6 +52,7 @@ GUI_SECTION_DEFAULTS: dict[str, bool] = {
     "jpg": False,
     "copy": False,
 }
+GUI_SECTION_KEYS = tuple(GUI_SECTION_DEFAULTS)
 
 # CJK / symbol UI fonts (first match under %WINDIR%\Fonts).
 _UNICODE_UI_FONT_NAMES = (
@@ -134,7 +134,7 @@ def config_load_defaults() -> tuple[str, str, str, str]:
         src = str(data.get("source") or "").strip()
         tgt = str(data.get("target") or "")
         strip = normalize_strip_chars(data.get("strip_title_chars") or "")
-        tag = str(data.get("bracket_tag_text") or data.get("parent_tag_text") or "").strip()
+        tag = str(data.get("bracket_tag_text") or "").strip()
         return src, tgt, strip, tag
     except OSError:
         return "", "", "", ""
@@ -340,19 +340,14 @@ class CopyTransferScan:
 
 
 @dataclass
-class TitleStripScan:
+class RenameScan:
     planned: list[tuple[Path, Path]]
-    skipped_unchanged: int
+    skipped_no_change: int
     skipped_collision: list[tuple[Path, Path]]
     skipped_under_source: int
 
 
-@dataclass
-class BracketTagScan:
-    planned: list[tuple[Path, Path]]
-    skipped_already_tagged: int
-    skipped_collision: list[tuple[Path, Path]]
-    skipped_under_source: int
+_EMPTY_RENAME_SCAN = RenameScan([], 0, [], 0)
 
 
 def sanitize_tag_text(text: str) -> str:
@@ -379,17 +374,6 @@ def _strip_bracket_tag_spans(stem: str, spans: list[tuple[int, int]]) -> str:
     return re.sub(r" {2,}", " ", merged).strip()
 
 
-def remove_all_matching_bracket_tags(stem: str, tag_inner: str) -> str:
-    """Remove every ``[tag]`` / `` [tag]`` in the stem whose inner text matches ``tag_inner`` (case-insensitive)."""
-    want = tag_inner.casefold()
-    to_remove: list[tuple[int, int]] = []
-    for m in _ANY_BRACKET_TAG.finditer(stem):
-        inner = m.group(1).strip().casefold()
-        if inner == want:
-            to_remove.append((m.start(), m.end()))
-    return _strip_bracket_tag_spans(stem, to_remove)
-
-
 def remove_all_bracket_tags(stem: str) -> str:
     """Remove every ``[...]`` / `` [...]`` bracket tag in the stem."""
     to_remove = [(m.start(), m.end()) for m in _ANY_BRACKET_TAG.finditer(stem)]
@@ -403,34 +387,6 @@ def stem_final_trailing_bracket_inner(stem: str) -> Optional[str]:
 
 
 def bracket_tag_new_name(path: Path, tag_inner: str) -> Optional[str]:
-    """
-    Append one normalized `` [tag]`` before the extension.
-    Removes every matching ``[tag]`` anywhere in the stem (case-insensitive), then reapplies at the end.
-    If the stem ends with a different ``[...]`` tag after that cleanup, returns None (do not add another).
-    """
-    if not path.name or not tag_inner:
-        return None
-
-    suffix = path.suffix
-    stem = path.stem
-    stem_clean = remove_all_matching_bracket_tags(stem, tag_inner)
-
-    tail = stem_final_trailing_bracket_inner(stem_clean)
-    if tail is not None and tail.casefold() != tag_inner.casefold():
-        return None
-
-    base = stem_clean.rstrip()
-    if base:
-        new_stem = base + f" [{tag_inner}]"
-    else:
-        new_stem = f"[{tag_inner}]"
-    new_name = new_stem + suffix
-    if new_name == path.name:
-        return None
-    return new_name
-
-
-def bracket_tag_append_name(path: Path, tag_inner: str) -> Optional[str]:
     """Append `` [tag]`` at the end of the stem; leave other bracket tags unchanged."""
     if not path.name or not tag_inner:
         return None
@@ -458,10 +414,44 @@ def bracket_tag_remove_all_name(path: Path) -> Optional[str]:
     stem_clean = remove_all_bracket_tags(path.stem)
     if stem_clean == path.stem:
         return None
-    new_name = stem_clean + suffix
-    if new_name == path.name:
-        return None
-    return new_name
+    return stem_clean + suffix
+
+
+def _scan_target_renames(
+    source_root: Path,
+    target_root: Path,
+    new_name_for: Callable[[Path], Optional[str]],
+    only: Optional[set[Path]] = None,
+    source_library: Optional[Path] = None,
+) -> RenameScan:
+    planned: list[tuple[Path, Path]] = []
+    skipped_collision: list[tuple[Path, Path]] = []
+    skipped_no_change = 0
+    skipped_under_source = 0
+    planned_dest_keys: set[str] = set()
+
+    for path in iter_files_in_tree(target_root, only):
+        if path_in_source_library(source_library, path):
+            skipped_under_source += 1
+            continue
+        new_name = new_name_for(path)
+        if new_name is None:
+            skipped_no_change += 1
+            continue
+        new_path = path.with_name(new_name)
+        if not rename_stays_valid(
+            source_root, target_root, path, new_path, source_library=source_library
+        ):
+            skipped_under_source += 1
+            continue
+        _try_plan_rename(path, new_path, planned, skipped_collision, planned_dest_keys)
+
+    return RenameScan(
+        planned=planned,
+        skipped_no_change=skipped_no_change,
+        skipped_collision=skipped_collision,
+        skipped_under_source=skipped_under_source,
+    )
 
 
 def scan_bracket_tag(
@@ -470,99 +460,17 @@ def scan_bracket_tag(
     tag_text: str,
     only: Optional[set[Path]] = None,
     source_library: Optional[Path] = None,
-) -> BracketTagScan:
-    """Plan renames: normalize `` [tag_text]`` before extension on all target-tree files."""
-    planned: list[tuple[Path, Path]] = []
-    skipped_collision: list[tuple[Path, Path]] = []
-    skipped_already_tagged = 0
-    skipped_under_source = 0
-
-    tag_inner = sanitize_tag_text(tag_text)
-    if not tag_inner:
-        return BracketTagScan(
-            planned=[],
-            skipped_already_tagged=0,
-            skipped_collision=[],
-            skipped_under_source=0,
-        )
-
-    planned_dest_keys: set[str] = set()
-    for path in iter_files_in_tree(target_root, only):
-        if path_in_source_library(source_library, path):
-            skipped_under_source += 1
-            continue
-
-        new_name = bracket_tag_new_name(path, tag_inner)
-        if new_name is None:
-            skipped_already_tagged += 1
-            continue
-
-        new_path = path.with_name(new_name)
-        if not rename_stays_valid(
-            source_root, target_root, path, new_path, source_library=source_library
-        ):
-            skipped_under_source += 1
-            continue
-        _try_plan_rename(
-            path, new_path, planned, skipped_collision, planned_dest_keys
-        )
-
-    return BracketTagScan(
-        planned=planned,
-        skipped_already_tagged=skipped_already_tagged,
-        skipped_collision=skipped_collision,
-        skipped_under_source=skipped_under_source,
-    )
-
-
-def scan_bracket_tag_append(
-    source_root: Path,
-    target_root: Path,
-    tag_text: str,
-    only: Optional[set[Path]] = None,
-    source_library: Optional[Path] = None,
-) -> BracketTagScan:
+) -> RenameScan:
     """Plan renames: append `` [tag_text]`` at end of each target-tree filename stem."""
-    planned: list[tuple[Path, Path]] = []
-    skipped_collision: list[tuple[Path, Path]] = []
-    skipped_already_tagged = 0
-    skipped_under_source = 0
-
     tag_inner = sanitize_tag_text(tag_text)
     if not tag_inner:
-        return BracketTagScan(
-            planned=[],
-            skipped_already_tagged=0,
-            skipped_collision=[],
-            skipped_under_source=0,
-        )
-
-    planned_dest_keys: set[str] = set()
-    for path in iter_files_in_tree(target_root, only):
-        if path_in_source_library(source_library, path):
-            skipped_under_source += 1
-            continue
-
-        new_name = bracket_tag_append_name(path, tag_inner)
-        if new_name is None:
-            skipped_already_tagged += 1
-            continue
-
-        new_path = path.with_name(new_name)
-        if not rename_stays_valid(
-            source_root, target_root, path, new_path, source_library=source_library
-        ):
-            skipped_under_source += 1
-            continue
-        _try_plan_rename(
-            path, new_path, planned, skipped_collision, planned_dest_keys
-        )
-
-    return BracketTagScan(
-        planned=planned,
-        skipped_already_tagged=skipped_already_tagged,
-        skipped_collision=skipped_collision,
-        skipped_under_source=skipped_under_source,
+        return _EMPTY_RENAME_SCAN
+    return _scan_target_renames(
+        source_root,
+        target_root,
+        lambda p: bracket_tag_new_name(p, tag_inner),
+        only=only,
+        source_library=source_library,
     )
 
 
@@ -571,39 +479,14 @@ def scan_bracket_tag_remove_all(
     target_root: Path,
     only: Optional[set[Path]] = None,
     source_library: Optional[Path] = None,
-) -> BracketTagScan:
+) -> RenameScan:
     """Plan renames: strip every ``[...]`` tag from target-tree filenames."""
-    planned: list[tuple[Path, Path]] = []
-    skipped_collision: list[tuple[Path, Path]] = []
-    skipped_already_tagged = 0
-    skipped_under_source = 0
-
-    planned_dest_keys: set[str] = set()
-    for path in iter_files_in_tree(target_root, only):
-        if path_in_source_library(source_library, path):
-            skipped_under_source += 1
-            continue
-
-        new_name = bracket_tag_remove_all_name(path)
-        if new_name is None:
-            skipped_already_tagged += 1
-            continue
-
-        new_path = path.with_name(new_name)
-        if not rename_stays_valid(
-            source_root, target_root, path, new_path, source_library=source_library
-        ):
-            skipped_under_source += 1
-            continue
-        _try_plan_rename(
-            path, new_path, planned, skipped_collision, planned_dest_keys
-        )
-
-    return BracketTagScan(
-        planned=planned,
-        skipped_already_tagged=skipped_already_tagged,
-        skipped_collision=skipped_collision,
-        skipped_under_source=skipped_under_source,
+    return _scan_target_renames(
+        source_root,
+        target_root,
+        bracket_tag_remove_all_name,
+        only=only,
+        source_library=source_library,
     )
 
 
@@ -661,37 +544,14 @@ def scan_title_strip(
     strip_chars: str,
     only: Optional[set[Path]] = None,
     source_library: Optional[Path] = None,
-) -> TitleStripScan:
+) -> RenameScan:
     """Plan renames under target_root only (stem cleanup). Skips paths inside source_root."""
-    planned: list[tuple[Path, Path]] = []
-    skipped_collision: list[tuple[Path, Path]] = []
-    skipped_unchanged = 0
-    skipped_under_source = 0
-    planned_dest_keys: set[str] = set()
-
-    for path in iter_files_in_tree(target_root, only):
-        if path_in_source_library(source_library, path):
-            skipped_under_source += 1
-            continue
-        new_name = transform_title_filename(path.name, strip_chars)
-        if new_name is None:
-            skipped_unchanged += 1
-            continue
-        new_path = path.with_name(new_name)
-        if not rename_stays_valid(
-            source_root, target_root, path, new_path, source_library=source_library
-        ):
-            skipped_under_source += 1
-            continue
-        _try_plan_rename(
-            path, new_path, planned, skipped_collision, planned_dest_keys
-        )
-
-    return TitleStripScan(
-        planned=planned,
-        skipped_unchanged=skipped_unchanged,
-        skipped_collision=skipped_collision,
-        skipped_under_source=skipped_under_source,
+    return _scan_target_renames(
+        source_root,
+        target_root,
+        lambda p: transform_title_filename(p.name, strip_chars),
+        only=only,
+        source_library=source_library,
     )
 
 
@@ -807,12 +667,6 @@ def resolve_work_paths(
     )
 
 
-def format_paths_text(paths: Optional[set[Path]]) -> str:
-    if not paths:
-        return ""
-    return "\n".join(str(p) for p in sorted(paths))
-
-
 def _only_list_lines(
     list_path: Optional[str] = None, file_args: Optional[list[str]] = None
 ) -> list[str]:
@@ -857,23 +711,13 @@ def build_initial_source_text(
         return "\n".join(from_dopus)
 
     lines: list[str] = []
-    seen: set[str] = set()
-
-    def add(line: str) -> None:
-        s = line.strip()
-        if not s:
-            return
-        key = s.casefold()
-        if key in seen:
-            return
-        seen.add(key)
-        lines.append(s)
-
     for ln in saved_source.splitlines():
-        add(ln)
+        s = ln.strip()
+        if s:
+            lines.append(s)
     if initial_source and str(initial_source).strip():
-        add(str(initial_source).strip())
-    return "\n".join(lines)
+        lines.append(str(initial_source).strip())
+    return "\n".join(_dedupe_path_lines(lines))
 
 
 def read_only_paths(
@@ -1052,18 +896,27 @@ def scan_jpg_moves(
     return JpgMoveScan(moves=moves, skipped_exists=skipped_exists)
 
 
-def apply_jpg_moves(moves: list[tuple[Path, Path]]) -> tuple[int, list[str]]:
-    """Returns (success_count, error_messages). Removes each file from source after move."""
+def _apply_file_pairs(
+    pairs: list[tuple[Path, Path]], *, copy: bool
+) -> tuple[int, list[str]]:
     errors: list[str] = []
     n = 0
-    for src, dst in moves:
+    for src, dst in pairs:
         try:
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(os.fspath(src), os.fspath(dst))
+            if copy:
+                shutil.copy2(os.fspath(src), os.fspath(dst))
+            else:
+                shutil.move(os.fspath(src), os.fspath(dst))
             n += 1
         except OSError as e:
             errors.append(f"{src}\n  -> {dst}\n  {e}")
     return n, errors
+
+
+def apply_jpg_moves(moves: list[tuple[Path, Path]]) -> tuple[int, list[str]]:
+    """Returns (success_count, error_messages). Removes each file from source after move."""
+    return _apply_file_pairs(moves, copy=False)
 
 
 def video_basename_from_transfer_line(line: str) -> str:
@@ -1166,25 +1019,7 @@ def _browse_initial_dir(hint: str) -> str:
     return str(parent) if parent.is_dir() else ""
 
 
-def pick_native_folder(title: str, initial: str = "") -> Optional[str]:
-    """Windows folder picker (tkinter uses the system dialog on win32)."""
-    import tkinter as tk
-    from tkinter import filedialog
-
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    kwargs: dict = {"title": title, "mustexist": True, "parent": root}
-    init = _browse_initial_dir(initial)
-    if init:
-        kwargs["initialdir"] = init
-    path = filedialog.askdirectory(**kwargs)
-    root.destroy()
-    return path if path else None
-
-
-def pick_native_files(title: str, initial: str = "") -> list[str]:
-    """Windows multi-file picker (tkinter uses the system dialog on win32)."""
+def _pick_native_dialog(folder: bool, title: str, initial: str = "") -> list[str]:
     import tkinter as tk
     from tkinter import filedialog
 
@@ -1195,22 +1030,265 @@ def pick_native_files(title: str, initial: str = "") -> list[str]:
     init = _browse_initial_dir(initial)
     if init:
         kwargs["initialdir"] = init
+    if folder:
+        kwargs["mustexist"] = True
+        path = filedialog.askdirectory(**kwargs)
+        root.destroy()
+        return [path] if path else []
     paths = filedialog.askopenfilenames(**kwargs)
     root.destroy()
     return list(paths) if paths else []
 
 
+def pick_native_folder(title: str, initial: str = "") -> Optional[str]:
+    """Windows folder picker (tkinter uses the system dialog on win32)."""
+    paths = _pick_native_dialog(True, title, initial)
+    return paths[0] if paths else None
+
+
+def pick_native_files(title: str, initial: str = "") -> list[str]:
+    """Windows multi-file picker (tkinter uses the system dialog on win32)."""
+    return _pick_native_dialog(False, title, initial)
+
+
 def apply_copy_transfer(copies: list[tuple[Path, Path]]) -> tuple[int, list[str]]:
-    errors: list[str] = []
-    n = 0
-    for src, dst in copies:
-        try:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(os.fspath(src), os.fspath(dst))
-            n += 1
-        except OSError as e:
-            errors.append(f"{src}\n  -> {dst}\n  {e}")
-    return n, errors
+    return _apply_file_pairs(copies, copy=True)
+
+
+def _scope_banner(only: Optional[set[Path]]) -> str:
+    return f"Limited to {len(only)} listed file(s).\n\n" if only else ""
+
+
+def _format_rename_collision_block(
+    collisions: list[tuple[Path, Path]], *, basename_only: bool
+) -> str:
+    if not collisions:
+        return ""
+    lines = [
+        "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
+    ]
+    for old_path, dest_path in collisions:
+        left = old_path.name if basename_only else str(old_path)
+        lines.append(f"  {left}\n")
+        lines.append(f"    -> {dest_path.name}\n")
+    return "".join(lines)
+
+
+def format_preview_mark(result: ScanResult, only: Optional[set[Path]]) -> str:
+    lines = [_scope_banner(only)]
+    lines.append("Files to rename (add ✔ prefix):\n")
+    if result.planned:
+        for old_path, new_path in result.planned:
+            lines.append(f"  {old_path}\n")
+            lines.append(f"    -> {new_path}\n")
+    else:
+        lines.append("  (none)\n")
+    if result.skipped_exists:
+        lines.append("\nNot included (✔ name already exists):\n")
+        for p in result.skipped_exists:
+            lines.append(f"  {p}\n")
+    lines.append(
+        f"\nSummary — to rename: {len(result.planned)}, "
+        f"already marked: {result.skipped_checked}, "
+        f"no source match: {result.skipped_no_match}, "
+        f"skipped (under source tree): {result.skipped_under_source}\n"
+    )
+    return "".join(lines)
+
+
+def format_preview_rename(
+    rs: RenameScan,
+    only: Optional[set[Path]],
+    heading: str,
+    skip_label: str,
+    *,
+    collision_basename_only: bool,
+) -> str:
+    lines = [_scope_banner(only), heading]
+    if rs.planned:
+        for old_path, new_path in rs.planned:
+            lines.append(f"  {old_path}\n")
+            lines.append(f"    -> {new_path.name}\n")
+    else:
+        lines.append("  (none)\n")
+    lines.append(_format_rename_collision_block(rs.skipped_collision, basename_only=collision_basename_only))
+    lines.append(
+        f"\nSummary — to rename: {len(rs.planned)}, "
+        f"{skip_label}: {rs.skipped_no_change}, "
+        f"collision: {len(rs.skipped_collision)}, "
+        f"skipped (under source tree): {rs.skipped_under_source}\n"
+    )
+    return "".join(lines)
+
+
+def format_preview_jpg(jpg: JpgMoveScan, only: Optional[set[Path]]) -> str:
+    lines = [_scope_banner(only), "JPG files to move (source → target, relative path preserved):\n"]
+    if jpg.moves:
+        for old_path, new_path in jpg.moves:
+            lines.append(f"  {old_path}\n")
+            lines.append(f"    -> {new_path}\n")
+    else:
+        lines.append("  (none)\n")
+    if jpg.skipped_exists:
+        lines.append("\nSkipped (file already exists at destination):\n")
+        for s_path, d_path in jpg.skipped_exists:
+            lines.append(f"  {s_path}\n")
+            lines.append(f"    (exists: {d_path})\n")
+    lines.append(
+        f"\nSummary — to move: {len(jpg.moves)}, "
+        f"skipped (dest exists): {len(jpg.skipped_exists)}\n"
+    )
+    return "".join(lines)
+
+
+def format_preview_copy_transfer(
+    xfer: CopyTransferScan, only: Optional[set[Path]], source_root: Path
+) -> str:
+    lines = [_scope_banner(only)]
+    list_path = source_root / COPY_TRANSFER_LIST_NAME
+    if xfer.list_missing:
+        lines.append(f"List file not found (expected at):\n  {list_path}\n")
+        return "".join(lines)
+    lines.append(
+        f'Videos to copy (from "{COPY_TRANSFER_LIST_NAME}"; source → target):\n'
+    )
+    if xfer.copies:
+        for old_path, new_path in xfer.copies:
+            lines.append(f"  {old_path}\n")
+            lines.append(f"    -> {new_path}\n")
+    else:
+        lines.append("  (none)\n")
+    if xfer.skipped_exists:
+        lines.append("\nSkipped (file already exists at destination):\n")
+        for s_path, d_path in xfer.skipped_exists:
+            lines.append(f"  {s_path}\n")
+            lines.append(f"    (exists: {d_path})\n")
+    if xfer.missing:
+        lines.append(f"\nNot found under source ({len(xfer.missing)}):\n")
+        for name in xfer.missing[:80]:
+            lines.append(f"  {name}\n")
+        if len(xfer.missing) > 80:
+            lines.append(f"  … and {len(xfer.missing) - 80} more\n")
+    if xfer.not_in_selection:
+        lines.append(
+            f"\nFound under source but not in selected files ({len(xfer.not_in_selection)}):\n"
+        )
+        for name in xfer.not_in_selection[:80]:
+            lines.append(f"  {name}\n")
+        if len(xfer.not_in_selection) > 80:
+            lines.append(f"  … and {len(xfer.not_in_selection) - 80} more\n")
+    if xfer.ambiguous:
+        lines.append("\nSkipped (multiple files with same name under source):\n")
+        for base, paths in xfer.ambiguous[:30]:
+            lines.append(f"  {base}\n")
+            for p in paths[:5]:
+                lines.append(f"    {p}\n")
+            if len(paths) > 5:
+                lines.append(f"    … and {len(paths) - 5} more\n")
+    lines.append(
+        f"\nSummary — to copy: {len(xfer.copies)}, "
+        f"dest exists: {len(xfer.skipped_exists)}, "
+        f"not found: {len(xfer.missing)}, "
+        f"not in selection: {len(xfer.not_in_selection)}, "
+        f"ambiguous: {len(xfer.ambiguous)}\n"
+    )
+    return "".join(lines)
+
+
+def _cli_apply_items(
+    action: str, items: list[tuple[Path, Path]]
+) -> tuple[int, list[str], int]:
+    """Run apply for action; return (success_count, errors, exit_code)."""
+    if not items:
+        print("Nothing to do.")
+        return 0, [], 0
+    if action in ("mark", "title-strip", "bracket-tag"):
+        n, errors, _ = apply_renames(items)
+        print(f"Renamed {n} file(s).")
+        return n, errors, 1 if errors else 0
+    if action == "jpg-move":
+        n, errors = apply_jpg_moves(items)
+        print(f"Moved {n} .jpg file(s).")
+        return n, errors, 1 if errors else 0
+    n, errors = apply_copy_transfer(items)
+    print(f"Copied {n} video file(s).")
+    return n, errors, 1 if errors else 0
+
+
+def _cli_scan_and_format(
+    action: str,
+    work: WorkPaths,
+    strip_chars: str,
+    tag_text: str,
+) -> tuple[object, str, Optional[int]]:
+    """Scan for CLI action. Returns (result, preview_text, early_exit_code)."""
+    src_r, tgt_r, only, src_lib = (
+        work.source_root,
+        work.target_root,
+        work.only,
+        work.source_library,
+    )
+    if action == "mark":
+        result = scan_target(src_r, tgt_r, only=only, source_library=src_lib)
+        return result, format_preview_mark(result, only), None
+    if action == "title-strip":
+        result = scan_title_strip(
+            src_r, tgt_r, strip_chars, only=only, source_library=src_lib
+        )
+        return (
+            result,
+            format_preview_rename(
+                result,
+                only,
+                "Target files to rename (strip characters from stem):\n",
+                "unchanged",
+                collision_basename_only=True,
+            ),
+            None,
+        )
+    if action == "bracket-tag":
+        if not tag_text:
+            return None, "", 2
+        result = scan_bracket_tag(
+            src_r, tgt_r, tag_text, only=only, source_library=src_lib
+        )
+        return (
+            result,
+            format_preview_rename(
+                result,
+                only,
+                f'Target files to rename (append " [{tag_text}]" at end):\n',
+                "already has tag at end / no change",
+                collision_basename_only=False,
+            ),
+            None,
+        )
+    if action == "jpg-move":
+        result = scan_jpg_moves(src_r, tgt_r, only=only)
+        return result, format_preview_jpg(result, only), None
+    result = scan_copy_transfer(src_r, tgt_r, only=only)
+    if result.list_missing:
+        print(
+            f'List file not found (expected "{COPY_TRANSFER_LIST_NAME}" under source):\n'
+            f"  {src_r / COPY_TRANSFER_LIST_NAME}",
+            file=sys.stderr,
+        )
+        return result, "", 2
+    return (
+        result,
+        format_preview_copy_transfer(result, only, src_r),
+        None,
+    )
+
+
+def _cli_planned_items(action: str, result: object) -> list[tuple[Path, Path]]:
+    if action == "mark":
+        return result.planned  # type: ignore[attr-defined]
+    if action in ("title-strip", "bracket-tag"):
+        return result.planned  # type: ignore[attr-defined]
+    if action == "jpg-move":
+        return result.moves  # type: ignore[attr-defined]
+    return result.copies  # type: ignore[attr-defined]
 
 
 def run_gui(
@@ -1262,17 +1340,16 @@ def run_gui(
         )
         TIP_BRACKET = (
             'Target only: type any tag text (e.g. NQ or Episode 3).\n'
-            "Preview / Apply — normalize one trailing \" [tag]\" (dedupe, fix spacing, skip if "
-            "another trailing tag is already there).\n"
-            "Append — add \" [tag]\" at the end without changing other tags.\n"
+            'Preview / Apply — append " [tag]" at the end (other bracket tags stay; skipped if '
+            "that tag is already the final trailing tag).\n"
             "Remove all tags — strip every […] from filenames."
         )
         TIP_BRACKET_TEXT = (
             "Text inside the brackets (without the brackets). Windows-forbidden characters "
             'are replaced with _. Example: NQ → "movie [NQ].mp4".'
         )
-        TIP_BRACKET_APPEND = (
-            "Append \" [tag]\" at the end of each target filename. Other bracket tags are left "
+        TIP_BRACKET_APPLY = (
+            'Append " [tag]" at the end of each target filename. Other bracket tags are left '
             "as-is; skipped if that tag is already the final trailing tag."
         )
         TIP_BRACKET_REMOVE_ALL = (
@@ -1563,24 +1640,16 @@ def run_gui(
                             "Apply",
                             self.on_preview_bracket_tag,
                             self.on_apply_bracket_tag,
-                            'List files that would get a normalized " [tag]" suffix.',
-                            "Apply the bracket tag to target files.",
+                            'List files that would get " [tag]" appended at the end.',
+                            self.TIP_BRACKET_APPLY,
                         )
                         dpg.add_spacer(height=4)
-                        with dpg.group(horizontal=True):
-                            btn_append = dpg.add_button(
-                                label="Append",
-                                callback=self.on_apply_bracket_tag_append,
-                                width=128,
-                            )
-                            btn_remove = dpg.add_button(
-                                label="Remove all tags",
-                                callback=self.on_apply_bracket_tag_remove_all,
-                                width=-1,
-                            )
-                        dpg.bind_item_theme(btn_append, self._theme_apply)
+                        btn_remove = dpg.add_button(
+                            label="Remove all tags",
+                            callback=self.on_apply_bracket_tag_remove_all,
+                            width=-1,
+                        )
                         dpg.bind_item_theme(btn_remove, self._theme_apply)
-                        self._hover_tip(btn_append, self.TIP_BRACKET_APPEND)
                         self._hover_tip(btn_remove, self.TIP_BRACKET_REMOVE_ALL)
 
                     hdr_jpg = self._section("JPG transfer", self.TIP_JPG, "jpg")
@@ -1635,7 +1704,7 @@ def run_gui(
 
         def _browse_add_source_folder(self) -> None:
             if sys.platform != "win32":
-                self._msg_warning("Browse", "Folder picker is only supported on Windows.")
+                self._msg("Browse", "Folder picker is only supported on Windows.")
                 return
             path = pick_native_folder("Select source folder", self._source_browse_hint())
             if path:
@@ -1643,7 +1712,7 @@ def run_gui(
 
         def _browse_add_source_files(self) -> None:
             if sys.platform != "win32":
-                self._msg_warning("Browse", "File picker is only supported on Windows.")
+                self._msg("Browse", "File picker is only supported on Windows.")
                 return
             paths = pick_native_files("Select files", self._source_browse_hint())
             if paths:
@@ -1651,7 +1720,7 @@ def run_gui(
 
         def _browse_target_folder(self) -> None:
             if sys.platform != "win32":
-                self._msg_warning("Browse", "Folder picker is only supported on Windows.")
+                self._msg("Browse", "Folder picker is only supported on Windows.")
                 return
             current = str(dpg.get_value(self.TAG_TARGET)).strip()
             path = pick_native_folder("Select target folder", current)
@@ -1731,27 +1800,12 @@ def run_gui(
             return str(dpg.get_value(self.TAG_SOURCE)).splitlines()
 
         def _merge_source_paths(self, new_paths: list[str]) -> None:
-            merged: list[str] = []
-            seen: set[str] = set()
-            for line in self._source_list_lines():
-                s = line.strip()
-                if not s:
-                    continue
-                key = s.casefold()
-                if key in seen:
-                    continue
-                seen.add(key)
-                merged.append(s)
+            lines = [ln.strip() for ln in self._source_list_lines() if ln.strip()]
             for p in new_paths:
                 s = str(p).strip()
-                if not s:
-                    continue
-                key = s.casefold()
-                if key in seen:
-                    continue
-                seen.add(key)
-                merged.append(s)
-            dpg.set_value(self.TAG_SOURCE, "\n".join(merged))
+                if s:
+                    lines.append(s)
+            dpg.set_value(self.TAG_SOURCE, "\n".join(_dedupe_path_lines(lines)))
 
         def _on_clear_source_paths(self) -> None:
             dpg.set_value(self.TAG_SOURCE, "")
@@ -1774,15 +1828,6 @@ def run_gui(
 
         def _msg(self, title: str, message: str) -> None:
             self._set_preview(f"{title}\n\n{message}")
-
-        def _msg_error(self, title: str, message: str) -> None:
-            self._msg(title, message)
-
-        def _msg_warning(self, title: str, message: str) -> None:
-            self._msg(title, message)
-
-        def _msg_info(self, title: str, message: str) -> None:
-            self._msg(title, message)
 
         def _gui_sections_snapshot(self) -> dict[str, bool]:
             sections: dict[str, bool] = {}
@@ -1821,6 +1866,83 @@ def run_gui(
             self._update_source_paths_after_renames(done)
             return n, errors
 
+        def _work_tuple(self, work: WorkPaths):
+            return work.source_root, work.target_root, work.only, work.source_library
+
+        def _gui_preview(
+            self,
+            action: str,
+            busy: str,
+            scan,
+            format_result,
+            *,
+            pre_check=None,
+        ) -> None:
+            config_record_last(action, "preview")
+            if pre_check is not None:
+                err = pre_check()
+                if err:
+                    title, msg = err
+                    self._msg(title, msg)
+                    return
+            work, err = self.resolve_work_paths()
+            if err:
+                self._msg("Invalid paths", err)
+                return
+            self.persist_paths()
+            self._set_preview(busy)
+            try:
+                result = scan(work)
+            except OSError as e:
+                self._msg("Scan failed", str(e))
+                self._set_preview("")
+                return
+            self._set_preview(format_result(result, work))
+
+        def _gui_apply(
+            self,
+            action: str,
+            scan,
+            get_items,
+            apply_items,
+            refresh_preview,
+            *,
+            pre_check=None,
+            fail_label: str = "Renamed",
+            error_title: str = "Some renames failed",
+            list_missing=None,
+        ) -> None:
+            config_record_last(action, "apply")
+            if pre_check is not None:
+                err = pre_check()
+                if err:
+                    title, msg = err
+                    self._msg(title, msg)
+                    return
+            work, err = self.resolve_work_paths()
+            if err:
+                self._msg("Invalid paths", err)
+                return
+            try:
+                result = scan(work)
+            except OSError as e:
+                self._msg("Scan failed", str(e))
+                return
+            if list_missing is not None and list_missing(result, work):
+                return
+            items = get_items(result)
+            if not items:
+                return
+            self.persist_paths()
+            n, errors = apply_items(items)
+            if errors:
+                self._set_preview(
+                    f"{error_title}\n\n{fail_label}: {n}\nFailed: {len(errors)}\n\n"
+                    + "\n\n".join(errors[:10])
+                )
+            else:
+                refresh_preview()
+
         def on_close(self) -> None:
             try:
                 self.persist_paths()
@@ -1832,654 +1954,207 @@ def run_gui(
                 self._process_frame()
             dpg.destroy_context()
 
+        def _bracket_tag_required(self, when: str):
+            tag = self._bracket_tag_text()
+            if tag:
+                return None
+            return ("Tag text required", f"Enter tag text (e.g. NQ) before {when}.")
+
         def on_preview(self) -> None:
-            config_record_last("mark", "preview")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
+            self._gui_preview(
+                "mark",
+                "Scanning…\n",
+                lambda w: scan_target(*self._work_tuple(w)[:3], source_library=w.source_library),
+                lambda r, w: format_preview_mark(r, w.only),
             )
-            self.persist_paths()
-
-            self._set_preview("Scanning…\n")
-
-            try:
-                result = scan_target(src_r, tgt_r, only=only, source_library=src_lib)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            lines.append("Files to rename (add ✔ prefix):\n")
-            if result.planned:
-                for old_path, new_path in result.planned:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if result.skipped_exists:
-                lines.append("\nNot included (✔ name already exists):\n")
-                for p in result.skipped_exists:
-                    lines.append(f"  {p}\n")
-
-            lines.append(
-                f"\nSummary — to rename: {len(result.planned)}, "
-                f"already marked: {result.skipped_checked}, "
-                f"no source match: {result.skipped_no_match}, "
-                f"skipped (under source tree): {result.skipped_under_source}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_preview_title_strip(self) -> None:
-            config_record_last("title-strip", "preview")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            strip_chars = str(dpg.get_value(self.TAG_STRIP))
-            self.persist_paths()
-
-            self._set_preview("Scanning target for title strip…\n")
-
-            try:
-                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=only, source_library=src_lib)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            lines.append("Target files to rename (strip characters from stem):\n")
-            if ts.planned:
-                for old_path, new_path in ts.planned:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path.name}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if ts.skipped_collision:
-                lines.append(
-                    "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
-                )
-                for old_path, dest_path in ts.skipped_collision:
-                    lines.append(f"  {old_path.name}\n")
-                    lines.append(f"    -> {dest_path.name}\n")
-
-            lines.append(
-                f"\nSummary — to rename: {len(ts.planned)}, "
-                f"unchanged: {ts.skipped_unchanged}, "
-                f"collision: {len(ts.skipped_collision)}, "
-                f"skipped (under source tree): {ts.skipped_under_source}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_apply_title_strip(self) -> None:
-            config_record_last("title-strip", "apply")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            strip_chars = str(dpg.get_value(self.TAG_STRIP))
-
-            try:
-                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=only, source_library=src_lib)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
-
-            if not ts.planned:
-                return
-
-            self.persist_paths()
-
-            n, errors = self._apply_renames_gui(ts.planned)
-            if errors:
-                self._set_preview(
-                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
-                )
-            else:
-                self.on_preview_title_strip()
-
-        def on_preview_bracket_tag(self) -> None:
-            config_record_last("bracket-tag", "preview")
-            tag_inner = self._bracket_tag_text()
-            if not tag_inner:
-                self._msg_error("Tag text required", "Enter tag text (e.g. NQ) before preview.")
-                return
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            self.persist_paths()
-
-            self._set_preview(f'Scanning target for tag "[{tag_inner}]"…\n')
-
-            try:
-                bt = scan_bracket_tag(src_r, tgt_r, tag_inner, only=only, source_library=src_lib)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            lines.append(f'Target files to rename (normalize " [{tag_inner}]" before extension):\n')
-            if bt.planned:
-                for old_path, new_path in bt.planned:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path.name}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if bt.skipped_collision:
-                lines.append(
-                    "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
-                )
-                for old_path, dest_path in bt.skipped_collision:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {dest_path.name}\n")
-
-            lines.append(
-                f"\nSummary — to rename: {len(bt.planned)}, "
-                f"already tagged / no change / other trailing tag: {bt.skipped_already_tagged}, "
-                f"collision: {len(bt.skipped_collision)}, "
-                f"skipped (under source tree): {bt.skipped_under_source}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_apply_bracket_tag(self) -> None:
-            config_record_last("bracket-tag", "apply")
-            tag_inner = self._bracket_tag_text()
-            if not tag_inner:
-                self._msg_error("Tag text required", "Enter tag text (e.g. NQ) before apply.")
-                return
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-
-            try:
-                bt = scan_bracket_tag(src_r, tgt_r, tag_inner, only=only, source_library=src_lib)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
-
-            if not bt.planned:
-                return
-
-            self.persist_paths()
-
-            n, errors = self._apply_renames_gui(bt.planned)
-            if errors:
-                self._set_preview(
-                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
-                )
-            else:
-                self.on_preview_bracket_tag()
-
-        def on_apply_bracket_tag_append(self) -> None:
-            config_record_last("bracket-tag", "apply")
-            tag_inner = self._bracket_tag_text()
-            if not tag_inner:
-                self._msg_error("Tag text required", "Enter tag text (e.g. NQ) before append.")
-                return
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-
-            try:
-                bt = scan_bracket_tag_append(
-                    src_r, tgt_r, tag_inner, only=only, source_library=src_lib
-                )
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
-
-            if not bt.planned:
-                return
-
-            self.persist_paths()
-
-            n, errors = self._apply_renames_gui(bt.planned)
-            if errors:
-                self._set_preview(
-                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
-                )
-            else:
-                self.on_preview_bracket_tag_append()
-
-        def on_preview_bracket_tag_append(self) -> None:
-            config_record_last("bracket-tag", "preview")
-            tag_inner = self._bracket_tag_text()
-            if not tag_inner:
-                self._msg_error("Tag text required", "Enter tag text (e.g. NQ) before preview.")
-                return
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            self.persist_paths()
-
-            self._set_preview(f'Scanning target to append " [{tag_inner}]"…\n')
-
-            try:
-                bt = scan_bracket_tag_append(
-                    src_r, tgt_r, tag_inner, only=only, source_library=src_lib
-                )
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            lines.append(f'Target files to rename (append " [{tag_inner}]" at end):\n')
-            if bt.planned:
-                for old_path, new_path in bt.planned:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path.name}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if bt.skipped_collision:
-                lines.append(
-                    "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
-                )
-                for old_path, dest_path in bt.skipped_collision:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {dest_path.name}\n")
-
-            lines.append(
-                f"\nSummary — to rename: {len(bt.planned)}, "
-                f"already has tag at end / no change: {bt.skipped_already_tagged}, "
-                f"collision: {len(bt.skipped_collision)}, "
-                f"skipped (under source tree): {bt.skipped_under_source}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_apply_bracket_tag_remove_all(self) -> None:
-            config_record_last("bracket-tag", "apply")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-
-            try:
-                bt = scan_bracket_tag_remove_all(
-                    src_r, tgt_r, only=only, source_library=src_lib
-                )
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
-
-            if not bt.planned:
-                return
-
-            self.persist_paths()
-
-            n, errors = self._apply_renames_gui(bt.planned)
-            if errors:
-                self._set_preview(
-                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
-                )
-            else:
-                self.on_preview_bracket_tag_remove_all()
-
-        def on_preview_bracket_tag_remove_all(self) -> None:
-            config_record_last("bracket-tag", "preview")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            self.persist_paths()
-
-            self._set_preview("Scanning target to remove all bracket tags…\n")
-
-            try:
-                bt = scan_bracket_tag_remove_all(
-                    src_r, tgt_r, only=only, source_library=src_lib
-                )
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            lines.append("Target files to rename (remove all […] tags):\n")
-            if bt.planned:
-                for old_path, new_path in bt.planned:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path.name}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if bt.skipped_collision:
-                lines.append(
-                    "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
-                )
-                for old_path, dest_path in bt.skipped_collision:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {dest_path.name}\n")
-
-            lines.append(
-                f"\nSummary — to rename: {len(bt.planned)}, "
-                f"no bracket tags / no change: {bt.skipped_already_tagged}, "
-                f"collision: {len(bt.skipped_collision)}, "
-                f"skipped (under source tree): {bt.skipped_under_source}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_preview_jpg(self) -> None:
-            config_record_last("jpg-move", "preview")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            self.persist_paths()
-
-            self._set_preview("Scanning .jpg files…\n")
-
-            try:
-                jpg = scan_jpg_moves(src_r, tgt_r, only=only)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            lines.append("JPG files to move (source → target, relative path preserved):\n")
-            if jpg.moves:
-                for old_path, new_path in jpg.moves:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if jpg.skipped_exists:
-                lines.append("\nSkipped (file already exists at destination):\n")
-                for s_path, d_path in jpg.skipped_exists:
-                    lines.append(f"  {s_path}\n")
-                    lines.append(f"    (exists: {d_path})\n")
-
-            lines.append(
-                f"\nSummary — to move: {len(jpg.moves)}, skipped (dest exists): {len(jpg.skipped_exists)}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_apply_jpg(self) -> None:
-            config_record_last("jpg-move", "apply")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-
-            try:
-                jpg = scan_jpg_moves(src_r, tgt_r, only=only)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
-
-            if not jpg.moves:
-                return
-
-            self.persist_paths()
-
-            n, errors = apply_jpg_moves(jpg.moves)
-            if errors:
-                self._set_preview(
-                    f"Some moves failed\n\nMoved: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
-                )
-            else:
-                self.on_preview_jpg()
-
-        def on_preview_copy_transfer(self) -> None:
-            config_record_last("copy-transfer", "preview")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-            self.persist_paths()
-
-            self._set_preview("Reading copy list…\n")
-
-            try:
-                xfer = scan_copy_transfer(src_r, tgt_r, only=only)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                self._set_preview("")
-                return
-
-            self._set_preview("")
-            lines: list[str] = []
-            if only:
-                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
-            list_path = src_r / COPY_TRANSFER_LIST_NAME
-
-            if xfer.list_missing:
-                lines.append(
-                    f"List file not found (expected at):\n  {list_path}\n"
-                )
-                self._set_preview("".join(lines))
-                return
-
-            lines.append(
-                f'Videos to copy (from "{COPY_TRANSFER_LIST_NAME}"; source → target):\n'
-            )
-            if xfer.copies:
-                for old_path, new_path in xfer.copies:
-                    lines.append(f"  {old_path}\n")
-                    lines.append(f"    -> {new_path}\n")
-            else:
-                lines.append("  (none)\n")
-
-            if xfer.skipped_exists:
-                lines.append("\nSkipped (file already exists at destination):\n")
-                for s_path, d_path in xfer.skipped_exists:
-                    lines.append(f"  {s_path}\n")
-                    lines.append(f"    (exists: {d_path})\n")
-
-            if xfer.missing:
-                lines.append(f"\nNot found under source ({len(xfer.missing)}):\n")
-                for name in xfer.missing[:80]:
-                    lines.append(f"  {name}\n")
-                if len(xfer.missing) > 80:
-                    lines.append(f"  … and {len(xfer.missing) - 80} more\n")
-
-            if xfer.not_in_selection:
-                lines.append(
-                    f"\nFound under source but not in selected files ({len(xfer.not_in_selection)}):\n"
-                )
-                for name in xfer.not_in_selection[:80]:
-                    lines.append(f"  {name}\n")
-                if len(xfer.not_in_selection) > 80:
-                    lines.append(f"  … and {len(xfer.not_in_selection) - 80} more\n")
-
-            if xfer.ambiguous:
-                lines.append("\nSkipped (multiple files with same name under source):\n")
-                for base, paths in xfer.ambiguous[:30]:
-                    lines.append(f"  {base}\n")
-                    for p in paths[:5]:
-                        lines.append(f"    {p}\n")
-                    if len(paths) > 5:
-                        lines.append(f"    … and {len(paths) - 5} more\n")
-
-            lines.append(
-                f"\nSummary — to copy: {len(xfer.copies)}, "
-                f"dest exists: {len(xfer.skipped_exists)}, "
-                f"not found: {len(xfer.missing)}, "
-                f"not in selection: {len(xfer.not_in_selection)}, "
-                f"ambiguous: {len(xfer.ambiguous)}\n"
-            )
-            self._set_preview("".join(lines))
-
-        def on_apply_copy_transfer(self) -> None:
-            config_record_last("copy-transfer", "apply")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
-            )
-
-            try:
-                xfer = scan_copy_transfer(src_r, tgt_r, only=only)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
-
-            if xfer.list_missing:
-                self._msg_error(
-                    "List missing",
-                    f'Could not find "{COPY_TRANSFER_LIST_NAME}" under the source folder:\n\n'
-                    f"{src_r}",
-                )
-                return
-
-            if not xfer.copies:
-                return
-
-            self.persist_paths()
-
-            n, errors = apply_copy_transfer(xfer.copies)
-            if errors:
-                self._set_preview(
-                    f"Some copies failed\n\nCopied: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
-                )
-            else:
-                self.on_preview_copy_transfer()
 
         def on_apply(self) -> None:
-            config_record_last("mark", "apply")
-            work, err = self.resolve_work_paths()
-            if err:
-                self._msg_error("Invalid paths", err)
-                return
-            src_r, tgt_r, only, src_lib = (
-                work.source_root,
-                work.target_root,
-                work.only,
-                work.source_library,
+            self._gui_apply(
+                "mark",
+                lambda w: scan_target(*self._work_tuple(w)[:3], source_library=w.source_library),
+                lambda r: r.planned,
+                self._apply_renames_gui,
+                self.on_preview,
+                fail_label="Renamed",
             )
 
-            try:
-                result = scan_target(src_r, tgt_r, only=only, source_library=src_lib)
-            except OSError as e:
-                self._msg_error("Scan failed", str(e))
-                return
+        def on_preview_title_strip(self) -> None:
+            strip = str(dpg.get_value(self.TAG_STRIP))
 
-            if not result.planned:
-                return
-
-            self.persist_paths()
-
-            n, errors = self._apply_renames_gui(result.planned)
-            if errors:
-                self._set_preview(
-                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
-                    + "\n\n".join(errors[:10])
+            def scan(w):
+                return scan_title_strip(
+                    w.source_root,
+                    w.target_root,
+                    strip,
+                    only=w.only,
+                    source_library=w.source_library,
                 )
-            else:
-                self.on_preview()
+
+            self._gui_preview(
+                "title-strip",
+                "Scanning target for title strip…\n",
+                scan,
+                lambda r, w: format_preview_rename(
+                    r,
+                    w.only,
+                    "Target files to rename (strip characters from stem):\n",
+                    "unchanged",
+                    collision_basename_only=True,
+                ),
+            )
+
+        def on_apply_title_strip(self) -> None:
+            strip = str(dpg.get_value(self.TAG_STRIP))
+
+            def scan(w):
+                return scan_title_strip(
+                    w.source_root,
+                    w.target_root,
+                    strip,
+                    only=w.only,
+                    source_library=w.source_library,
+                )
+
+            self._gui_apply(
+                "title-strip",
+                scan,
+                lambda r: r.planned,
+                self._apply_renames_gui,
+                self.on_preview_title_strip,
+            )
+
+        def on_preview_bracket_tag(self) -> None:
+            tag = self._bracket_tag_text()
+
+            def scan(w):
+                return scan_bracket_tag(
+                    w.source_root,
+                    w.target_root,
+                    tag,
+                    only=w.only,
+                    source_library=w.source_library,
+                )
+
+            self._gui_preview(
+                "bracket-tag",
+                f'Scanning target for tag "[{tag}]"…\n',
+                scan,
+                lambda r, w: format_preview_rename(
+                    r,
+                    w.only,
+                    f'Target files to rename (append " [{tag}]" at end):\n',
+                    "already has tag at end / no change",
+                    collision_basename_only=False,
+                ),
+                pre_check=lambda: self._bracket_tag_required("preview"),
+            )
+
+        def on_apply_bracket_tag(self) -> None:
+            tag = self._bracket_tag_text()
+
+            def scan(w):
+                return scan_bracket_tag(
+                    w.source_root,
+                    w.target_root,
+                    tag,
+                    only=w.only,
+                    source_library=w.source_library,
+                )
+
+            self._gui_apply(
+                "bracket-tag",
+                scan,
+                lambda r: r.planned,
+                self._apply_renames_gui,
+                self.on_preview_bracket_tag,
+                pre_check=lambda: self._bracket_tag_required("apply"),
+            )
+
+        def on_preview_bracket_tag_remove_all(self) -> None:
+            self._gui_preview(
+                "bracket-tag",
+                "Scanning target to remove all bracket tags…\n",
+                lambda w: scan_bracket_tag_remove_all(
+                    w.source_root,
+                    w.target_root,
+                    only=w.only,
+                    source_library=w.source_library,
+                ),
+                lambda r, w: format_preview_rename(
+                    r,
+                    w.only,
+                    "Target files to rename (remove all […] tags):\n",
+                    "no bracket tags / no change",
+                    collision_basename_only=False,
+                ),
+            )
+
+        def on_apply_bracket_tag_remove_all(self) -> None:
+            self._gui_apply(
+                "bracket-tag",
+                lambda w: scan_bracket_tag_remove_all(
+                    w.source_root,
+                    w.target_root,
+                    only=w.only,
+                    source_library=w.source_library,
+                ),
+                lambda r: r.planned,
+                self._apply_renames_gui,
+                self.on_preview_bracket_tag_remove_all,
+            )
+
+        def on_preview_jpg(self) -> None:
+            self._gui_preview(
+                "jpg-move",
+                "Scanning .jpg files…\n",
+                lambda w: scan_jpg_moves(w.source_root, w.target_root, only=w.only),
+                lambda r, w: format_preview_jpg(r, w.only),
+            )
+
+        def on_apply_jpg(self) -> None:
+            self._gui_apply(
+                "jpg-move",
+                lambda w: scan_jpg_moves(w.source_root, w.target_root, only=w.only),
+                lambda r: r.moves,
+                apply_jpg_moves,
+                self.on_preview_jpg,
+                fail_label="Moved",
+                error_title="Some moves failed",
+            )
+
+        def on_preview_copy_transfer(self) -> None:
+            self._gui_preview(
+                "copy-transfer",
+                "Reading copy list…\n",
+                lambda w: scan_copy_transfer(
+                    w.source_root, w.target_root, only=w.only
+                ),
+                lambda r, w: format_preview_copy_transfer(r, w.only, w.source_root),
+            )
+
+        def on_apply_copy_transfer(self) -> None:
+            def list_missing(xfer, work):
+                if not xfer.list_missing:
+                    return False
+                self._msg(
+                    "List missing",
+                    f'Could not find "{COPY_TRANSFER_LIST_NAME}" under the source folder:\n\n'
+                    f"{work.source_root}",
+                )
+                return True
+
+            self._gui_apply(
+                "copy-transfer",
+                lambda w: scan_copy_transfer(
+                    w.source_root, w.target_root, only=w.only
+                ),
+                lambda r: r.copies,
+                apply_copy_transfer,
+                self.on_preview_copy_transfer,
+                fail_label="Copied",
+                error_title="Some copies failed",
+                list_missing=list_missing,
+            )
 
     App().run()
 
@@ -2592,177 +2267,33 @@ def run_cli(argv: list[str]) -> int:
         print(err, file=sys.stderr)
         return 2
 
-    src_r, tgt_r, only, src_lib = (
-        work.source_root,
-        work.target_root,
-        work.only,
-        work.source_library,
-    )
     do_apply = bool(args.apply)
     do_preview = not do_apply or args.preview
     config_record_last(args.action, "apply" if do_apply else "preview")
 
-    def cli_scope_banner() -> str:
-        return f"Limited to {len(only)} listed file(s).\n\n" if only else ""
-
     try:
-        if args.action == "mark":
-            result = scan_target(src_r, tgt_r, only=only, source_library=src_lib)
-            if do_preview:
-                print(cli_scope_banner() + "Files to rename (add ✔ prefix):")
-                if result.planned:
-                    for old_path, new_path in result.planned:
-                        print(f"  {old_path}")
-                        print(f"    -> {new_path}")
-                else:
-                    print("  (none)")
+        result, preview_text, early = _cli_scan_and_format(
+            args.action, work, strip_chars, tag_text
+        )
+        if early == 2:
+            if args.action == "bracket-tag":
                 print(
-                    f"\nSummary — to rename: {len(result.planned)}, "
-                    f"already marked: {result.skipped_checked}, "
-                    f"no source match: {result.skipped_no_match}, "
-                    f"skipped (under source tree): {result.skipped_under_source}"
-                )
-            if do_apply:
-                if not result.planned:
-                    print("Nothing to do.")
-                    return 0
-                n, errors, _ = apply_renames(result.planned)
-                print(f"Renamed {n} file(s).")
-                if errors:
-                    print(_cli_format_errors(errors), file=sys.stderr)
-                    return 1
-
-        elif args.action == "title-strip":
-            ts = scan_title_strip(src_r, tgt_r, strip_chars, only=only, source_library=src_lib)
-            if do_preview:
-                print(
-                    cli_scope_banner()
-                    + "Target files to rename (strip characters from stem):"
-                )
-                if ts.planned:
-                    for old_path, new_path in ts.planned:
-                        print(f"  {old_path}")
-                        print(f"    -> {new_path.name}")
-                else:
-                    print("  (none)")
-                print(
-                    f"\nSummary — to rename: {len(ts.planned)}, "
-                    f"unchanged: {ts.skipped_unchanged}, "
-                    f"collision: {len(ts.skipped_collision)}, "
-                    f"skipped (under source tree): {ts.skipped_under_source}"
-                )
-            if do_apply:
-                if not ts.planned:
-                    print("Nothing to do.")
-                    return 0
-                n, errors, _ = apply_renames(ts.planned)
-                print(f"Renamed {n} file(s).")
-                if errors:
-                    print(_cli_format_errors(errors), file=sys.stderr)
-                    return 1
-
-        elif args.action == "bracket-tag":
-            if not tag_text:
-                print("Tag text required (--tag-text or saved bracket_tag_text).", file=sys.stderr)
-                return 2
-            bt = scan_bracket_tag(src_r, tgt_r, tag_text, only=only, source_library=src_lib)
-            if do_preview:
-                print(
-                    cli_scope_banner()
-                    + f'Target files to rename (normalize " [{tag_text}]" before extension):'
-                )
-                if bt.planned:
-                    for old_path, new_path in bt.planned:
-                        print(f"  {old_path}")
-                        print(f"    -> {new_path.name}")
-                else:
-                    print("  (none)")
-                print(
-                    f"\nSummary — to rename: {len(bt.planned)}, "
-                    f"already tagged / no change / other trailing tag: {bt.skipped_already_tagged}, "
-                    f"collision: {len(bt.skipped_collision)}, "
-                    f"skipped (under source tree): {bt.skipped_under_source}"
-                )
-            if do_apply:
-                if not bt.planned:
-                    print("Nothing to do.")
-                    return 0
-                n, errors, _ = apply_renames(bt.planned)
-                print(f"Renamed {n} file(s).")
-                if errors:
-                    print(_cli_format_errors(errors), file=sys.stderr)
-                    return 1
-
-        elif args.action == "jpg-move":
-            jpg = scan_jpg_moves(src_r, tgt_r, only=only)
-            if do_preview:
-                print(
-                    cli_scope_banner()
-                    + "JPG files to move (source → target, relative path preserved):"
-                )
-                if jpg.moves:
-                    for old_path, new_path in jpg.moves:
-                        print(f"  {old_path}")
-                        print(f"    -> {new_path}")
-                else:
-                    print("  (none)")
-                print(
-                    f"\nSummary — to move: {len(jpg.moves)}, "
-                    f"skipped (dest exists): {len(jpg.skipped_exists)}"
-                )
-            if do_apply:
-                if not jpg.moves:
-                    print("Nothing to do.")
-                    return 0
-                n, errors = apply_jpg_moves(jpg.moves)
-                print(f"Moved {n} .jpg file(s).")
-                if errors:
-                    print(_cli_format_errors(errors), file=sys.stderr)
-                    return 1
-
-        elif args.action == "copy-transfer":
-            xfer = scan_copy_transfer(src_r, tgt_r, only=only)
-            if xfer.list_missing:
-                print(
-                    f'List file not found (expected "{COPY_TRANSFER_LIST_NAME}" under source):\n  {src_r / COPY_TRANSFER_LIST_NAME}',
+                    "Tag text required (--tag-text or saved bracket_tag_text).",
                     file=sys.stderr,
                 )
-                return 2
-            if do_preview:
-                print(
-                    cli_scope_banner()
-                    + f'Videos to copy (from "{COPY_TRANSFER_LIST_NAME}"; source → target):'
-                )
-                if xfer.copies:
-                    for old_path, new_path in xfer.copies:
-                        print(f"  {old_path}")
-                        print(f"    -> {new_path}")
-                else:
-                    print("  (none)")
-                if xfer.not_in_selection:
-                    print(
-                        f"\nFound under source but not in selected files ({len(xfer.not_in_selection)}):"
-                    )
-                    for name in xfer.not_in_selection[:80]:
-                        print(f"  {name}")
-                    if len(xfer.not_in_selection) > 80:
-                        print(f"  … and {len(xfer.not_in_selection) - 80} more")
-                print(
-                    f"\nSummary — to copy: {len(xfer.copies)}, "
-                    f"dest exists: {len(xfer.skipped_exists)}, "
-                    f"not found: {len(xfer.missing)}, "
-                    f"not in selection: {len(xfer.not_in_selection)}, "
-                    f"ambiguous: {len(xfer.ambiguous)}"
-                )
-            if do_apply:
-                if not xfer.copies:
-                    print("Nothing to do.")
-                    return 0
-                n, errors = apply_copy_transfer(xfer.copies)
-                print(f"Copied {n} video file(s).")
-                if errors:
-                    print(_cli_format_errors(errors), file=sys.stderr)
-                    return 1
+            return 2
+        if early is not None:
+            return early
+        if do_preview and preview_text:
+            print(preview_text.rstrip("\n"))
+        if do_apply:
+            _, errors, code = _cli_apply_items(
+                args.action, _cli_planned_items(args.action, result)
+            )
+            if errors:
+                print(_cli_format_errors(errors), file=sys.stderr)
+            if code:
+                return code
     except OSError as e:
         print(str(e), file=sys.stderr)
         return 1
