@@ -5,8 +5,8 @@
 // (checkbox on in GUI; Ctrl+preview uses the same list).
 // No selection: whole source/target folders as before.
 //
-// Ctrl+click: repeat the last action used in the GUI (preview or apply) on the
-// selected files, using saved source/target from %APPDATA%\OrganizeFiles\settings.json.
+// Ctrl+click: run the last GUI action (e.g. tag apply) on the selection — always
+// Apply, not Preview. Uses saved tag/strip paths from %APPDATA%\OrganizeFiles\settings.json.
 // GUI also saves which panels were expanded (e.g. Filename tags) when you close the window.
 //
 /** Optional full path to OrganizeFiles.py if auto-detect fails. */
@@ -188,8 +188,13 @@ function OnClick(clickData) {
     var srcHint = tab ? tabFolderPath(tab) : "";
     var destTab = clickData.func.desttab;
     var tgtHint = tabFolderPath(destTab);
-    var qual = String(clickData.func.qualifiers || "").toLowerCase();
-    var isCtrl = qual.indexOf("ctrl") >= 0;
+    var qualStr = "";
+    try {
+        qualStr = String(clickData.func.qualifiers + "").toLowerCase();
+    } catch (eq) {
+        qualStr = "";
+    }
+    var isCtrl = qualStr.indexOf("ctrl") >= 0;
 
     var selected = [];
     if (tab) {
@@ -212,8 +217,11 @@ function OnClick(clickData) {
         if (tgtHint) {
             execRepeat += " --target " + quoteArg(tgtHint);
         }
+        execRepeat += " --apply";
         execRepeat = appendOnlyList(execRepeat, onlyListPath);
-        execRepeat = appendOnlyFiles(execRepeat, selected);
+        if (!onlyListPath) {
+            execRepeat = appendOnlyFiles(execRepeat, selected);
+        }
         DOpus.Output("Organize Files (repeat last): " + execRepeat);
         var rc = shell.Run(execRepeat, 1, true);
         DOpus.Output("Organize Files (repeat last) exit code: " + rc);

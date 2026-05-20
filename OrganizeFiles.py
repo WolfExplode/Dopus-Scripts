@@ -2228,10 +2228,12 @@ def run_cli(argv: list[str]) -> int:
     if args.repeat:
         last_action, last_mode = config_load_last()
         args.action = last_action
-        if last_mode == "apply":
-            args.apply = True
-        else:
-            args.preview = True
+        # --apply / --preview on the command line win (DOpus Ctrl+click passes --apply).
+        if not args.apply and not args.preview:
+            if last_mode == "apply":
+                args.apply = True
+            else:
+                args.preview = True
 
     if not args.action:
         run_gui(
@@ -2243,7 +2245,6 @@ def run_cli(argv: list[str]) -> int:
         return 0
 
     saved_src, saved_tgt, saved_strip, saved_tag = config_load_defaults()
-    src_s = args.source or saved_src or ""
     tgt_s = (args.target or saved_tgt or "").strip()
     strip_chars = normalize_strip_chars(
         args.strip_chars if args.strip_chars != "" else saved_strip
@@ -2252,17 +2253,12 @@ def run_cli(argv: list[str]) -> int:
         args.tag_text if args.tag_text != "" else saved_tag
     )
 
-    src_lines = [ln.strip() for ln in src_s.splitlines() if ln.strip()]
-    extra_only = read_only_paths(args.only_list, args.only_file)
-    if extra_only:
-        seen = {ln.casefold() for ln in src_lines}
-        for p in sorted(extra_only):
-            s = str(p)
-            if s.casefold() not in seen:
-                seen.add(s.casefold())
-                src_lines.append(s)
+    # Match GUI / DOpus: --only-list or --only-file → only those paths, not saved folders too.
+    src_s = build_initial_source_text(
+        saved_src, args.source, args.only_list, args.only_file
+    )
 
-    work, err = resolve_work_paths("\n".join(src_lines), tgt_s)
+    work, err = resolve_work_paths(src_s, tgt_s)
     if err:
         print(err, file=sys.stderr)
         return 2
@@ -2300,7 +2296,9 @@ def run_cli(argv: list[str]) -> int:
 
     if do_apply:
         try:
-            config_save(src_s, tgt_s, strip_chars, tag_text)
+            only_lines = _only_list_lines(args.only_list, args.only_file)
+            persist_source = saved_src if only_lines else src_s
+            config_save(persist_source, tgt_s, strip_chars, tag_text)
         except OSError:
             pass
     return 0
