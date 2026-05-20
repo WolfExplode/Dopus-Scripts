@@ -7,7 +7,7 @@ Also: read `Copy and Transfer.txt` in the source folder; each line is a `.mp4.jp
 Also: strip chosen characters from filenames under the target (stem only), trim spaces, remove trailing dots before the extension,
 collapse a duplicated final extension (e.g. ``.mp4.mp4`` → ``.mp4``; case-insensitive),
 and remove trailing copy suffixes like `` (1)`` / `` (23)`` (1–3 digits; avoids `` (2024)``-style years).
-Also: under the target tree, append a chosen `` [tag]`` before the file extension (any text you enter).
+Also: under the target tree, normalize or append a chosen `` [tag]`` before the file extension, or strip every ``[...]`` tag from names.
 
 GUI (Dear PyGui): edit source paths (folders and/or files), target folder, and strip characters; drag files/folders from Explorer onto the path fields (Windows); settings are stored under %APPDATA%\\OrganizeFiles.
 """
@@ -366,6 +366,19 @@ def sanitize_tag_text(text: str) -> str:
 _ANY_BRACKET_TAG = re.compile(r"\s?\[([^\]]*)\]")
 
 
+def _strip_bracket_tag_spans(stem: str, spans: list[tuple[int, int]]) -> str:
+    if not spans:
+        return stem
+    parts: list[str] = []
+    last = 0
+    for start, end in spans:
+        parts.append(stem[last:start])
+        last = end
+    parts.append(stem[last:])
+    merged = "".join(parts)
+    return re.sub(r" {2,}", " ", merged).strip()
+
+
 def remove_all_matching_bracket_tags(stem: str, tag_inner: str) -> str:
     """Remove every ``[tag]`` / `` [tag]`` in the stem whose inner text matches ``tag_inner`` (case-insensitive)."""
     want = tag_inner.casefold()
@@ -374,16 +387,13 @@ def remove_all_matching_bracket_tags(stem: str, tag_inner: str) -> str:
         inner = m.group(1).strip().casefold()
         if inner == want:
             to_remove.append((m.start(), m.end()))
-    if not to_remove:
-        return stem
-    parts: list[str] = []
-    last = 0
-    for start, end in to_remove:
-        parts.append(stem[last:start])
-        last = end
-    parts.append(stem[last:])
-    merged = "".join(parts)
-    return re.sub(r" {2,}", " ", merged).strip()
+    return _strip_bracket_tag_spans(stem, to_remove)
+
+
+def remove_all_bracket_tags(stem: str) -> str:
+    """Remove every ``[...]`` / `` [...]`` bracket tag in the stem."""
+    to_remove = [(m.start(), m.end()) for m in _ANY_BRACKET_TAG.finditer(stem)]
+    return _strip_bracket_tag_spans(stem, to_remove)
 
 
 def stem_final_trailing_bracket_inner(stem: str) -> Optional[str]:
@@ -420,6 +430,40 @@ def bracket_tag_new_name(path: Path, tag_inner: str) -> Optional[str]:
     return new_name
 
 
+def bracket_tag_append_name(path: Path, tag_inner: str) -> Optional[str]:
+    """Append `` [tag]`` at the end of the stem; leave other bracket tags unchanged."""
+    if not path.name or not tag_inner:
+        return None
+
+    suffix = path.suffix
+    stem = path.stem
+    tail = stem_final_trailing_bracket_inner(stem)
+    if tail is not None and tail.casefold() == tag_inner.casefold():
+        return None
+
+    base = stem.rstrip()
+    new_stem = (base + f" [{tag_inner}]") if base else f"[{tag_inner}]"
+    new_name = new_stem + suffix
+    if new_name == path.name:
+        return None
+    return new_name
+
+
+def bracket_tag_remove_all_name(path: Path) -> Optional[str]:
+    """Remove every ``[...]`` bracket tag from the stem."""
+    if not path.name:
+        return None
+
+    suffix = path.suffix
+    stem_clean = remove_all_bracket_tags(path.stem)
+    if stem_clean == path.stem:
+        return None
+    new_name = stem_clean + suffix
+    if new_name == path.name:
+        return None
+    return new_name
+
+
 def scan_bracket_tag(
     source_root: Path,
     target_root: Path,
@@ -449,6 +493,98 @@ def scan_bracket_tag(
             continue
 
         new_name = bracket_tag_new_name(path, tag_inner)
+        if new_name is None:
+            skipped_already_tagged += 1
+            continue
+
+        new_path = path.with_name(new_name)
+        if not rename_stays_valid(
+            source_root, target_root, path, new_path, source_library=source_library
+        ):
+            skipped_under_source += 1
+            continue
+        _try_plan_rename(
+            path, new_path, planned, skipped_collision, planned_dest_keys
+        )
+
+    return BracketTagScan(
+        planned=planned,
+        skipped_already_tagged=skipped_already_tagged,
+        skipped_collision=skipped_collision,
+        skipped_under_source=skipped_under_source,
+    )
+
+
+def scan_bracket_tag_append(
+    source_root: Path,
+    target_root: Path,
+    tag_text: str,
+    only: Optional[set[Path]] = None,
+    source_library: Optional[Path] = None,
+) -> BracketTagScan:
+    """Plan renames: append `` [tag_text]`` at end of each target-tree filename stem."""
+    planned: list[tuple[Path, Path]] = []
+    skipped_collision: list[tuple[Path, Path]] = []
+    skipped_already_tagged = 0
+    skipped_under_source = 0
+
+    tag_inner = sanitize_tag_text(tag_text)
+    if not tag_inner:
+        return BracketTagScan(
+            planned=[],
+            skipped_already_tagged=0,
+            skipped_collision=[],
+            skipped_under_source=0,
+        )
+
+    planned_dest_keys: set[str] = set()
+    for path in iter_files_in_tree(target_root, only):
+        if path_in_source_library(source_library, path):
+            skipped_under_source += 1
+            continue
+
+        new_name = bracket_tag_append_name(path, tag_inner)
+        if new_name is None:
+            skipped_already_tagged += 1
+            continue
+
+        new_path = path.with_name(new_name)
+        if not rename_stays_valid(
+            source_root, target_root, path, new_path, source_library=source_library
+        ):
+            skipped_under_source += 1
+            continue
+        _try_plan_rename(
+            path, new_path, planned, skipped_collision, planned_dest_keys
+        )
+
+    return BracketTagScan(
+        planned=planned,
+        skipped_already_tagged=skipped_already_tagged,
+        skipped_collision=skipped_collision,
+        skipped_under_source=skipped_under_source,
+    )
+
+
+def scan_bracket_tag_remove_all(
+    source_root: Path,
+    target_root: Path,
+    only: Optional[set[Path]] = None,
+    source_library: Optional[Path] = None,
+) -> BracketTagScan:
+    """Plan renames: strip every ``[...]`` tag from target-tree filenames."""
+    planned: list[tuple[Path, Path]] = []
+    skipped_collision: list[tuple[Path, Path]] = []
+    skipped_already_tagged = 0
+    skipped_under_source = 0
+
+    planned_dest_keys: set[str] = set()
+    for path in iter_files_in_tree(target_root, only):
+        if path_in_source_library(source_library, path):
+            skipped_under_source += 1
+            continue
+
+        new_name = bracket_tag_remove_all_name(path)
         if new_name is None:
             skipped_already_tagged += 1
             continue
@@ -834,17 +970,58 @@ def scan_target(
     )
 
 
-def apply_renames(planned: list[tuple[Path, Path]]) -> tuple[int, list[str]]:
-    """Returns (success_count, error_messages)."""
+def _rename_lookup_keys(path: Path) -> list[str]:
+    keys = [os.fspath(path).casefold(), path.as_posix().casefold()]
+    try:
+        resolved = path.resolve()
+        keys.append(os.fspath(resolved).casefold())
+        keys.append(resolved.as_posix().casefold())
+    except OSError:
+        pass
+    return keys
+
+
+def remap_path_lines(
+    lines: list[str], renames: list[tuple[Path, Path]]
+) -> list[str]:
+    """Replace source-input lines that match a renamed path with the new path."""
+    if not renames:
+        return lines
+    lookup: dict[str, str] = {}
+    for old_path, new_path in renames:
+        new_s = os.fspath(new_path)
+        for key in _rename_lookup_keys(old_path):
+            lookup[key] = new_s
+    out: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            out.append(line)
+            continue
+        hit = None
+        for key in _rename_lookup_keys(Path(stripped)):
+            if key in lookup:
+                hit = lookup[key]
+                break
+        out.append(hit if hit is not None else line)
+    return out
+
+
+def apply_renames(
+    planned: list[tuple[Path, Path]],
+) -> tuple[int, list[str], list[tuple[Path, Path]]]:
+    """Returns (success_count, error_messages, successfully_renamed pairs)."""
     errors: list[str] = []
+    done: list[tuple[Path, Path]] = []
     n = 0
     for old_path, new_path in planned:
         try:
             old_path.rename(new_path)
             n += 1
+            done.append((old_path, new_path))
         except OSError as e:
             errors.append(f"{old_path}\n  {e}")
-    return n, errors
+    return n, errors, done
 
 
 def scan_jpg_moves(
@@ -1084,15 +1261,22 @@ def run_gui(
             "always runs even when this is empty."
         )
         TIP_BRACKET = (
-            'Target only: type any tag text (e.g. NQ or Episode 3). Each file gets one trailing '
-            '" [tag]" before the extension. Fixes missing space before [, duplicate tags, and stray '
-            "[tag] earlier in the name — then reapplies one tag at the end "
-            "(e.g. Ultrasound[NQ].mp4 → Ultrasound [NQ].mp4).\n"
-            "A different trailing [tag] on a file is left as-is."
+            'Target only: type any tag text (e.g. NQ or Episode 3).\n'
+            "Preview / Apply — normalize one trailing \" [tag]\" (dedupe, fix spacing, skip if "
+            "another trailing tag is already there).\n"
+            "Append — add \" [tag]\" at the end without changing other tags.\n"
+            "Remove all tags — strip every […] from filenames."
         )
         TIP_BRACKET_TEXT = (
             "Text inside the brackets (without the brackets). Windows-forbidden characters "
             'are replaced with _. Example: NQ → "movie [NQ].mp4".'
+        )
+        TIP_BRACKET_APPEND = (
+            "Append \" [tag]\" at the end of each target filename. Other bracket tags are left "
+            "as-is; skipped if that tag is already the final trailing tag."
+        )
+        TIP_BRACKET_REMOVE_ALL = (
+            "Remove every […] bracket tag from target filenames (any tag text, anywhere in the name)."
         )
         TIP_JPG = (
             "Move every .jpg under Source into Target using the same relative paths "
@@ -1382,6 +1566,22 @@ def run_gui(
                             'List files that would get a normalized " [tag]" suffix.',
                             "Apply the bracket tag to target files.",
                         )
+                        dpg.add_spacer(height=4)
+                        with dpg.group(horizontal=True):
+                            btn_append = dpg.add_button(
+                                label="Append",
+                                callback=self.on_apply_bracket_tag_append,
+                                width=128,
+                            )
+                            btn_remove = dpg.add_button(
+                                label="Remove all tags",
+                                callback=self.on_apply_bracket_tag_remove_all,
+                                width=-1,
+                            )
+                        dpg.bind_item_theme(btn_append, self._theme_apply)
+                        dpg.bind_item_theme(btn_remove, self._theme_apply)
+                        self._hover_tip(btn_append, self.TIP_BRACKET_APPEND)
+                        self._hover_tip(btn_remove, self.TIP_BRACKET_REMOVE_ALL)
 
                     hdr_jpg = self._section("JPG transfer", self.TIP_JPG, "jpg")
                     with dpg.group(parent=hdr_jpg):
@@ -1603,6 +1803,24 @@ def run_gui(
         def _bracket_tag_text(self) -> str:
             return sanitize_tag_text(str(dpg.get_value(self.TAG_BRACKET)))
 
+        def _update_source_paths_after_renames(
+            self, renames: list[tuple[Path, Path]]
+        ) -> None:
+            if not renames:
+                return
+            lines = self._source_list_lines()
+            updated = remap_path_lines(lines, renames)
+            if updated != lines:
+                dpg.set_value(self.TAG_SOURCE, "\n".join(updated))
+                self.persist_paths()
+
+        def _apply_renames_gui(
+            self, planned: list[tuple[Path, Path]]
+        ) -> tuple[int, list[str]]:
+            n, errors, done = apply_renames(planned)
+            self._update_source_paths_after_renames(done)
+            return n, errors
+
         def on_close(self) -> None:
             try:
                 self.persist_paths()
@@ -1739,7 +1957,7 @@ def run_gui(
 
             self.persist_paths()
 
-            n, errors = apply_renames(ts.planned)
+            n, errors = self._apply_renames_gui(ts.planned)
             if errors:
                 self._set_preview(
                     f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
@@ -1831,7 +2049,7 @@ def run_gui(
 
             self.persist_paths()
 
-            n, errors = apply_renames(bt.planned)
+            n, errors = self._apply_renames_gui(bt.planned)
             if errors:
                 self._set_preview(
                     f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
@@ -1839,6 +2057,190 @@ def run_gui(
                 )
             else:
                 self.on_preview_bracket_tag()
+
+        def on_apply_bracket_tag_append(self) -> None:
+            config_record_last("bracket-tag", "apply")
+            tag_inner = self._bracket_tag_text()
+            if not tag_inner:
+                self._msg_error("Tag text required", "Enter tag text (e.g. NQ) before append.")
+                return
+            work, err = self.resolve_work_paths()
+            if err:
+                self._msg_error("Invalid paths", err)
+                return
+            src_r, tgt_r, only, src_lib = (
+                work.source_root,
+                work.target_root,
+                work.only,
+                work.source_library,
+            )
+
+            try:
+                bt = scan_bracket_tag_append(
+                    src_r, tgt_r, tag_inner, only=only, source_library=src_lib
+                )
+            except OSError as e:
+                self._msg_error("Scan failed", str(e))
+                return
+
+            if not bt.planned:
+                return
+
+            self.persist_paths()
+
+            n, errors = self._apply_renames_gui(bt.planned)
+            if errors:
+                self._set_preview(
+                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
+                    + "\n\n".join(errors[:10])
+                )
+            else:
+                self.on_preview_bracket_tag_append()
+
+        def on_preview_bracket_tag_append(self) -> None:
+            config_record_last("bracket-tag", "preview")
+            tag_inner = self._bracket_tag_text()
+            if not tag_inner:
+                self._msg_error("Tag text required", "Enter tag text (e.g. NQ) before preview.")
+                return
+            work, err = self.resolve_work_paths()
+            if err:
+                self._msg_error("Invalid paths", err)
+                return
+            src_r, tgt_r, only, src_lib = (
+                work.source_root,
+                work.target_root,
+                work.only,
+                work.source_library,
+            )
+            self.persist_paths()
+
+            self._set_preview(f'Scanning target to append " [{tag_inner}]"…\n')
+
+            try:
+                bt = scan_bracket_tag_append(
+                    src_r, tgt_r, tag_inner, only=only, source_library=src_lib
+                )
+            except OSError as e:
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
+                return
+
+            self._set_preview("")
+            lines: list[str] = []
+            if only:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
+            lines.append(f'Target files to rename (append " [{tag_inner}]" at end):\n')
+            if bt.planned:
+                for old_path, new_path in bt.planned:
+                    lines.append(f"  {old_path}\n")
+                    lines.append(f"    -> {new_path.name}\n")
+            else:
+                lines.append("  (none)\n")
+
+            if bt.skipped_collision:
+                lines.append(
+                    "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
+                )
+                for old_path, dest_path in bt.skipped_collision:
+                    lines.append(f"  {old_path}\n")
+                    lines.append(f"    -> {dest_path.name}\n")
+
+            lines.append(
+                f"\nSummary — to rename: {len(bt.planned)}, "
+                f"already has tag at end / no change: {bt.skipped_already_tagged}, "
+                f"collision: {len(bt.skipped_collision)}, "
+                f"skipped (under source tree): {bt.skipped_under_source}\n"
+            )
+            self._set_preview("".join(lines))
+
+        def on_apply_bracket_tag_remove_all(self) -> None:
+            config_record_last("bracket-tag", "apply")
+            work, err = self.resolve_work_paths()
+            if err:
+                self._msg_error("Invalid paths", err)
+                return
+            src_r, tgt_r, only, src_lib = (
+                work.source_root,
+                work.target_root,
+                work.only,
+                work.source_library,
+            )
+
+            try:
+                bt = scan_bracket_tag_remove_all(
+                    src_r, tgt_r, only=only, source_library=src_lib
+                )
+            except OSError as e:
+                self._msg_error("Scan failed", str(e))
+                return
+
+            if not bt.planned:
+                return
+
+            self.persist_paths()
+
+            n, errors = self._apply_renames_gui(bt.planned)
+            if errors:
+                self._set_preview(
+                    f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
+                    + "\n\n".join(errors[:10])
+                )
+            else:
+                self.on_preview_bracket_tag_remove_all()
+
+        def on_preview_bracket_tag_remove_all(self) -> None:
+            config_record_last("bracket-tag", "preview")
+            work, err = self.resolve_work_paths()
+            if err:
+                self._msg_error("Invalid paths", err)
+                return
+            src_r, tgt_r, only, src_lib = (
+                work.source_root,
+                work.target_root,
+                work.only,
+                work.source_library,
+            )
+            self.persist_paths()
+
+            self._set_preview("Scanning target to remove all bracket tags…\n")
+
+            try:
+                bt = scan_bracket_tag_remove_all(
+                    src_r, tgt_r, only=only, source_library=src_lib
+                )
+            except OSError as e:
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
+                return
+
+            self._set_preview("")
+            lines: list[str] = []
+            if only:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
+            lines.append("Target files to rename (remove all […] tags):\n")
+            if bt.planned:
+                for old_path, new_path in bt.planned:
+                    lines.append(f"  {old_path}\n")
+                    lines.append(f"    -> {new_path.name}\n")
+            else:
+                lines.append("  (none)\n")
+
+            if bt.skipped_collision:
+                lines.append(
+                    "\nSkipped (destination already exists on disk or duplicate in this batch):\n"
+                )
+                for old_path, dest_path in bt.skipped_collision:
+                    lines.append(f"  {old_path}\n")
+                    lines.append(f"    -> {dest_path.name}\n")
+
+            lines.append(
+                f"\nSummary — to rename: {len(bt.planned)}, "
+                f"no bracket tags / no change: {bt.skipped_already_tagged}, "
+                f"collision: {len(bt.skipped_collision)}, "
+                f"skipped (under source tree): {bt.skipped_under_source}\n"
+            )
+            self._set_preview("".join(lines))
 
         def on_preview_jpg(self) -> None:
             config_record_last("jpg-move", "preview")
@@ -2070,7 +2472,7 @@ def run_gui(
 
             self.persist_paths()
 
-            n, errors = apply_renames(result.planned)
+            n, errors = self._apply_renames_gui(result.planned)
             if errors:
                 self._set_preview(
                     f"Some renames failed\n\nRenamed: {n}\nFailed: {len(errors)}\n\n"
@@ -2224,7 +2626,7 @@ def run_cli(argv: list[str]) -> int:
                 if not result.planned:
                     print("Nothing to do.")
                     return 0
-                n, errors = apply_renames(result.planned)
+                n, errors, _ = apply_renames(result.planned)
                 print(f"Renamed {n} file(s).")
                 if errors:
                     print(_cli_format_errors(errors), file=sys.stderr)
@@ -2253,7 +2655,7 @@ def run_cli(argv: list[str]) -> int:
                 if not ts.planned:
                     print("Nothing to do.")
                     return 0
-                n, errors = apply_renames(ts.planned)
+                n, errors, _ = apply_renames(ts.planned)
                 print(f"Renamed {n} file(s).")
                 if errors:
                     print(_cli_format_errors(errors), file=sys.stderr)
@@ -2285,7 +2687,7 @@ def run_cli(argv: list[str]) -> int:
                 if not bt.planned:
                     print("Nothing to do.")
                     return 0
-                n, errors = apply_renames(bt.planned)
+                n, errors, _ = apply_renames(bt.planned)
                 print(f"Renamed {n} file(s).")
                 if errors:
                     print(_cli_format_errors(errors), file=sys.stderr)
