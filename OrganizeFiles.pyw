@@ -9,7 +9,7 @@ collapse a duplicated final extension (e.g. ``.mp4.mp4`` → ``.mp4``; case-inse
 and remove trailing copy suffixes like `` (1)`` / `` (23)`` (1–3 digits; avoids `` (2024)``-style years).
 Also: under the target tree, append `` [immediate parent folder]`` before the file extension (files directly under the target root are skipped).
 
-GUI: edit source/target folders and strip characters; settings are stored under %APPDATA%\\OrganizeFiles.
+GUI (Dear PyGui): edit source/target folders and strip characters; settings are stored under %APPDATA%\\OrganizeFiles.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import json
 import os
 import re
 import shutil
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,36 @@ _TRAILING_BRACKET_TAG_END = re.compile(r"(?:\s?)\[([^\]]*)\]\Z")
 CONFIG_DIR = Path(os.environ.get("APPDATA", "")) / "OrganizeFiles"
 CONFIG_PATH = CONFIG_DIR / "settings.json"
 
+# CJK / symbol UI fonts (first match under %WINDIR%\Fonts).
+_UNICODE_UI_FONT_NAMES = (
+    "NotoSansSC-VF.ttf",
+    "msyh.ttc",
+    "msyhbd.ttc",
+    "simsun.ttc",
+    "mingliu.ttc",
+    "msjh.ttc",
+    "segoeui.ttf",
+)
+def normalize_strip_chars(strip_chars: str) -> str:
+    """NFC-normalize so pasted CJK / fullwidth brackets match filenames on disk."""
+    return unicodedata.normalize("NFC", strip_chars or "")
+
+
+def windows_fonts_dir() -> Path:
+    return Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+
+
+def pick_unicode_ui_font() -> Optional[Path]:
+    """Best installed font for Chinese, Japanese, Korean, and Latin UI text."""
+    fonts_dir = windows_fonts_dir()
+    if not fonts_dir.is_dir():
+        return None
+    for name in _UNICODE_UI_FONT_NAMES:
+        path = fonts_dir / name
+        if path.is_file():
+            return path
+    return None
+
 
 def config_load_defaults() -> tuple[str, str, str]:
     """Load saved source/target paths and strip-title characters, or empty strings if missing."""
@@ -45,8 +76,8 @@ def config_load_defaults() -> tuple[str, str, str]:
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         src = data.get("source") or ""
         tgt = data.get("target") or ""
-        strip = data.get("strip_title_chars") or ""
-        return str(src), str(tgt), str(strip)
+        strip = normalize_strip_chars(data.get("strip_title_chars") or "")
+        return str(src), str(tgt), strip
     except (OSError, json.JSONDecodeError):
         return "", "", ""
 
@@ -237,7 +268,9 @@ def parent_folder_tag_new_name(path: Path, target_root: Path) -> Optional[str]:
     return new_name
 
 
-def scan_parent_folder_tag(source_root: Path, target_root: Path) -> ParentFolderTagScan:
+def scan_parent_folder_tag(
+    source_root: Path, target_root: Path, only: Optional[set[Path]] = None
+) -> ParentFolderTagScan:
     """Plan renames: normalize `` [immediate parent folder name]`` before extension. Skips target-root files."""
     planned: list[tuple[Path, Path]] = []
     skipped_collision: list[tuple[Path, Path]] = []
@@ -246,12 +279,8 @@ def scan_parent_folder_tag(source_root: Path, target_root: Path) -> ParentFolder
     skipped_empty_folder_name = 0
     skipped_under_source = 0
 
-    for path in sorted(target_root.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in iter_files_in_tree(target_root, only):
         resolved = path.resolve()
-        if not is_resolved_subpath(target_root, resolved):
-            continue
         if is_resolved_subpath(source_root, resolved):
             skipped_under_source += 1
             continue
@@ -319,6 +348,7 @@ def transform_title_filename(filename: str, strip_chars: str) -> Optional[str]:
     Collapse a duplicated final extension (e.g. ``.mp4.mp4`` → ``.mp4``) before other stem rules.
     Returns new full filename if changed, else None. None if stem becomes empty.
     """
+    strip_chars = normalize_strip_chars(strip_chars)
     if not filename or filename.endswith(("/", "\\")):
         return None
     original = Path(filename).name
@@ -343,19 +373,20 @@ def transform_title_filename(filename: str, strip_chars: str) -> Optional[str]:
     return new_name
 
 
-def scan_title_strip(source_root: Path, target_root: Path, strip_chars: str) -> TitleStripScan:
+def scan_title_strip(
+    source_root: Path,
+    target_root: Path,
+    strip_chars: str,
+    only: Optional[set[Path]] = None,
+) -> TitleStripScan:
     """Plan renames under target_root only (stem cleanup). Skips paths inside source_root."""
     planned: list[tuple[Path, Path]] = []
     skipped_collision: list[tuple[Path, Path]] = []
     skipped_unchanged = 0
     skipped_under_source = 0
 
-    for path in sorted(target_root.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in iter_files_in_tree(target_root, only):
         resolved = path.resolve()
-        if not is_resolved_subpath(target_root, resolved):
-            continue
         if is_resolved_subpath(source_root, resolved):
             skipped_under_source += 1
             continue
@@ -383,6 +414,43 @@ def scan_title_strip(source_root: Path, target_root: Path, strip_chars: str) -> 
     )
 
 
+def read_only_paths(
+    list_path: Optional[str] = None, file_args: Optional[list[str]] = None
+) -> Optional[set[Path]]:
+    """Resolved file paths to limit scans; None means process the full tree."""
+    out: set[Path] = set()
+    for s in file_args or []:
+        p = Path(s.strip())
+        if p.is_file():
+            out.add(p.resolve())
+    if list_path:
+        lp = Path(list_path)
+        if lp.is_file():
+            for line in lp.read_text(encoding="utf-8", errors="replace").splitlines():
+                s = line.strip()
+                if not s:
+                    continue
+                p = Path(s)
+                if p.is_file():
+                    out.add(p.resolve())
+    return out if out else None
+
+
+def iter_files_in_tree(root: Path, only: Optional[set[Path]] = None):
+    """Yield files under root, or only the resolved paths in only when set."""
+    if only is not None:
+        for path in sorted(only):
+            if not path.is_file():
+                continue
+            resolved = path.resolve()
+            if is_resolved_subpath(root, resolved):
+                yield path
+        return
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            yield path
+
+
 def validate_roots(source_root: Path, target_root: Path) -> Optional[str]:
     if not str(source_root).strip():
         return "Source folder is not set."
@@ -407,7 +475,9 @@ def validate_roots(source_root: Path, target_root: Path) -> Optional[str]:
     return None
 
 
-def scan_target(source_root: Path, target_root: Path) -> ScanResult:
+def scan_target(
+    source_root: Path, target_root: Path, only: Optional[set[Path]] = None
+) -> ScanResult:
     source_index = index_source(source_root)
     skipped_checked = 0
     skipped_no_match = 0
@@ -415,12 +485,8 @@ def scan_target(source_root: Path, target_root: Path) -> ScanResult:
     planned: list[tuple[Path, Path]] = []
     skipped_exists: list[Path] = []
 
-    for path in sorted(target_root.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in iter_files_in_tree(target_root, only):
         resolved = path.resolve()
-        if not is_resolved_subpath(target_root, resolved):
-            continue
         if is_resolved_subpath(source_root, resolved):
             skipped_under_source += 1
             continue
@@ -466,7 +532,9 @@ def apply_renames(planned: list[tuple[Path, Path]]) -> tuple[int, list[str]]:
     return n, errors
 
 
-def scan_jpg_moves(source_root: Path, target_root: Path) -> JpgMoveScan:
+def scan_jpg_moves(
+    source_root: Path, target_root: Path, only: Optional[set[Path]] = None
+) -> JpgMoveScan:
     """
     For every .jpg under source_root, plan a move to target_root / relative_path.
     Skips destinations that already exist (does not overwrite).
@@ -474,12 +542,10 @@ def scan_jpg_moves(source_root: Path, target_root: Path) -> JpgMoveScan:
     moves: list[tuple[Path, Path]] = []
     skipped_exists: list[tuple[Path, Path]] = []
 
-    for path in sorted(source_root.rglob("*")):
+    for path in iter_files_in_tree(source_root, only):
         if not is_jpg_file(path):
             continue
         resolved = path.resolve()
-        if not is_resolved_subpath(source_root, resolved):
-            continue
         rel = path.relative_to(source_root)
         dest = (target_root / rel).resolve()
         if not is_resolved_subpath(target_root, dest):
@@ -527,7 +593,9 @@ def index_basenames_under(root: Path) -> dict[str, list[Path]]:
     return idx
 
 
-def scan_copy_transfer(source_root: Path, target_root: Path) -> CopyTransferScan:
+def scan_copy_transfer(
+    source_root: Path, target_root: Path, only: Optional[set[Path]] = None
+) -> CopyTransferScan:
     """
     Read COPY_TRANSFER_LIST_NAME under source_root. Each line names a `.jpg` thumbnail;
     the actual video is the same name without the trailing `.jpg`. Plan copies into target_root
@@ -560,6 +628,10 @@ def scan_copy_transfer(source_root: Path, target_root: Path) -> CopyTransferScan
 
     for base in wanted:
         matches = by_name.get(os.path.normcase(base), [])
+        if only is not None:
+            matches = [m for m in matches if m.resolve() in only]
+            if not matches:
+                continue
         if not matches:
             missing.append(base)
             continue
@@ -598,184 +670,446 @@ def apply_copy_transfer(copies: list[tuple[Path, Path]]) -> tuple[int, list[str]
     return n, errors
 
 
-def run_gui() -> None:
-    import tkinter as tk
-    from tkinter import filedialog, messagebox, ttk
+def run_gui(
+    initial_source: Optional[str] = None,
+    initial_target: Optional[str] = None,
+    initial_only_list: Optional[str] = None,
+    initial_only_files: Optional[list[str]] = None,
+) -> None:
+    import dearpygui.dearpygui as dpg
 
-    class App(tk.Tk):
+    class App:
+        TAG_SOURCE = "source_input"
+        TAG_TARGET = "target_input"
+        TAG_STRIP = "strip_chars_input"
+        TAG_ONLY = "only_selected_chk"
+        TAG_PREVIEW = "preview_text"
+        TAG_DLG_SOURCE = "dlg_source"
+        TAG_DLG_TARGET = "dlg_target"
+
+        TIP_FOLDERS = (
+            "Source and target roots for every operation.\n"
+            "Paths are saved when you close the app (%APPDATA%\\OrganizeFiles)."
+        )
+        TIP_SOURCE = "Folder tree to match against and to pull .jpg / copy-list videos from."
+        TIP_TARGET = "Folder tree where renames, tags, and incoming files are applied."
+        TIP_ONLY = (
+            "When launched from Directory Opus with a file list, process only those paths "
+            "(not whole folder trees). Disabled if no list was passed."
+        )
+        TIP_MARK = (
+            "Target only: prepend ✔ to a filename when the same relative folder contains a source file "
+            "with a matching peeled basename (e.g. source foo.mkv ↔ target foo.mp4.jpg).\n"
+            "Does not move or delete files."
+        )
+        TIP_TITLE = (
+            "Target only: clean filenames — optional characters removed from the stem, spaces trimmed, "
+            "trailing dots before the extension removed, duplicated final extension collapsed "
+            "(e.g. video.mp4.mp4 → video.mp4), and Explorer-style copy suffixes removed "
+            '(" (1)" / " (12)", 1–3 digits; years like " (2024)" are kept).\n'
+            "Example: 「Juno Bike Exercise」..mp4 with 「」 stripped → Juno Bike Exercise.mp4."
+        )
+        TIP_STRIP_CHARS = (
+            "Characters removed from each stem (optional). Paste any Unicode here — e.g. corner "
+            "brackets 「」 (U+300C / U+300D), fullwidth quotes, or emoji. Each character is removed "
+            "wherever it appears in the stem. Duplicate-extension and copy-number suffix cleanup "
+            "always runs even when this is empty."
+        )
+        TIP_PARENT = (
+            'Target only: for files in subfolders, ensure one trailing " [parent]" before the extension '
+            "(immediate parent folder only). Fixes missing space before [, wrong capitalization, "
+            "duplicate tags, and stray [parent] earlier in the name — then reapplies one tag at the end "
+            "(e.g. Ultrasound[NQ].mp4 → Ultrasound [NQ].mp4).\n"
+            "Files at the target root are skipped; a different trailing [tag] is left as-is."
+        )
+        TIP_JPG = (
+            "Move every .jpg under Source into Target using the same relative paths "
+            "(creates folders as needed; files are removed from Source)."
+        )
+        TIP_COPY = (
+            f'Put "{COPY_TRANSFER_LIST_NAME}" in the Source folder — one thumbnail filename per line '
+            "(.mp4.jpg / .wmv.jpg). The .jpg is stripped to find the video under Source; "
+            "videos are copied into Target (same relative path; Source is not deleted)."
+        )
+        TIP_PREVIEW_PANEL = "Output from the last Preview or Apply scan."
+
         def __init__(self) -> None:
-            super().__init__()
-            self.title("Organize files")
-            self.geometry("900x720")
-            self.minsize(640, 480)
-
             s_default, t_default, strip_default = config_load_defaults()
-            self.var_source = tk.StringVar(value=s_default)
-            self.var_target = tk.StringVar(value=t_default)
-            self.var_strip_title_chars = tk.StringVar(value=strip_default)
+            if initial_source and str(initial_source).strip():
+                s_default = str(initial_source).strip()
+            if initial_target and str(initial_target).strip():
+                t_default = str(initial_target).strip()
+            self._only_paths = read_only_paths(initial_only_list, initial_only_files)
+            self._only_default = bool(self._only_paths)
+            self._theme_apply = "theme_btn_apply"
+            self._theme_preview = "theme_btn_preview"
 
-            frm = ttk.Frame(self, padding=8)
-            frm.pack(fill=tk.BOTH, expand=True)
+            dpg.create_context()
+            self._build_themes()
 
-            ttk.Label(frm, text="Source:").grid(row=0, column=0, sticky="w")
-            ttk.Entry(frm, textvariable=self.var_source).grid(
-                row=1, column=0, sticky="ew", pady=(0, 6)
-            )
-            ttk.Button(frm, text="Browse…", command=self.browse_source).grid(
-                row=1, column=1, sticky="e", padx=(6, 0), pady=(0, 6)
-            )
+            with dpg.file_dialog(
+                directory_selector=True,
+                show=False,
+                modal=True,
+                callback=self._on_dir_dialog,
+                tag=self.TAG_DLG_SOURCE,
+                width=700,
+                height=400,
+            ):
+                pass
+            with dpg.file_dialog(
+                directory_selector=True,
+                show=False,
+                modal=True,
+                callback=self._on_dir_dialog,
+                tag=self.TAG_DLG_TARGET,
+                width=700,
+                height=400,
+            ):
+                pass
 
-            ttk.Label(frm, text="Target:").grid(row=2, column=0, sticky="w")
-            ttk.Entry(frm, textvariable=self.var_target).grid(
-                row=3, column=0, sticky="ew", pady=(0, 6)
-            )
-            ttk.Button(frm, text="Browse…", command=self.browse_target).grid(
-                row=3, column=1, sticky="e", padx=(6, 0), pady=(0, 6)
-            )
+            with dpg.window(tag="primary_window", label="Organize Files", no_title_bar=True):
+                self._build_main_layout(s_default, t_default, strip_default)
+            self._build_fonts()
 
-            ttk.Label(
-                frm,
-                text=("Rename target files: prepend ✔ to files in target based on the base name"),
-                wraplength=820,
-                justify=tk.LEFT,
-            ).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(4, 4))
+            dpg.create_viewport(
+                title="Organize Files",
+                width=1080,
+                height=740,
+                min_width=780,
+                min_height=520,
+            )
+            dpg.setup_dearpygui()
+            dpg.show_viewport()
+            dpg.set_primary_window("primary_window", True)
+            dpg.set_exit_callback(self.on_close)
 
-            btn_row = ttk.Frame(frm)
-            btn_row.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 6))
-            ttk.Button(btn_row, text="Scan / preview", command=self.on_preview).pack(
-                side=tk.LEFT, padx=(0, 8)
-            )
-            ttk.Button(btn_row, text="Apply renames…", command=self.on_apply).pack(side=tk.LEFT)
+        def _build_themes(self) -> None:
+            accent = (72, 168, 190)
+            accent_h = (92, 198, 220)
+            apply_bg = (52, 128, 108)
+            apply_h = (68, 158, 132)
 
-            ttk.Separator(frm, orient=tk.HORIZONTAL).grid(
-                row=6, column=0, columnspan=2, sticky="ew", pady=8
-            )
-            ttk.Label(
-                frm,
-                text=(
-                    "Strip from titles (Target only): remove each character you type below from the "
-                    "filename stem; trim spaces; remove trailing dots before the extension; collapse a "
-                    "duplicated final extension (e.g. video.mp4.mp4 → video.mp4); and remove "
-                    "trailing copy suffixes like \" (1)\" or \" (12)\" (up to 3 digits in parens, "
-                    "so years like \" (2024)\" are not removed). "
-                    "Example: 「Juno Bike Exercise」..mp4 with 「」 stripped → Juno Bike Exercise.mp4; "
-                    "vdo-333-0123 (1).mp4 → vdo-333-0123.mp4."
-                ),
-                wraplength=820,
-                justify=tk.LEFT,
-            ).grid(row=7, column=0, columnspan=2, sticky="ew", pady=(0, 2))
-            ttk.Label(
-                frm,
-                text="Characters to strip from stem (optional; duplicate extension + copy-number suffix always checked):",
-            ).grid(row=8, column=0, sticky="w", pady=(0, 2))
-            title_strip_row = ttk.Frame(frm)
-            title_strip_row.grid(row=9, column=0, columnspan=2, sticky="ew", pady=(0, 6))
-            title_strip_row.columnconfigure(0, weight=1)
-            ttk.Entry(title_strip_row, textvariable=self.var_strip_title_chars).grid(
-                row=0, column=0, sticky="ew", padx=(0, 8)
-            )
-            ttk.Button(title_strip_row, text="Preview title strip", command=self.on_preview_title_strip).grid(
-                row=0, column=1, sticky="e", padx=(0, 8)
-            )
-            ttk.Button(title_strip_row, text="Apply title strip…", command=self.on_apply_title_strip).grid(
-                row=0, column=2, sticky="e"
-            )
+            with dpg.theme(tag="app_theme"):
+                with dpg.theme_component(dpg.mvAll):
+                    dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (16, 18, 24))
+                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (22, 25, 32))
+                    dpg.add_theme_color(dpg.mvThemeCol_PopupBg, (26, 30, 40))
+                    dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (34, 38, 50))
+                    dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (44, 50, 66))
+                    dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, (52, 60, 78))
+                    dpg.add_theme_color(dpg.mvThemeCol_Button, (48, 54, 70))
+                    dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (60, 68, 88))
+                    dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, accent)
+                    dpg.add_theme_color(dpg.mvThemeCol_Header, (38, 44, 58))
+                    dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (50, 58, 76))
+                    dpg.add_theme_color(dpg.mvThemeCol_HeaderActive, (58, 72, 92))
+                    dpg.add_theme_color(dpg.mvThemeCol_Text, (228, 232, 240))
+                    dpg.add_theme_color(dpg.mvThemeCol_TextDisabled, (110, 118, 135))
+                    dpg.add_theme_color(dpg.mvThemeCol_Border, (52, 58, 74))
+                    dpg.add_theme_color(dpg.mvThemeCol_Separator, (48, 54, 70))
+                    dpg.add_theme_color(dpg.mvThemeCol_CheckMark, accent_h)
+                    dpg.add_theme_color(dpg.mvThemeCol_ScrollbarBg, (20, 22, 30))
+                    dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrab, (56, 62, 80))
+                    dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrabHovered, accent)
+                    dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 10)
+                    dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 8)
+                    dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 6)
+                    dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 6)
+                    dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 14, 14)
+                    dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 10, 6)
+                    dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 10, 8)
+                    dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize, 14)
 
-            ttk.Separator(frm, orient=tk.HORIZONTAL).grid(
-                row=10, column=0, columnspan=2, sticky="ew", pady=8
+            with dpg.theme(tag=self._theme_preview):
+                with dpg.theme_component(dpg.mvButton):
+                    dpg.add_theme_color(dpg.mvThemeCol_Button, (42, 48, 62))
+                    dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (56, 64, 82))
+                    dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (70, 80, 102))
+
+            with dpg.theme(tag=self._theme_apply):
+                with dpg.theme_component(dpg.mvButton):
+                    dpg.add_theme_color(dpg.mvThemeCol_Button, apply_bg)
+                    dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, apply_h)
+                    dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (80, 178, 150))
+
+            with dpg.theme(tag="theme_preview_panel"):
+                with dpg.theme_component(dpg.mvChildWindow):
+                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (12, 14, 20))
+                    dpg.add_theme_color(dpg.mvThemeCol_Border, (40, 72, 88))
+
+            with dpg.theme(tag="theme_actions_panel"):
+                with dpg.theme_component(dpg.mvChildWindow):
+                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (20, 23, 30))
+                    dpg.add_theme_color(dpg.mvThemeCol_Border, (44, 50, 66))
+
+            with dpg.theme(tag="theme_modal"):
+                with dpg.theme_component(dpg.mvWindowAppItem):
+                    dpg.add_theme_color(dpg.mvThemeCol_TitleBg, (32, 38, 52))
+                    dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, (48, 88, 108))
+
+            dpg.bind_theme("app_theme")
+
+        def _make_app_font(self, size: int) -> Optional[int | str]:
+            ui_font_path = pick_unicode_ui_font()
+            if not ui_font_path:
+                return None
+            return dpg.add_font(str(ui_font_path), size)
+
+        def _build_fonts(self) -> None:
+            with dpg.font_registry():
+                ui_font = self._make_app_font(14)
+                if ui_font is not None:
+                    dpg.bind_font(ui_font)
+                    title_font = self._make_app_font(18)
+                    if title_font is not None:
+                        dpg.bind_item_font("title_main", title_font)
+                    preview_font = self._make_app_font(13)
+                    if preview_font is not None:
+                        dpg.bind_item_font(self.TAG_PREVIEW, preview_font)
+                    return
+                segoe = windows_fonts_dir() / "segoeui.ttf"
+                if segoe.is_file():
+                    dpg.bind_font(dpg.add_font(str(segoe), 14))
+
+        def _hover_tip(self, parent: int | str, text: str, delay: float = 0.4) -> None:
+            with dpg.tooltip(parent, delay=delay):
+                dpg.add_text(text, wrap=400, color=(200, 208, 220))
+
+        def _preview_apply_row(
+            self,
+            preview_label: str,
+            apply_label: str,
+            preview_cb,
+            apply_cb,
+            tip_preview: str,
+            tip_apply: str,
+        ) -> None:
+            with dpg.group(horizontal=True):
+                btn_p = dpg.add_button(label=preview_label, callback=preview_cb, width=128)
+                btn_a = dpg.add_button(label=apply_label, callback=apply_cb, width=128)
+            dpg.bind_item_theme(btn_p, self._theme_preview)
+            dpg.bind_item_theme(btn_a, self._theme_apply)
+            self._hover_tip(btn_p, tip_preview)
+            self._hover_tip(btn_a, tip_apply)
+
+        def _path_field(
+            self,
+            label: str,
+            input_tag: str,
+            dialog_tag: str,
+            default: str,
+            tip: str,
+        ) -> None:
+            dpg.add_text(label, color=(150, 158, 175))
+            with dpg.group(horizontal=True):
+                dpg.add_input_text(tag=input_tag, default_value=default, width=-48)
+                btn = dpg.add_button(
+                    label="…",
+                    width=40,
+                    callback=lambda: dpg.show_item(dialog_tag),
+                )
+            self._hover_tip(input_tag, tip)
+            self._hover_tip(btn, f"Browse for {label.lower()}")
+
+        def _section(
+            self,
+            title: str,
+            tip: str,
+            default_open: bool,
+        ):
+            hdr = dpg.add_collapsing_header(
+                label=title,
+                default_open=default_open,
+                tag=dpg.generate_uuid(),
             )
-            ttk.Label(
-                frm,
-                text=(
-                    "Parent folder tag (Target only): for files inside a subfolder of the target, ensure "
-                    "one trailing \" [parent]\" before the extension (immediate folder only). "
-                    "Fixes no space before \"[\", wrong capitalization vs the folder, duplicate tags, and any "
-                    "same-name \"[parent]\" earlier in the title — those are removed and one tag is reapplied at the end "
-                    "(e.g. Ultrasound[NQ].mp4 → Ultrasound [NQ].mp4). "
-                    "Files in the target root are skipped; a different trailing \"[tag]\" is left unchanged."
-                ),
-                wraplength=820,
-                justify=tk.LEFT,
-            ).grid(row=11, column=0, columnspan=2, sticky="ew", pady=(0, 2))
-            parent_tag_row = ttk.Frame(frm)
-            parent_tag_row.grid(row=12, column=0, columnspan=2, sticky="w", pady=(0, 6))
-            ttk.Button(parent_tag_row, text="Preview parent folder tag", command=self.on_preview_parent_tag).pack(
-                side=tk.LEFT, padx=(0, 8)
+            self._hover_tip(hdr, tip)
+            return hdr
+
+        def _build_main_layout(
+            self,
+            s_default: str,
+            t_default: str,
+            strip_default: str,
+        ) -> None:
+            dpg.add_text("Organize Files", tag="title_main", color=(120, 200, 220))
+            dpg.add_text(
+                "Source ↔ target workflow",
+                color=(130, 138, 155),
             )
-            ttk.Button(parent_tag_row, text="Apply parent folder tag…", command=self.on_apply_parent_tag).pack(
-                side=tk.LEFT
-            )
+            dpg.add_spacer(height=6)
 
-            ttk.Separator(frm, orient=tk.HORIZONTAL).grid(
-                row=13, column=0, columnspan=2, sticky="ew", pady=8
-            )
-            ttk.Label(
-                frm,
-                text=(
-                    "Move .jpg: move all .jpg files from Source to Target using the same relative "
-                    "paths (folders are created as needed; files leave Source):"
-                ),
-                wraplength=820,
-                justify=tk.LEFT,
-            ).grid(row=14, column=0, columnspan=2, sticky="ew")
-            jpg_row = ttk.Frame(frm)
-            jpg_row.grid(row=15, column=0, columnspan=2, sticky="w", pady=(4, 6))
-            ttk.Button(jpg_row, text="Preview JPG moves", command=self.on_preview_jpg).pack(
-                side=tk.LEFT, padx=(0, 8)
-            )
-            ttk.Button(jpg_row, text="Move JPGs…", command=self.on_apply_jpg).pack(side=tk.LEFT)
+            with dpg.group(horizontal=True):
+                with dpg.child_window(width=400, height=-1, border=True, tag="panel_actions"):
+                    dpg.bind_item_theme("panel_actions", "theme_actions_panel")
 
-            ttk.Separator(frm, orient=tk.HORIZONTAL).grid(
-                row=16, column=0, columnspan=2, sticky="ew", pady=8
-            )
-            ttk.Label(
-                frm,
-                text=(
-                    f'Place "{COPY_TRANSFER_LIST_NAME}" in Source directory to copy videos from source to target. '
-                    "each line is a thumbnail name ending in .jpg"
-                ),
-                wraplength=820,
-                justify=tk.LEFT,
-            ).grid(row=17, column=0, columnspan=2, sticky="ew")
-            xfer_row = ttk.Frame(frm)
-            xfer_row.grid(row=18, column=0, columnspan=2, sticky="w", pady=(4, 6))
-            ttk.Button(
-                xfer_row, text="Preview copy from list", command=self.on_preview_copy_transfer
-            ).pack(side=tk.LEFT, padx=(0, 8))
-            ttk.Button(
-                xfer_row, text="Copy videos…", command=self.on_apply_copy_transfer
-            ).pack(side=tk.LEFT)
+                    hdr_folders = self._section("Folders", self.TIP_FOLDERS, default_open=True)
+                    with dpg.group(parent=hdr_folders):
+                        self._path_field("Source", self.TAG_SOURCE, self.TAG_DLG_SOURCE, s_default, self.TIP_SOURCE)
+                        dpg.add_spacer(height=4)
+                        self._path_field("Target", self.TAG_TARGET, self.TAG_DLG_TARGET, t_default, self.TIP_TARGET)
+                        dpg.add_spacer(height=4)
+                        chk = dpg.add_checkbox(
+                            label="Only listed files",
+                            tag=self.TAG_ONLY,
+                            default_value=self._only_default,
+                            enabled=bool(self._only_paths),
+                        )
+                        self._hover_tip(chk, self.TIP_ONLY)
 
-            ttk.Label(frm, text="Preview:").grid(row=19, column=0, columnspan=2, sticky="w")
-            self.text = tk.Text(frm, height=16, wrap=tk.NONE, font=("Consolas", 9))
-            self.text.grid(row=20, column=0, columnspan=2, sticky="nsew")
-            sy = ttk.Scrollbar(frm, orient=tk.VERTICAL, command=self.text.yview)
-            sy.grid(row=20, column=2, sticky="ns")
-            self.text.configure(yscrollcommand=sy.set)
-            sx = ttk.Scrollbar(frm, orient=tk.HORIZONTAL, command=self.text.xview)
-            sx.grid(row=21, column=0, columnspan=2, sticky="ew")
-            self.text.configure(xscrollcommand=sx.set)
+                    dpg.add_spacer(height=8)
 
-            frm.columnconfigure(0, weight=1)
-            frm.rowconfigure(20, weight=1)
+                    hdr_mark = self._section(f"{CHECK}  Match marks", self.TIP_MARK, default_open=True)
+                    with dpg.group(parent=hdr_mark):
+                        self._preview_apply_row(
+                            "Preview",
+                            "Apply",
+                            self.on_preview,
+                            self.on_apply,
+                            "Scan target tree and list files that would get a ✔ prefix.",
+                            "Add ✔ prefix to matched target files (no moves/deletes).",
+                        )
 
-            self.protocol("WM_DELETE_WINDOW", self.on_close)
+                    hdr_title = self._section("Title cleanup", self.TIP_TITLE, default_open=False)
+                    with dpg.group(parent=hdr_title):
+                        dpg.add_text("Strip characters", color=(150, 158, 175))
+                        dpg.add_input_text(
+                            tag=self.TAG_STRIP,
+                            default_value=strip_default,
+                            width=-1,
+                            hint="e.g. 「」",
+                        )
+                        self._hover_tip(self.TAG_STRIP, self.TIP_STRIP_CHARS)
+                        dpg.add_spacer(height=4)
+                        self._preview_apply_row(
+                            "Preview",
+                            "Apply",
+                            self.on_preview_title_strip,
+                            self.on_apply_title_strip,
+                            "List target renames from title cleanup rules.",
+                            "Rename target files (stem cleanup only).",
+                        )
 
-        def browse_source(self) -> None:
-            p = filedialog.askdirectory(title="Source folder")
-            if p:
-                self.var_source.set(p)
+                    hdr_parent = self._section("Parent folder tags", self.TIP_PARENT, default_open=False)
+                    with dpg.group(parent=hdr_parent):
+                        self._preview_apply_row(
+                            "Preview",
+                            "Apply",
+                            self.on_preview_parent_tag,
+                            self.on_apply_parent_tag,
+                            'List files that would get a normalized " [parent]" tag.',
+                            "Apply parent-folder tags on target subfolders.",
+                        )
 
-        def browse_target(self) -> None:
-            p = filedialog.askdirectory(title="Target folder")
-            if p:
-                self.var_target.set(p)
+                    hdr_jpg = self._section("JPG transfer", self.TIP_JPG, default_open=False)
+                    with dpg.group(parent=hdr_jpg):
+                        self._preview_apply_row(
+                            "Preview",
+                            "Move",
+                            self.on_preview_jpg,
+                            self.on_apply_jpg,
+                            "List .jpg files that would move source → target.",
+                            "Move .jpg files (removed from source).",
+                        )
+
+                    hdr_copy = self._section("Copy from list", self.TIP_COPY, default_open=False)
+                    with dpg.group(parent=hdr_copy):
+                        self._preview_apply_row(
+                            "Preview",
+                            "Copy",
+                            self.on_preview_copy_transfer,
+                            self.on_apply_copy_transfer,
+                            f"Read {COPY_TRANSFER_LIST_NAME} and list videos to copy.",
+                            "Copy listed videos into target (source kept).",
+                        )
+
+                with dpg.child_window(width=-1, height=-1, border=True, tag="panel_preview"):
+                    dpg.bind_item_theme("panel_preview", "theme_preview_panel")
+                    with dpg.group(horizontal=True):
+                        dpg.add_text("Preview", color=(120, 200, 220))
+                        dpg.add_text("  ·  ", color=(80, 88, 100))
+                        hint = dpg.add_text("hover controls for help", color=(100, 108, 125))
+                        self._hover_tip(hint, self.TIP_PREVIEW_PANEL)
+                    dpg.add_spacer(height=4)
+                    dpg.add_input_text(
+                        tag=self.TAG_PREVIEW,
+                        multiline=True,
+                        readonly=True,
+                        width=-1,
+                        height=-1,
+                        tab_input=False,
+                        default_value=(
+                            "Pick a section on the left, then Preview.\n\n"
+                            "Results show up here."
+                        ),
+                    )
+
+        def _on_dir_dialog(self, _sender, app_data) -> None:
+            path = app_data.get("file_path_name") or app_data.get("current_path") or ""
+            if not path:
+                return
+            if _sender == self.TAG_DLG_SOURCE:
+                dpg.set_value(self.TAG_SOURCE, path)
+            elif _sender == self.TAG_DLG_TARGET:
+                dpg.set_value(self.TAG_TARGET, path)
+
+        def _set_preview(self, text: str) -> None:
+            dpg.set_value(self.TAG_PREVIEW, text)
+            if dpg.is_dearpygui_running():
+                dpg.render_dearpygui_frame()
+
+        def _msg(self, title: str, message: str) -> None:
+            modal_tag = dpg.generate_uuid()
+
+            def close() -> None:
+                dpg.delete_item(modal_tag)
+
+            with dpg.window(label=title, modal=True, popup=True, tag=modal_tag, no_close=True):
+                dpg.bind_item_theme(modal_tag, "theme_modal")
+                dpg.add_text(message, wrap=500)
+                dpg.add_button(label="OK", callback=close, width=100)
+            while dpg.does_item_exist(modal_tag) and dpg.is_dearpygui_running():
+                dpg.render_dearpygui_frame()
+
+        def _msg_error(self, title: str, message: str) -> None:
+            self._msg(title, message)
+
+        def _msg_warning(self, title: str, message: str) -> None:
+            self._msg(title, message)
+
+        def _msg_info(self, title: str, message: str) -> None:
+            self._msg(title, message)
+
+        def _ask_yesno(self, title: str, message: str) -> bool:
+            modal_tag = dpg.generate_uuid()
+            result: list[Optional[bool]] = [None]
+
+            def close(value: bool) -> None:
+                result[0] = value
+                dpg.delete_item(modal_tag)
+
+            with dpg.window(label=title, modal=True, popup=True, tag=modal_tag, no_close=True):
+                dpg.bind_item_theme(modal_tag, "theme_modal")
+                dpg.add_text(message, wrap=500)
+                with dpg.group(horizontal=True):
+                    yes_btn = dpg.add_button(label="Yes", callback=lambda: close(True), width=88)
+                    no_btn = dpg.add_button(label="No", callback=lambda: close(False), width=88)
+                dpg.bind_item_theme(yes_btn, self._theme_apply)
+                dpg.bind_item_theme(no_btn, self._theme_preview)
+            while result[0] is None and dpg.is_dearpygui_running():
+                dpg.render_dearpygui_frame()
+            return bool(result[0])
+
+        def get_only_paths(self) -> Optional[set[Path]]:
+            if dpg.get_value(self.TAG_ONLY) and self._only_paths:
+                return self._only_paths
+            return None
 
         def persist_paths(self) -> None:
             config_save(
-                self.var_source.get().strip(),
-                self.var_target.get().strip(),
-                self.var_strip_title_chars.get(),
+                str(dpg.get_value(self.TAG_SOURCE)).strip(),
+                str(dpg.get_value(self.TAG_TARGET)).strip(),
+                str(dpg.get_value(self.TAG_STRIP)),
             )
 
         def on_close(self) -> None:
@@ -783,34 +1117,38 @@ def run_gui() -> None:
                 self.persist_paths()
             except OSError:
                 pass
-            self.destroy()
+
+        def run(self) -> None:
+            dpg.start_dearpygui()
+            dpg.destroy_context()
 
         def on_preview(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
-            self.text.delete("1.0", tk.END)
-            self.text.insert(tk.END, "Scanning…\n")
-            self.update_idletasks()
+            self._set_preview("Scanning…\n")
 
             try:
-                result = scan_target(src_r, tgt_r)
+                result = scan_target(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
-                self.text.delete("1.0", tk.END)
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
                 return
 
-            self.text.delete("1.0", tk.END)
+            self._set_preview("")
             lines: list[str] = []
+            only = self.get_only_paths()
+            if only is not None:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("Files to rename (add ✔ prefix):\n")
             if result.planned:
                 for old_path, new_path in result.planned:
@@ -830,35 +1168,36 @@ def run_gui() -> None:
                 f"no source match: {result.skipped_no_match}, "
                 f"skipped (under source tree): {result.skipped_under_source}\n"
             )
-            self.text.insert(tk.END, "".join(lines))
+            self._set_preview("".join(lines))
 
         def on_preview_title_strip(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
-            strip_chars = self.var_strip_title_chars.get()
+            strip_chars = str(dpg.get_value(self.TAG_STRIP))
             src_r, tgt_r = src.resolve(), tgt.resolve()
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
-            self.text.delete("1.0", tk.END)
-            self.text.insert(tk.END, "Scanning target for title strip…\n")
-            self.update_idletasks()
+            self._set_preview("Scanning target for title strip…\n")
 
             try:
-                ts = scan_title_strip(src_r, tgt_r, strip_chars)
+                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
-                self.text.delete("1.0", tk.END)
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
                 return
 
-            self.text.delete("1.0", tk.END)
+            self._set_preview("")
             lines: list[str] = []
+            only = self.get_only_paths()
+            if only is not None:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("Target files to rename (strip characters from stem):\n")
             if ts.planned:
                 for old_path, new_path in ts.planned:
@@ -879,33 +1218,33 @@ def run_gui() -> None:
                 f"collision: {len(ts.skipped_collision)}, "
                 f"skipped (under source tree): {ts.skipped_under_source}\n"
             )
-            self.text.insert(tk.END, "".join(lines))
+            self._set_preview("".join(lines))
 
         def on_apply_title_strip(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
-            strip_chars = self.var_strip_title_chars.get()
+            strip_chars = str(dpg.get_value(self.TAG_STRIP))
             src_r, tgt_r = src.resolve(), tgt.resolve()
 
             try:
-                ts = scan_title_strip(src_r, tgt_r, strip_chars)
+                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
+                self._msg_error("Scan failed", str(e))
                 return
 
             if not ts.planned:
-                messagebox.showinfo(
+                self._msg_info(
                     "Nothing to do",
                     "No target files need renaming (no strip chars / duplicate extension / copy suffix changes apply). "
                     "Use Preview for details.",
                 )
                 return
 
-            if not messagebox.askyesno(
+            if not self._ask_yesno(
                 "Confirm title strip",
                 f"Rename {len(ts.planned)} file(s) under the target folder?\n\n"
                 "Only the filename changes (same folder): optional characters removed from the stem, "
@@ -918,45 +1257,46 @@ def run_gui() -> None:
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
             n, errors = apply_renames(ts.planned)
             if errors:
-                messagebox.showwarning(
+                self._msg_warning(
                     "Some renames failed",
                     f"Renamed: {n}\nFailed: {len(errors)}\n\n" + "\n\n".join(errors[:10]),
                 )
             else:
-                messagebox.showinfo("Done", f"Renamed {n} file(s) in the target.")
+                self._msg_info("Done", f"Renamed {n} file(s) in the target.")
 
             self.on_preview_title_strip()
 
         def on_preview_parent_tag(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
-            self.text.delete("1.0", tk.END)
-            self.text.insert(tk.END, "Scanning target for parent folder tags…\n")
-            self.update_idletasks()
+            self._set_preview("Scanning target for parent folder tags…\n")
 
             try:
-                pt = scan_parent_folder_tag(src_r, tgt_r)
+                pt = scan_parent_folder_tag(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
-                self.text.delete("1.0", tk.END)
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
                 return
 
-            self.text.delete("1.0", tk.END)
+            self._set_preview("")
             lines: list[str] = []
+            only = self.get_only_paths()
+            if only is not None:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("Target files to rename (normalize [parent folder] before extension):\n")
             if pt.planned:
                 for old_path, new_path in pt.planned:
@@ -979,31 +1319,31 @@ def run_gui() -> None:
                 f"collision: {len(pt.skipped_collision)}, "
                 f"skipped (under source tree): {pt.skipped_under_source}\n"
             )
-            self.text.insert(tk.END, "".join(lines))
+            self._set_preview("".join(lines))
 
         def on_apply_parent_tag(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
 
             try:
-                pt = scan_parent_folder_tag(src_r, tgt_r)
+                pt = scan_parent_folder_tag(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
+                self._msg_error("Scan failed", str(e))
                 return
 
             if not pt.planned:
-                messagebox.showinfo(
+                self._msg_info(
                     "Nothing to do",
                     "No files need a parent folder tag. Use Preview for details (e.g. files only at target root).",
                 )
                 return
 
-            if not messagebox.askyesno(
+            if not self._ask_yesno(
                 "Confirm parent folder tag",
                 f"Rename {len(pt.planned)} file(s) under the target folder?\n\n"
                 "Each file in a subfolder gets a single normalized \" [parent]\" tag (spacing, capitalization, "
@@ -1015,45 +1355,46 @@ def run_gui() -> None:
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
             n, errors = apply_renames(pt.planned)
             if errors:
-                messagebox.showwarning(
+                self._msg_warning(
                     "Some renames failed",
                     f"Renamed: {n}\nFailed: {len(errors)}\n\n" + "\n\n".join(errors[:10]),
                 )
             else:
-                messagebox.showinfo("Done", f"Renamed {n} file(s) in the target.")
+                self._msg_info("Done", f"Renamed {n} file(s) in the target.")
 
             self.on_preview_parent_tag()
 
         def on_preview_jpg(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
-            self.text.delete("1.0", tk.END)
-            self.text.insert(tk.END, "Scanning .jpg files…\n")
-            self.update_idletasks()
+            self._set_preview("Scanning .jpg files…\n")
 
             try:
-                jpg = scan_jpg_moves(src_r, tgt_r)
+                jpg = scan_jpg_moves(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
-                self.text.delete("1.0", tk.END)
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
                 return
 
-            self.text.delete("1.0", tk.END)
+            self._set_preview("")
             lines: list[str] = []
+            only = self.get_only_paths()
+            if only is not None:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("JPG files to move (source → target, relative path preserved):\n")
             if jpg.moves:
                 for old_path, new_path in jpg.moves:
@@ -1071,28 +1412,28 @@ def run_gui() -> None:
             lines.append(
                 f"\nSummary — to move: {len(jpg.moves)}, skipped (dest exists): {len(jpg.skipped_exists)}\n"
             )
-            self.text.insert(tk.END, "".join(lines))
+            self._set_preview("".join(lines))
 
         def on_apply_jpg(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
 
             try:
-                jpg = scan_jpg_moves(src_r, tgt_r)
+                jpg = scan_jpg_moves(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
+                self._msg_error("Scan failed", str(e))
                 return
 
             if not jpg.moves:
-                messagebox.showinfo("Nothing to do", "No .jpg files to move.")
+                self._msg_info("Nothing to do", "No .jpg files to move.")
                 return
 
-            if not messagebox.askyesno(
+            if not self._ask_yesno(
                 "Confirm move",
                 f"Move {len(jpg.moves)} .jpg file(s) from source to target?\n\n"
                 "Relative folders will be created under the target. "
@@ -1104,52 +1445,53 @@ def run_gui() -> None:
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
             n, errors = apply_jpg_moves(jpg.moves)
             if errors:
-                messagebox.showwarning(
+                self._msg_warning(
                     "Some moves failed",
                     f"Moved: {n}\nFailed: {len(errors)}\n\n" + "\n\n".join(errors[:10]),
                 )
             else:
-                messagebox.showinfo("Done", f"Moved {n} .jpg file(s) to target.")
+                self._msg_info("Done", f"Moved {n} .jpg file(s) to target.")
 
             self.on_preview_jpg()
 
         def on_preview_copy_transfer(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
-            self.text.delete("1.0", tk.END)
-            self.text.insert(tk.END, "Reading copy list…\n")
-            self.update_idletasks()
+            self._set_preview("Reading copy list…\n")
 
             try:
-                xfer = scan_copy_transfer(src_r, tgt_r)
+                xfer = scan_copy_transfer(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
-                self.text.delete("1.0", tk.END)
+                self._msg_error("Scan failed", str(e))
+                self._set_preview("")
                 return
 
-            self.text.delete("1.0", tk.END)
+            self._set_preview("")
             lines: list[str] = []
+            only = self.get_only_paths()
+            if only is not None:
+                lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             list_path = src_r / COPY_TRANSFER_LIST_NAME
 
             if xfer.list_missing:
                 lines.append(
                     f"List file not found (expected at):\n  {list_path}\n"
                 )
-                self.text.insert(tk.END, "".join(lines))
+                self._set_preview("".join(lines))
                 return
 
             lines.append(
@@ -1190,25 +1532,25 @@ def run_gui() -> None:
                 f"not found: {len(xfer.missing)}, "
                 f"ambiguous: {len(xfer.ambiguous)}\n"
             )
-            self.text.insert(tk.END, "".join(lines))
+            self._set_preview("".join(lines))
 
         def on_apply_copy_transfer(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
 
             try:
-                xfer = scan_copy_transfer(src_r, tgt_r)
+                xfer = scan_copy_transfer(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
+                self._msg_error("Scan failed", str(e))
                 return
 
             if xfer.list_missing:
-                messagebox.showerror(
+                self._msg_error(
                     "List missing",
                     f'Could not find "{COPY_TRANSFER_LIST_NAME}" under the source folder:\n\n'
                     f"{src_r}",
@@ -1216,14 +1558,14 @@ def run_gui() -> None:
                 return
 
             if not xfer.copies:
-                messagebox.showinfo(
+                self._msg_info(
                     "Nothing to do",
                     "No videos to copy (all missing, ambiguous, or already at destination). "
                     "Use Preview for details.",
                 )
                 return
 
-            if not messagebox.askyesno(
+            if not self._ask_yesno(
                 "Confirm copy",
                 f"Copy {len(xfer.copies)} video file(s) from source to target?\n\n"
                 "Relative folders will be created under the target. "
@@ -1235,39 +1577,39 @@ def run_gui() -> None:
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
             n, errors = apply_copy_transfer(xfer.copies)
             if errors:
-                messagebox.showwarning(
+                self._msg_warning(
                     "Some copies failed",
                     f"Copied: {n}\nFailed: {len(errors)}\n\n" + "\n\n".join(errors[:10]),
                 )
             else:
-                messagebox.showinfo("Done", f"Copied {n} video file(s) to target.")
+                self._msg_info("Done", f"Copied {n} video file(s) to target.")
 
             self.on_preview_copy_transfer()
 
         def on_apply(self) -> None:
-            src = Path(self.var_source.get().strip())
-            tgt = Path(self.var_target.get().strip())
+            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
+            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
             err = validate_roots(src, tgt)
             if err:
-                messagebox.showerror("Invalid paths", err)
+                self._msg_error("Invalid paths", err)
                 return
             src_r, tgt_r = src.resolve(), tgt.resolve()
 
             try:
-                result = scan_target(src_r, tgt_r)
+                result = scan_target(src_r, tgt_r, only=self.get_only_paths())
             except OSError as e:
-                messagebox.showerror("Scan failed", str(e))
+                self._msg_error("Scan failed", str(e))
                 return
 
             if not result.planned:
-                messagebox.showinfo("Nothing to do", "No renames pending.")
+                self._msg_info("Nothing to do", "No renames pending.")
                 return
 
-            if not messagebox.askyesno(
+            if not self._ask_yesno(
                 "Confirm",
                 f"Rename {len(result.planned)} file(s) in the target folder?\n\n"
                 "This step only adds a ✔ prefix to names under the target; "
@@ -1278,21 +1620,309 @@ def run_gui() -> None:
             try:
                 self.persist_paths()
             except OSError as e:
-                messagebox.showwarning("Could not save settings", str(e))
+                self._msg_warning("Could not save settings", str(e))
 
             n, errors = apply_renames(result.planned)
             if errors:
-                messagebox.showwarning(
+                self._msg_warning(
                     "Some renames failed",
                     f"Renamed: {n}\nFailed: {len(errors)}\n\n" + "\n\n".join(errors[:10]),
                 )
             else:
-                messagebox.showinfo("Done", f"Renamed {n} file(s).")
+                self._msg_info("Done", f"Renamed {n} file(s).")
 
             self.on_preview()
 
-    App().mainloop()
+    App().run()
+
+
+def _cli_format_errors(errors: list[str], limit: int = 10) -> str:
+    if not errors:
+        return ""
+    return "\n\n".join(errors[:limit]) + (
+        f"\n\n… and {len(errors) - limit} more." if len(errors) > limit else ""
+    )
+
+
+def run_cli(argv: list[str]) -> int:
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description="Organize files (CLI). Default with no args opens the GUI."
+    )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Open the Dear PyGui GUI (also used when no --action is given).",
+    )
+    parser.add_argument(
+        "--action",
+        choices=("mark", "title-strip", "parent-tag", "jpg-move", "copy-transfer"),
+        help="Operation to run from the command line.",
+    )
+    parser.add_argument("--source", help="Source folder path.")
+    parser.add_argument("--target", help="Target folder path.")
+    parser.add_argument(
+        "--strip-chars",
+        default="",
+        help="Characters to strip from stems (title-strip only; uses saved value if omitted).",
+    )
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help="Scan and print a preview only (default when --apply is not set).",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply the planned operation after validation.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip interactive confirmation when using --apply (CLI only).",
+    )
+    parser.add_argument(
+        "--only-list",
+        metavar="FILE",
+        help="Text file with one file path per line; only those files are processed.",
+    )
+    parser.add_argument(
+        "--only-file",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="Limit to this file path (repeatable). Combined with --only-list.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.gui or not args.action:
+        run_gui(
+            initial_source=args.source,
+            initial_target=args.target,
+            initial_only_list=args.only_list,
+            initial_only_files=args.only_file,
+        )
+        return 0
+
+    saved_src, saved_tgt, saved_strip = config_load_defaults()
+    src_s = (args.source or saved_src or "").strip()
+    tgt_s = (args.target or saved_tgt or "").strip()
+    strip_chars = normalize_strip_chars(
+        args.strip_chars if args.strip_chars != "" else saved_strip
+    )
+
+    src = Path(src_s)
+    tgt = Path(tgt_s)
+    err = validate_roots(src, tgt)
+    if err:
+        print(err, file=sys.stderr)
+        return 2
+
+    src_r, tgt_r = src.resolve(), tgt.resolve()
+    only = read_only_paths(args.only_list, args.only_file)
+    do_apply = bool(args.apply)
+    do_preview = not do_apply or args.preview
+
+    def cli_only_banner() -> str:
+        return f"Limited to {len(only)} listed file(s).\n\n" if only else ""
+
+    try:
+        if args.action == "mark":
+            result = scan_target(src_r, tgt_r, only=only)
+            if do_preview:
+                print(cli_only_banner() + "Files to rename (add ✔ prefix):")
+                if result.planned:
+                    for old_path, new_path in result.planned:
+                        print(f"  {old_path}")
+                        print(f"    -> {new_path}")
+                else:
+                    print("  (none)")
+                print(
+                    f"\nSummary — to rename: {len(result.planned)}, "
+                    f"already marked: {result.skipped_checked}, "
+                    f"no source match: {result.skipped_no_match}, "
+                    f"skipped (under source tree): {result.skipped_under_source}"
+                )
+            if do_apply:
+                if not result.planned:
+                    print("Nothing to do.")
+                    return 0
+                if not args.yes:
+                    print(
+                        f"Refusing --apply without --yes ({len(result.planned)} renames pending).",
+                        file=sys.stderr,
+                    )
+                    return 2
+                n, errors = apply_renames(result.planned)
+                print(f"Renamed {n} file(s).")
+                if errors:
+                    print(_cli_format_errors(errors), file=sys.stderr)
+                    return 1
+
+        elif args.action == "title-strip":
+            ts = scan_title_strip(src_r, tgt_r, strip_chars, only=only)
+            if do_preview:
+                print(cli_only_banner() + "Target files to rename (strip characters from stem):")
+                if ts.planned:
+                    for old_path, new_path in ts.planned:
+                        print(f"  {old_path}")
+                        print(f"    -> {new_path.name}")
+                else:
+                    print("  (none)")
+                print(
+                    f"\nSummary — to rename: {len(ts.planned)}, "
+                    f"unchanged: {ts.skipped_unchanged}, "
+                    f"collision: {len(ts.skipped_collision)}, "
+                    f"skipped (under source tree): {ts.skipped_under_source}"
+                )
+            if do_apply:
+                if not ts.planned:
+                    print("Nothing to do.")
+                    return 0
+                if not args.yes:
+                    print(
+                        f"Refusing --apply without --yes ({len(ts.planned)} renames pending).",
+                        file=sys.stderr,
+                    )
+                    return 2
+                n, errors = apply_renames(ts.planned)
+                print(f"Renamed {n} file(s).")
+                if errors:
+                    print(_cli_format_errors(errors), file=sys.stderr)
+                    return 1
+
+        elif args.action == "parent-tag":
+            pt = scan_parent_folder_tag(src_r, tgt_r, only=only)
+            if do_preview:
+                print(
+                    cli_only_banner()
+                    + "Target files to rename (normalize [parent folder] before extension):"
+                )
+                if pt.planned:
+                    for old_path, new_path in pt.planned:
+                        print(f"  {old_path}")
+                        print(f"    -> {new_path.name}")
+                else:
+                    print("  (none)")
+                print(
+                    f"\nSummary — to rename: {len(pt.planned)}, "
+                    f"at target root (skipped): {pt.skipped_at_target_root}, "
+                    f"already tagged / no change: {pt.skipped_already_tagged}, "
+                    f"empty folder name: {pt.skipped_empty_folder_name}, "
+                    f"collision: {len(pt.skipped_collision)}, "
+                    f"skipped (under source tree): {pt.skipped_under_source}"
+                )
+            if do_apply:
+                if not pt.planned:
+                    print("Nothing to do.")
+                    return 0
+                if not args.yes:
+                    print(
+                        f"Refusing --apply without --yes ({len(pt.planned)} renames pending).",
+                        file=sys.stderr,
+                    )
+                    return 2
+                n, errors = apply_renames(pt.planned)
+                print(f"Renamed {n} file(s).")
+                if errors:
+                    print(_cli_format_errors(errors), file=sys.stderr)
+                    return 1
+
+        elif args.action == "jpg-move":
+            jpg = scan_jpg_moves(src_r, tgt_r, only=only)
+            if do_preview:
+                print(cli_only_banner() + "JPG files to move (source → target, relative path preserved):")
+                if jpg.moves:
+                    for old_path, new_path in jpg.moves:
+                        print(f"  {old_path}")
+                        print(f"    -> {new_path}")
+                else:
+                    print("  (none)")
+                print(
+                    f"\nSummary — to move: {len(jpg.moves)}, "
+                    f"skipped (dest exists): {len(jpg.skipped_exists)}"
+                )
+            if do_apply:
+                if not jpg.moves:
+                    print("Nothing to do.")
+                    return 0
+                if not args.yes:
+                    print(
+                        f"Refusing --apply without --yes ({len(jpg.moves)} moves pending).",
+                        file=sys.stderr,
+                    )
+                    return 2
+                n, errors = apply_jpg_moves(jpg.moves)
+                print(f"Moved {n} .jpg file(s).")
+                if errors:
+                    print(_cli_format_errors(errors), file=sys.stderr)
+                    return 1
+
+        elif args.action == "copy-transfer":
+            xfer = scan_copy_transfer(src_r, tgt_r, only=only)
+            if xfer.list_missing:
+                print(
+                    f'List file not found (expected "{COPY_TRANSFER_LIST_NAME}" under source):\n  {src_r / COPY_TRANSFER_LIST_NAME}',
+                    file=sys.stderr,
+                )
+                return 2
+            if do_preview:
+                print(
+                    cli_only_banner()
+                    + f'Videos to copy (from "{COPY_TRANSFER_LIST_NAME}"; source → target):'
+                )
+                if xfer.copies:
+                    for old_path, new_path in xfer.copies:
+                        print(f"  {old_path}")
+                        print(f"    -> {new_path}")
+                else:
+                    print("  (none)")
+                print(
+                    f"\nSummary — to copy: {len(xfer.copies)}, "
+                    f"dest exists: {len(xfer.skipped_exists)}, "
+                    f"not found: {len(xfer.missing)}, "
+                    f"ambiguous: {len(xfer.ambiguous)}"
+                )
+            if do_apply:
+                if not xfer.copies:
+                    print("Nothing to do.")
+                    return 0
+                if not args.yes:
+                    print(
+                        f"Refusing --apply without --yes ({len(xfer.copies)} copies pending).",
+                        file=sys.stderr,
+                    )
+                    return 2
+                n, errors = apply_copy_transfer(xfer.copies)
+                print(f"Copied {n} video file(s).")
+                if errors:
+                    print(_cli_format_errors(errors), file=sys.stderr)
+                    return 1
+    except OSError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    if do_apply:
+        try:
+            config_save(src_s, tgt_s, strip_chars)
+        except OSError:
+            pass
+    return 0
 
 
 if __name__ == "__main__":
+    import sys
+
+    if sys.platform == "win32":
+        for _stream in (sys.stdin, sys.stdout, sys.stderr):
+            if _stream is not None and hasattr(_stream, "reconfigure"):
+                try:
+                    _stream.reconfigure(encoding="utf-8")
+                except (OSError, ValueError):
+                    pass
+
+    if len(sys.argv) > 1:
+        raise SystemExit(run_cli(sys.argv[1:]))
     run_gui()
