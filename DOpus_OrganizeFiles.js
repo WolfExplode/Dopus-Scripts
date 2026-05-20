@@ -7,10 +7,8 @@
 //
 // Ctrl+click: repeat the last action used in the GUI (preview or apply) on the
 // selected files, using saved source/target from %APPDATA%\OrganizeFiles\settings.json.
+// GUI also saves which panels were expanded (e.g. Filename tags) when you close the window.
 //
-// Install: copy DOpus_OrganizeFiles.js and OrganizeFiles.py to the same folder
-// (e.g. Script AddIns), or set ORGANIZE_PY below. Python must be on PATH.
-
 /** Optional full path to OrganizeFiles.py if auto-detect fails. */
 var ORGANIZE_PY = "";
 
@@ -29,19 +27,44 @@ function tabFolderPath(tab) {
     return trimStr(tab.path + "");
 }
 
+function pushFilePath(paths, item, fso) {
+    var pathObj = item.realpath;
+    pathObj.Resolve();
+    var p = trimStr(pathObj + "");
+    if (p && fso.FileExists(p)) {
+        paths.push(p);
+    }
+}
+
 function collectSelectedFilePaths(tab, fso) {
     var paths = [];
-    if (!tab || tab.selstats.selfiles === 0) {
+    if (!tab) {
+        return paths;
+    }
+    var checkboxMode = false;
+    try {
+        checkboxMode = tab.selstats.checkbox_mode;
+    } catch (e0) {}
+    if (checkboxMode) {
+        if (tab.selstats.checkedfiles === 0) {
+            return paths;
+        }
+        var enChecked = new Enumerator(tab.files);
+        for (; !enChecked.atEnd(); enChecked.moveNext()) {
+            var checkedItem = enChecked.item();
+            if (!checkedItem.checked || checkedItem.is_dir) {
+                continue;
+            }
+            pushFilePath(paths, checkedItem, fso);
+        }
+        return paths;
+    }
+    if (tab.selstats.selfiles === 0) {
         return paths;
     }
     var en = new Enumerator(tab.selected_files);
     for (; !en.atEnd(); en.moveNext()) {
-        var pathObj = en.item().realpath;
-        pathObj.Resolve();
-        var p = trimStr(pathObj + "");
-        if (p && fso.FileExists(p)) {
-            paths.push(p);
-        }
+        pushFilePath(paths, en.item(), fso);
     }
     return paths;
 }
@@ -74,11 +97,19 @@ function writeOnlyListFile(shell, fso, paths) {
     var name =
         "OrganizeFiles_only_" + Math.floor(Math.random() * 1000000000) + ".txt";
     var file = fso.BuildPath(shell.ExpandEnvironmentStrings("%TEMP%"), name);
-    var stream = fso.CreateTextFile(file, true, false);
+    // FSO CreateTextFile(..., false) is ANSI and fails on emoji / CJK in paths.
+    var stream = new ActiveXObject("ADODB.Stream");
+    stream.Type = 2;
+    stream.Charset = "utf-8";
+    stream.Open();
     var i;
     for (i = 0; i < paths.length; i++) {
-        stream.WriteLine(paths[i]);
+        if (i > 0) {
+            stream.WriteText("\r\n");
+        }
+        stream.WriteText(paths[i]);
     }
+    stream.SaveToFile(file, 2);
     stream.Close();
     return file;
 }
@@ -86,6 +117,21 @@ function writeOnlyListFile(shell, fso, paths) {
 function appendOnlyList(exec, onlyListPath) {
     if (onlyListPath) {
         return exec + " --only-list " + quoteArg(onlyListPath);
+    }
+    return exec;
+}
+
+function appendOnlyFiles(exec, paths, maxArgs) {
+    if (!paths || paths.length === 0) {
+        return exec;
+    }
+    var limit = maxArgs || 40;
+    if (paths.length > limit) {
+        return exec;
+    }
+    var i;
+    for (i = 0; i < paths.length; i++) {
+        exec += " --only-file " + quoteArg(paths[i]);
     }
     return exec;
 }
@@ -167,6 +213,7 @@ function OnClick(clickData) {
             execRepeat += " --target " + quoteArg(tgtHint);
         }
         execRepeat = appendOnlyList(execRepeat, onlyListPath);
+        execRepeat = appendOnlyFiles(execRepeat, selected);
         DOpus.Output("Organize Files (repeat last): " + execRepeat);
         var rc = shell.Run(execRepeat, 1, true);
         DOpus.Output("Organize Files (repeat last) exit code: " + rc);
@@ -182,6 +229,7 @@ function OnClick(clickData) {
         execGui += " --target " + quoteArg(tgtHint);
     }
     execGui = appendOnlyList(execGui, onlyListPath);
+    execGui = appendOnlyFiles(execGui, selected);
     if (onlyListPath) {
         DOpus.Output(
             "Organize Files: " + selected.length + " selected file(s) only."
