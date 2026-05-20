@@ -152,7 +152,7 @@ function resolveOrganizePy(shell, fso) {
         }
     } catch (e) {}
     var fallback =
-        "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\OrganizeFiles.py";
+        "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\Organize Files\\OrganizeFiles.py";
     if (fso.FileExists(fallback)) {
         return fallback;
     }
