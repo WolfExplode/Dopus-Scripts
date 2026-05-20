@@ -38,6 +38,11 @@ _TRAILING_BRACKET_TAG_END = re.compile(r"(?:\s?)\[([^\]]*)\]\Z")
 CONFIG_DIR = Path(os.environ.get("APPDATA", "")) / "OrganizeFiles"
 CONFIG_PATH = CONFIG_DIR / "settings.json"
 
+LAST_ACTIONS = ("mark", "title-strip", "parent-tag", "jpg-move", "copy-transfer")
+LAST_MODES = ("preview", "apply")
+DEFAULT_LAST_ACTION = "mark"
+DEFAULT_LAST_MODE = "preview"
+
 # CJK / symbol UI fonts (first match under %WINDIR%\Fonts).
 _UNICODE_UI_FONT_NAMES = (
     "NotoSansSC-VF.ttf",
@@ -69,12 +74,52 @@ def pick_unicode_ui_font() -> Optional[Path]:
     return None
 
 
-def config_load_defaults() -> tuple[str, str, str]:
-    """Load saved source paths text, target folder, and strip-title characters."""
+def config_read() -> dict:
     if not CONFIG_PATH.is_file():
-        return "", "", ""
+        return {}
     try:
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def config_write(data: dict) -> None:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def config_load_last() -> tuple[str, str]:
+    """Last GUI/CLI operation: action name and preview or apply."""
+    data = config_read()
+    action = str(data.get("last_action") or DEFAULT_LAST_ACTION)
+    mode = str(data.get("last_mode") or DEFAULT_LAST_MODE)
+    if action not in LAST_ACTIONS:
+        action = DEFAULT_LAST_ACTION
+    if mode not in LAST_MODES:
+        mode = DEFAULT_LAST_MODE
+    return action, mode
+
+
+def config_record_last(action: str, mode: str) -> None:
+    if action not in LAST_ACTIONS or mode not in LAST_MODES:
+        return
+    data = config_read()
+    data["last_action"] = action
+    data["last_mode"] = mode
+    try:
+        config_write(data)
+    except OSError:
+        pass
+
+
+def config_load_defaults() -> tuple[str, str, str]:
+    """Load saved source paths text, target folder, and strip-title characters."""
+    try:
+        data = config_read()
         src = str(data.get("source") or "").strip()
         tgt = str(data.get("target") or "")
         strip = normalize_strip_chars(data.get("strip_title_chars") or "")
@@ -89,25 +134,16 @@ def config_load_defaults() -> tuple[str, str, str]:
                     lines.append(s)
             src = "\n".join(lines)
         return src, tgt, strip
-    except (OSError, json.JSONDecodeError):
+    except OSError:
         return "", "", ""
 
 
 def config_save(source: str, target: str, strip_title_chars: str = "") -> None:
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(
-        json.dumps(
-            {
-                "source": source,
-                "target": target,
-                "strip_title_chars": strip_title_chars,
-            },
-            indent=2,
-            ensure_ascii=False,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    data = config_read()
+    data["source"] = source
+    data["target"] = target
+    data["strip_title_chars"] = strip_title_chars
+    config_write(data)
 
 
 def is_resolved_subpath(parent: Path, child: Path) -> bool:
@@ -537,6 +573,10 @@ def build_initial_source_text(
     initial_only_list: Optional[str],
     initial_only_files: Optional[list[str]],
 ) -> str:
+    only_paths = read_only_paths(initial_only_list, initial_only_files)
+    if only_paths:
+        return "\n".join(str(p) for p in sorted(only_paths))
+
     lines: list[str] = []
     seen: set[str] = set()
 
@@ -554,10 +594,6 @@ def build_initial_source_text(
         add(ln)
     if initial_source and str(initial_source).strip():
         add(str(initial_source).strip())
-    only_paths = read_only_paths(initial_only_list, initial_only_files)
-    if only_paths:
-        for p in sorted(only_paths):
-            add(str(p))
     return "\n".join(lines)
 
 
@@ -1103,7 +1139,7 @@ def run_gui(
 
                     hdr_folders = self._section("Input/Output", self.TIP_FOLDERS, default_open=True)
                     with dpg.group(parent=hdr_folders):
-                        dpg.add_text("Paths (one per line)", color=(150, 158, 175))
+                        dpg.add_text("Paths", color=(150, 158, 175))
                         src_input = dpg.add_input_text(
                             tag=self.TAG_SOURCE,
                             default_value=s_default,
@@ -1357,6 +1393,7 @@ def run_gui(
             dpg.destroy_context()
 
         def on_preview(self) -> None:
+            config_record_last("mark", "preview")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1402,6 +1439,7 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_preview_title_strip(self) -> None:
+            config_record_last("title-strip", "preview")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1449,6 +1487,7 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_title_strip(self) -> None:
+            config_record_last("title-strip", "apply")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1497,6 +1536,7 @@ def run_gui(
             self.on_preview_title_strip()
 
         def on_preview_parent_tag(self) -> None:
+            config_record_last("parent-tag", "preview")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1545,6 +1585,7 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_parent_tag(self) -> None:
+            config_record_last("parent-tag", "apply")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1590,6 +1631,7 @@ def run_gui(
             self.on_preview_parent_tag()
 
         def on_preview_jpg(self) -> None:
+            config_record_last("jpg-move", "preview")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1633,6 +1675,7 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_jpg(self) -> None:
+            config_record_last("jpg-move", "apply")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1675,6 +1718,7 @@ def run_gui(
             self.on_preview_jpg()
 
         def on_preview_copy_transfer(self) -> None:
+            config_record_last("copy-transfer", "preview")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1748,6 +1792,7 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_copy_transfer(self) -> None:
+            config_record_last("copy-transfer", "apply")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1802,6 +1847,7 @@ def run_gui(
             self.on_preview_copy_transfer()
 
         def on_apply(self) -> None:
+            config_record_last("mark", "apply")
             work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
@@ -1867,8 +1913,13 @@ def run_cli(argv: list[str]) -> int:
     )
     parser.add_argument(
         "--action",
-        choices=("mark", "title-strip", "parent-tag", "jpg-move", "copy-transfer"),
+        choices=LAST_ACTIONS,
         help="Operation to run from the command line.",
+    )
+    parser.add_argument(
+        "--repeat",
+        action="store_true",
+        help="Run the last saved action and mode (preview or apply) from settings.",
     )
     parser.add_argument("--source", help="Source folder path.")
     parser.add_argument("--target", help="Target folder path.")
@@ -1906,6 +1957,15 @@ def run_cli(argv: list[str]) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.repeat:
+        last_action, last_mode = config_load_last()
+        args.action = last_action
+        if last_mode == "apply":
+            args.apply = True
+            args.yes = True
+        else:
+            args.preview = True
+
     if args.gui or not args.action:
         run_gui(
             initial_source=args.source,
@@ -1940,6 +2000,7 @@ def run_cli(argv: list[str]) -> int:
     src_r, tgt_r, only = work.source_root, work.target_root, work.only
     do_apply = bool(args.apply)
     do_preview = not do_apply or args.preview
+    config_record_last(args.action, "apply" if do_apply else "preview")
 
     def cli_only_banner() -> str:
         return f"Limited to {len(only)} listed file(s).\n\n" if only else ""

@@ -1,17 +1,18 @@
-// Organize Files — launches OrganizeFiles.pyw (Python / Dear PyGui) from this repo.
+// Organize Files — launches OrganizeFiles.py (Python / Dear PyGui) from this repo.
 //
 // Click: open GUI. Dual pane: source + destination tab paths as hints.
 // Files selected in source or destination pane: only those files are processed
 // (checkbox on in GUI; Ctrl+preview uses the same list).
 // No selection: whole source/target folders as before.
 //
-// Ctrl+click: preview checkmark scan in a console.
+// Ctrl+click: repeat the last action used in the GUI (preview or apply) on the
+// selected files, using saved source/target from %APPDATA%\OrganizeFiles\settings.json.
 //
-// Install: copy DOpus_OrganizeFiles.js and OrganizeFiles.pyw to the same folder
-// (e.g. Script AddIns), or set ORGANIZE_PYW below. Python must be on PATH.
+// Install: copy DOpus_OrganizeFiles.js and OrganizeFiles.py to the same folder
+// (e.g. Script AddIns), or set ORGANIZE_PY below. Python must be on PATH.
 
-/** Optional full path to OrganizeFiles.pyw if auto-detect fails. */
-var ORGANIZE_PYW = "";
+/** Optional full path to OrganizeFiles.py if auto-detect fails. */
+var ORGANIZE_PY = "";
 
 function trimStr(s) {
     return String(s).replace(/^\s+|\s+$/g, "");
@@ -89,15 +90,15 @@ function appendOnlyList(exec, onlyListPath) {
     return exec;
 }
 
-function resolveOrganizePyw(shell, fso) {
-    if (ORGANIZE_PYW && fso.FileExists(ORGANIZE_PYW)) {
-        return ORGANIZE_PYW;
+function resolveOrganizePy(shell, fso) {
+    if (ORGANIZE_PY && fso.FileExists(ORGANIZE_PY)) {
+        return ORGANIZE_PY;
     }
     try {
         if (typeof Script !== "undefined" && Script && Script.file) {
             var sibling = fso.BuildPath(
                 fso.GetParentFolderName(Script.file),
-                "OrganizeFiles.pyw"
+                "OrganizeFiles.py"
             );
             if (fso.FileExists(sibling)) {
                 return sibling;
@@ -105,48 +106,31 @@ function resolveOrganizePyw(shell, fso) {
         }
     } catch (e) {}
     var fallback =
-        "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\OrganizeFiles.pyw";
+        "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\OrganizeFiles.py";
     if (fso.FileExists(fallback)) {
         return fallback;
     }
     return "";
 }
 
-function resolvePythonExe(fso, projectDir) {
-    var venv1 = projectDir + "\\.venv\\Scripts\\python.exe";
-    var venv2 = projectDir + "\\venv\\Scripts\\python.exe";
-    if (fso.FileExists(venv1)) {
-        return venv1;
-    }
-    if (fso.FileExists(venv2)) {
-        return venv2;
-    }
+function resolvePythonExe() {
     return "python";
 }
 
-function resolvePythonwExe(fso, projectDir) {
-    var py = resolvePythonExe(fso, projectDir);
-    if (py === "python") {
-        return "pythonw";
-    }
-    var dir = fso.GetParentFolderName(py);
-    var pyw = dir + "\\pythonw.exe";
-    if (fso.FileExists(pyw)) {
-        return pyw;
-    }
-    return py;
+function resolvePythonwExe() {
+    return "pythonw";
 }
 
 function OnClick(clickData) {
     var tab = clickData.func.sourcetab;
     var shell = new ActiveXObject("WScript.Shell");
     var fso = new ActiveXObject("Scripting.FileSystemObject");
-    var pywPath = resolveOrganizePyw(shell, fso);
+    var organizePy = resolveOrganizePy(shell, fso);
 
-    if (!pywPath) {
+    if (!organizePy) {
         shell.Popup(
-            "OrganizeFiles.pyw not found.\n\n" +
-                "Copy it next to this script, set ORGANIZE_PYW in DOpus_OrganizeFiles.js, " +
+            "OrganizeFiles.py not found.\n\n" +
+                "Copy it next to this script, set ORGANIZE_PY in DOpus_OrganizeFiles.js, " +
                 "or install both under Script AddIns.",
             0,
             "Organize Files",
@@ -155,7 +139,6 @@ function OnClick(clickData) {
         return;
     }
 
-    var projectDir = fso.GetParentFolderName(pywPath);
     var srcHint = tab ? tabFolderPath(tab) : "";
     var destTab = clickData.func.desttab;
     var tgtHint = tabFolderPath(destTab);
@@ -175,25 +158,24 @@ function OnClick(clickData) {
     var onlyListPath = writeOnlyListFile(shell, fso, selected);
 
     if (isCtrl) {
-        var py = resolvePythonExe(fso, projectDir);
-        var execPreview =
-            quoteArg(py) + " " + quoteArg(pywPath) + " --action mark --preview";
-        if (srcHint) {
-            execPreview += " --source " + quoteArg(srcHint);
+        var py = resolvePythonExe();
+        var execRepeat = quoteArg(py) + " " + quoteArg(organizePy) + " --repeat";
+        if (srcHint && !onlyListPath) {
+            execRepeat += " --source " + quoteArg(srcHint);
         }
         if (tgtHint) {
-            execPreview += " --target " + quoteArg(tgtHint);
+            execRepeat += " --target " + quoteArg(tgtHint);
         }
-        execPreview = appendOnlyList(execPreview, onlyListPath);
-        DOpus.Output("Organize Files (preview): " + execPreview);
-        var rc = shell.Run(execPreview, 1, true);
-        DOpus.Output("Organize Files (preview) exit code: " + rc);
+        execRepeat = appendOnlyList(execRepeat, onlyListPath);
+        DOpus.Output("Organize Files (repeat last): " + execRepeat);
+        var rc = shell.Run(execRepeat, 1, true);
+        DOpus.Output("Organize Files (repeat last) exit code: " + rc);
         return;
     }
 
-    var pyw = resolvePythonwExe(fso, projectDir);
-    var execGui = quoteArg(pyw) + " " + quoteArg(pywPath) + " --gui";
-    if (srcHint) {
+    var pyw = resolvePythonwExe();
+    var execGui = quoteArg(pyw) + " " + quoteArg(organizePy) + " --gui";
+    if (srcHint && !onlyListPath) {
         execGui += " --source " + quoteArg(srcHint);
     }
     if (tgtHint) {
@@ -206,5 +188,5 @@ function OnClick(clickData) {
         );
     }
     DOpus.Output("Organize Files (GUI): " + execGui);
-    shell.Run(execGui, 1, false);
+    shell.Run(execGui, 0, false);
 }
