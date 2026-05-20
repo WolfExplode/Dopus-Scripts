@@ -9,7 +9,7 @@ collapse a duplicated final extension (e.g. ``.mp4.mp4`` → ``.mp4``; case-inse
 and remove trailing copy suffixes like `` (1)`` / `` (23)`` (1–3 digits; avoids `` (2024)``-style years).
 Also: under the target tree, append `` [immediate parent folder]`` before the file extension (files directly under the target root are skipped).
 
-GUI (Dear PyGui): edit source/target folders and strip characters; settings are stored under %APPDATA%\\OrganizeFiles.
+GUI (Dear PyGui): edit source paths (folders and/or files), target folder, and strip characters; settings are stored under %APPDATA%\\OrganizeFiles.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
@@ -69,15 +70,25 @@ def pick_unicode_ui_font() -> Optional[Path]:
 
 
 def config_load_defaults() -> tuple[str, str, str]:
-    """Load saved source/target paths and strip-title characters, or empty strings if missing."""
+    """Load saved source paths text, target folder, and strip-title characters."""
     if not CONFIG_PATH.is_file():
         return "", "", ""
     try:
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        src = data.get("source") or ""
-        tgt = data.get("target") or ""
+        src = str(data.get("source") or "").strip()
+        tgt = str(data.get("target") or "")
         strip = normalize_strip_chars(data.get("strip_title_chars") or "")
-        return str(src), str(tgt), strip
+        raw_only = data.get("only_files") or []
+        if raw_only:
+            lines = [ln.strip() for ln in src.splitlines() if ln.strip()] if src else []
+            seen = {ln.casefold() for ln in lines}
+            for p in raw_only:
+                s = str(p).strip()
+                if s and s.casefold() not in seen:
+                    seen.add(s.casefold())
+                    lines.append(s)
+            src = "\n".join(lines)
+        return src, tgt, strip
     except (OSError, json.JSONDecodeError):
         return "", "", ""
 
@@ -86,7 +97,11 @@ def config_save(source: str, target: str, strip_title_chars: str = "") -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(
         json.dumps(
-            {"source": source, "target": target, "strip_title_chars": strip_title_chars},
+            {
+                "source": source,
+                "target": target,
+                "strip_title_chars": strip_title_chars,
+            },
             indent=2,
             ensure_ascii=False,
         )
@@ -414,25 +429,150 @@ def scan_title_strip(
     )
 
 
+def parse_only_path_lines(lines: list[str]) -> set[Path]:
+    """Resolved existing files from path strings (one path per line)."""
+    out: set[Path] = set()
+    for s in lines:
+        s = s.strip()
+        if not s:
+            continue
+        p = Path(s)
+        if p.is_file():
+            out.add(p.resolve())
+    return out
+
+
+def common_root_for_files(files: set[Path]) -> Optional[Path]:
+    if not files:
+        return None
+    if len(files) == 1:
+        return next(iter(files)).parent.resolve()
+    try:
+        common = Path(os.path.commonpath([os.fspath(f) for f in files])).resolve()
+        return common.parent.resolve() if common.is_file() else common
+    except ValueError:
+        return None
+
+
+def parse_source_input_lines(
+    lines: list[str],
+) -> tuple[Optional[Path], Optional[set[Path]], Optional[str]]:
+    """
+    One path per line: a folder = full source tree; a file = limit to that file.
+    Returns (source_root, only_files or None for full tree, error).
+    """
+    dirs: list[Path] = []
+    files: set[Path] = set()
+    for s in lines:
+        s = s.strip()
+        if not s:
+            continue
+        p = Path(s)
+        if p.is_dir():
+            dirs.append(p.resolve())
+        elif p.is_file():
+            files.add(p.resolve())
+        else:
+            return None, None, f"Path not found:\n{p}"
+
+    if len(dirs) > 1:
+        return None, None, "Only one source folder per run (one directory line)."
+
+    if dirs:
+        return dirs[0], (files if files else None), None
+
+    if files:
+        root = common_root_for_files(files)
+        if root is None:
+            return (
+                None,
+                None,
+                "Listed files must share one folder (same drive on Windows).",
+            )
+        return root, files, None
+
+    return None, None, "Add a source folder or at least one file path."
+
+
+@dataclass
+class WorkPaths:
+    source_root: Path
+    target_root: Path
+    only: Optional[set[Path]]
+
+
+def resolve_work_paths(
+    source_text: str, target_text: str
+) -> tuple[Optional[WorkPaths], Optional[str]]:
+    tgt_s = target_text.strip()
+    if not tgt_s:
+        return None, "Target folder is not set."
+    tgt = Path(tgt_s)
+    if not tgt.is_dir():
+        return None, f"Target is not a directory:\n{tgt}"
+
+    source_root, only, err = parse_source_input_lines(source_text.splitlines())
+    if err:
+        return None, err
+
+    err = validate_roots(source_root, tgt.resolve())
+    if err:
+        return None, err
+
+    return (
+        WorkPaths(source_root.resolve(), tgt.resolve(), only),
+        None,
+    )
+
+
+def format_paths_text(paths: Optional[set[Path]]) -> str:
+    if not paths:
+        return ""
+    return "\n".join(str(p) for p in sorted(paths))
+
+
+def build_initial_source_text(
+    saved_source: str,
+    initial_source: Optional[str],
+    initial_only_list: Optional[str],
+    initial_only_files: Optional[list[str]],
+) -> str:
+    lines: list[str] = []
+    seen: set[str] = set()
+
+    def add(line: str) -> None:
+        s = line.strip()
+        if not s:
+            return
+        key = s.casefold()
+        if key in seen:
+            return
+        seen.add(key)
+        lines.append(s)
+
+    for ln in saved_source.splitlines():
+        add(ln)
+    if initial_source and str(initial_source).strip():
+        add(str(initial_source).strip())
+    only_paths = read_only_paths(initial_only_list, initial_only_files)
+    if only_paths:
+        for p in sorted(only_paths):
+            add(str(p))
+    return "\n".join(lines)
+
+
 def read_only_paths(
     list_path: Optional[str] = None, file_args: Optional[list[str]] = None
 ) -> Optional[set[Path]]:
     """Resolved file paths to limit scans; None means process the full tree."""
-    out: set[Path] = set()
-    for s in file_args or []:
-        p = Path(s.strip())
-        if p.is_file():
-            out.add(p.resolve())
+    lines: list[str] = list(file_args or [])
     if list_path:
         lp = Path(list_path)
         if lp.is_file():
-            for line in lp.read_text(encoding="utf-8", errors="replace").splitlines():
-                s = line.strip()
-                if not s:
-                    continue
-                p = Path(s)
-                if p.is_file():
-                    out.add(p.resolve())
+            lines.extend(
+                lp.read_text(encoding="utf-8", errors="replace").splitlines()
+            )
+    out = parse_only_path_lines(lines)
     return out if out else None
 
 
@@ -657,6 +797,53 @@ def scan_copy_transfer(
     )
 
 
+def _browse_initial_dir(hint: str) -> str:
+    hint = hint.strip()
+    if not hint:
+        return ""
+    p = Path(hint)
+    if p.is_dir():
+        return str(p)
+    if p.is_file():
+        return str(p.parent)
+    parent = p.parent
+    return str(parent) if parent.is_dir() else ""
+
+
+def pick_native_folder(title: str, initial: str = "") -> Optional[str]:
+    """Windows folder picker (tkinter uses the system dialog on win32)."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    kwargs: dict = {"title": title, "mustexist": True, "parent": root}
+    init = _browse_initial_dir(initial)
+    if init:
+        kwargs["initialdir"] = init
+    path = filedialog.askdirectory(**kwargs)
+    root.destroy()
+    return path if path else None
+
+
+def pick_native_files(title: str, initial: str = "") -> list[str]:
+    """Windows multi-file picker (tkinter uses the system dialog on win32)."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    kwargs: dict = {"title": title, "parent": root}
+    init = _browse_initial_dir(initial)
+    if init:
+        kwargs["initialdir"] = init
+    paths = filedialog.askopenfilenames(**kwargs)
+    root.destroy()
+    return list(paths) if paths else []
+
+
 def apply_copy_transfer(copies: list[tuple[Path, Path]]) -> tuple[int, list[str]]:
     errors: list[str] = []
     n = 0
@@ -682,21 +869,18 @@ def run_gui(
         TAG_SOURCE = "source_input"
         TAG_TARGET = "target_input"
         TAG_STRIP = "strip_chars_input"
-        TAG_ONLY = "only_selected_chk"
         TAG_PREVIEW = "preview_text"
-        TAG_DLG_SOURCE = "dlg_source"
-        TAG_DLG_TARGET = "dlg_target"
 
         TIP_FOLDERS = (
-            "Source and target roots for every operation.\n"
+            "Source paths and target folder for every operation.\n"
             "Paths are saved when you close the app (%APPDATA%\\OrganizeFiles)."
         )
-        TIP_SOURCE = "Folder tree to match against and to pull .jpg / copy-list videos from."
-        TIP_TARGET = "Folder tree where renames, tags, and incoming files are applied."
-        TIP_ONLY = (
-            "When launched from Directory Opus with a file list, process only those paths "
-            "(not whole folder trees). Disabled if no list was passed."
+        TIP_SOURCE = (
+            "One path per line. A folder = scan that whole source tree. "
+            "A file = only that file (you can mix several files). "
+            "Launch from Directory Opus to fill this from your selection."
         )
+        TIP_TARGET = "Folder tree where renames, tags, and incoming files are applied."
         TIP_MARK = (
             "Target only: prepend ✔ to a filename when the same relative folder contains a source file "
             "with a matching peeled basename (e.g. source foo.mkv ↔ target foo.mp4.jpg).\n"
@@ -735,38 +919,16 @@ def run_gui(
 
         def __init__(self) -> None:
             s_default, t_default, strip_default = config_load_defaults()
-            if initial_source and str(initial_source).strip():
-                s_default = str(initial_source).strip()
             if initial_target and str(initial_target).strip():
                 t_default = str(initial_target).strip()
-            self._only_paths = read_only_paths(initial_only_list, initial_only_files)
-            self._only_default = bool(self._only_paths)
+            s_default = build_initial_source_text(
+                s_default, initial_source, initial_only_list, initial_only_files
+            )
             self._theme_apply = "theme_btn_apply"
             self._theme_preview = "theme_btn_preview"
 
             dpg.create_context()
             self._build_themes()
-
-            with dpg.file_dialog(
-                directory_selector=True,
-                show=False,
-                modal=True,
-                callback=self._on_dir_dialog,
-                tag=self.TAG_DLG_SOURCE,
-                width=700,
-                height=400,
-            ):
-                pass
-            with dpg.file_dialog(
-                directory_selector=True,
-                show=False,
-                modal=True,
-                callback=self._on_dir_dialog,
-                tag=self.TAG_DLG_TARGET,
-                width=700,
-                height=400,
-            ):
-                pass
 
             with dpg.window(tag="primary_window", label="Organize Files", no_title_bar=True):
                 self._build_main_layout(s_default, t_default, strip_default)
@@ -897,18 +1059,14 @@ def run_gui(
             self,
             label: str,
             input_tag: str,
-            dialog_tag: str,
             default: str,
             tip: str,
+            browse_callback,
         ) -> None:
             dpg.add_text(label, color=(150, 158, 175))
             with dpg.group(horizontal=True):
                 dpg.add_input_text(tag=input_tag, default_value=default, width=-48)
-                btn = dpg.add_button(
-                    label="…",
-                    width=40,
-                    callback=lambda: dpg.show_item(dialog_tag),
-                )
+                btn = dpg.add_button(label="…", width=40, callback=browse_callback)
             self._hover_tip(input_tag, tip)
             self._hover_tip(btn, f"Browse for {label.lower()}")
 
@@ -943,19 +1101,42 @@ def run_gui(
                 with dpg.child_window(width=400, height=-1, border=True, tag="panel_actions"):
                     dpg.bind_item_theme("panel_actions", "theme_actions_panel")
 
-                    hdr_folders = self._section("Folders", self.TIP_FOLDERS, default_open=True)
+                    hdr_folders = self._section("Input/Output", self.TIP_FOLDERS, default_open=True)
                     with dpg.group(parent=hdr_folders):
-                        self._path_field("Source", self.TAG_SOURCE, self.TAG_DLG_SOURCE, s_default, self.TIP_SOURCE)
-                        dpg.add_spacer(height=4)
-                        self._path_field("Target", self.TAG_TARGET, self.TAG_DLG_TARGET, t_default, self.TIP_TARGET)
-                        dpg.add_spacer(height=4)
-                        chk = dpg.add_checkbox(
-                            label="Only listed files",
-                            tag=self.TAG_ONLY,
-                            default_value=self._only_default,
-                            enabled=bool(self._only_paths),
+                        dpg.add_text("Paths (one per line)", color=(150, 158, 175))
+                        src_input = dpg.add_input_text(
+                            tag=self.TAG_SOURCE,
+                            default_value=s_default,
+                            multiline=True,
+                            width=-1,
+                            height=100,
+                            tab_input=False,
                         )
-                        self._hover_tip(chk, self.TIP_ONLY)
+                        self._hover_tip(src_input, self.TIP_SOURCE)
+                        with dpg.group(horizontal=True):
+                            folder_btn = dpg.add_button(
+                                label="Add folder…",
+                                callback=self._browse_add_source_folder,
+                            )
+                            files_btn = dpg.add_button(
+                                label="Add files…",
+                                callback=self._browse_add_source_files,
+                            )
+                            clear_btn = dpg.add_button(
+                                label="Clear",
+                                callback=self._on_clear_source_paths,
+                            )
+                        self._hover_tip(folder_btn, "Append a source folder to the list.")
+                        self._hover_tip(files_btn, "Append one or more file paths.")
+                        self._hover_tip(clear_btn, "Clear all source paths.")
+                        dpg.add_spacer(height=4)
+                        self._path_field(
+                            "Target",
+                            self.TAG_TARGET,
+                            t_default,
+                            self.TIP_TARGET,
+                            self._browse_target_folder,
+                        )
 
                     dpg.add_spacer(height=8)
 
@@ -1044,14 +1225,72 @@ def run_gui(
                         ),
                     )
 
-        def _on_dir_dialog(self, _sender, app_data) -> None:
-            path = app_data.get("file_path_name") or app_data.get("current_path") or ""
-            if not path:
+        def _source_browse_hint(self) -> str:
+            for line in self._source_list_lines():
+                s = line.strip()
+                if s:
+                    return s
+            return str(dpg.get_value(self.TAG_TARGET)).strip()
+
+        def _browse_add_source_folder(self) -> None:
+            if sys.platform != "win32":
+                self._msg_warning("Browse", "Folder picker is only supported on Windows.")
                 return
-            if _sender == self.TAG_DLG_SOURCE:
-                dpg.set_value(self.TAG_SOURCE, path)
-            elif _sender == self.TAG_DLG_TARGET:
+            path = pick_native_folder("Select source folder", self._source_browse_hint())
+            if path:
+                self._merge_source_paths([path])
+
+        def _browse_add_source_files(self) -> None:
+            if sys.platform != "win32":
+                self._msg_warning("Browse", "File picker is only supported on Windows.")
+                return
+            paths = pick_native_files("Select files", self._source_browse_hint())
+            if paths:
+                self._merge_source_paths(paths)
+
+        def _browse_target_folder(self) -> None:
+            if sys.platform != "win32":
+                self._msg_warning("Browse", "Folder picker is only supported on Windows.")
+                return
+            current = str(dpg.get_value(self.TAG_TARGET)).strip()
+            path = pick_native_folder("Select target folder", current)
+            if path:
                 dpg.set_value(self.TAG_TARGET, path)
+
+        def _source_list_lines(self) -> list[str]:
+            return str(dpg.get_value(self.TAG_SOURCE)).splitlines()
+
+        def _merge_source_paths(self, new_paths: list[str]) -> None:
+            merged: list[str] = []
+            seen: set[str] = set()
+            for line in self._source_list_lines():
+                s = line.strip()
+                if not s:
+                    continue
+                key = s.casefold()
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(s)
+            for p in new_paths:
+                s = str(p).strip()
+                if not s:
+                    continue
+                key = s.casefold()
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(s)
+            dpg.set_value(self.TAG_SOURCE, "\n".join(merged))
+
+        def _on_clear_source_paths(self) -> None:
+            dpg.set_value(self.TAG_SOURCE, "")
+
+        def resolve_work_paths(self) -> tuple[Optional[WorkPaths], Optional[str]]:
+            return resolve_work_paths(
+                str(dpg.get_value(self.TAG_SOURCE)),
+                str(dpg.get_value(self.TAG_TARGET)),
+            )
 
         def _set_preview(self, text: str) -> None:
             dpg.set_value(self.TAG_PREVIEW, text)
@@ -1100,14 +1339,9 @@ def run_gui(
                 dpg.render_dearpygui_frame()
             return bool(result[0])
 
-        def get_only_paths(self) -> Optional[set[Path]]:
-            if dpg.get_value(self.TAG_ONLY) and self._only_paths:
-                return self._only_paths
-            return None
-
         def persist_paths(self) -> None:
             config_save(
-                str(dpg.get_value(self.TAG_SOURCE)).strip(),
+                str(dpg.get_value(self.TAG_SOURCE)),
                 str(dpg.get_value(self.TAG_TARGET)).strip(),
                 str(dpg.get_value(self.TAG_STRIP)),
             )
@@ -1123,13 +1357,11 @@ def run_gui(
             dpg.destroy_context()
 
         def on_preview(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
             try:
                 self.persist_paths()
             except OSError as e:
@@ -1138,7 +1370,7 @@ def run_gui(
             self._set_preview("Scanning…\n")
 
             try:
-                result = scan_target(src_r, tgt_r, only=self.get_only_paths())
+                result = scan_target(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 self._set_preview("")
@@ -1146,8 +1378,7 @@ def run_gui(
 
             self._set_preview("")
             lines: list[str] = []
-            only = self.get_only_paths()
-            if only is not None:
+            if only:
                 lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("Files to rename (add ✔ prefix):\n")
             if result.planned:
@@ -1171,14 +1402,12 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_preview_title_strip(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
             strip_chars = str(dpg.get_value(self.TAG_STRIP))
-            src_r, tgt_r = src.resolve(), tgt.resolve()
             try:
                 self.persist_paths()
             except OSError as e:
@@ -1187,7 +1416,7 @@ def run_gui(
             self._set_preview("Scanning target for title strip…\n")
 
             try:
-                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=self.get_only_paths())
+                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 self._set_preview("")
@@ -1195,8 +1424,7 @@ def run_gui(
 
             self._set_preview("")
             lines: list[str] = []
-            only = self.get_only_paths()
-            if only is not None:
+            if only:
                 lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("Target files to rename (strip characters from stem):\n")
             if ts.planned:
@@ -1221,17 +1449,15 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_title_strip(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
             strip_chars = str(dpg.get_value(self.TAG_STRIP))
-            src_r, tgt_r = src.resolve(), tgt.resolve()
 
             try:
-                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=self.get_only_paths())
+                ts = scan_title_strip(src_r, tgt_r, strip_chars, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 return
@@ -1271,13 +1497,11 @@ def run_gui(
             self.on_preview_title_strip()
 
         def on_preview_parent_tag(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
             try:
                 self.persist_paths()
             except OSError as e:
@@ -1286,7 +1510,7 @@ def run_gui(
             self._set_preview("Scanning target for parent folder tags…\n")
 
             try:
-                pt = scan_parent_folder_tag(src_r, tgt_r, only=self.get_only_paths())
+                pt = scan_parent_folder_tag(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 self._set_preview("")
@@ -1294,8 +1518,7 @@ def run_gui(
 
             self._set_preview("")
             lines: list[str] = []
-            only = self.get_only_paths()
-            if only is not None:
+            if only:
                 lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("Target files to rename (normalize [parent folder] before extension):\n")
             if pt.planned:
@@ -1322,16 +1545,14 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_parent_tag(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
 
             try:
-                pt = scan_parent_folder_tag(src_r, tgt_r, only=self.get_only_paths())
+                pt = scan_parent_folder_tag(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 return
@@ -1369,13 +1590,11 @@ def run_gui(
             self.on_preview_parent_tag()
 
         def on_preview_jpg(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
             try:
                 self.persist_paths()
             except OSError as e:
@@ -1384,7 +1603,7 @@ def run_gui(
             self._set_preview("Scanning .jpg files…\n")
 
             try:
-                jpg = scan_jpg_moves(src_r, tgt_r, only=self.get_only_paths())
+                jpg = scan_jpg_moves(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 self._set_preview("")
@@ -1392,8 +1611,7 @@ def run_gui(
 
             self._set_preview("")
             lines: list[str] = []
-            only = self.get_only_paths()
-            if only is not None:
+            if only:
                 lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             lines.append("JPG files to move (source → target, relative path preserved):\n")
             if jpg.moves:
@@ -1415,16 +1633,14 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_jpg(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
 
             try:
-                jpg = scan_jpg_moves(src_r, tgt_r, only=self.get_only_paths())
+                jpg = scan_jpg_moves(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 return
@@ -1459,13 +1675,11 @@ def run_gui(
             self.on_preview_jpg()
 
         def on_preview_copy_transfer(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
             try:
                 self.persist_paths()
             except OSError as e:
@@ -1474,7 +1688,7 @@ def run_gui(
             self._set_preview("Reading copy list…\n")
 
             try:
-                xfer = scan_copy_transfer(src_r, tgt_r, only=self.get_only_paths())
+                xfer = scan_copy_transfer(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 self._set_preview("")
@@ -1482,8 +1696,7 @@ def run_gui(
 
             self._set_preview("")
             lines: list[str] = []
-            only = self.get_only_paths()
-            if only is not None:
+            if only:
                 lines.append(f"Limited to {len(only)} listed file(s).\n\n")
             list_path = src_r / COPY_TRANSFER_LIST_NAME
 
@@ -1535,16 +1748,14 @@ def run_gui(
             self._set_preview("".join(lines))
 
         def on_apply_copy_transfer(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
 
             try:
-                xfer = scan_copy_transfer(src_r, tgt_r, only=self.get_only_paths())
+                xfer = scan_copy_transfer(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 return
@@ -1591,16 +1802,14 @@ def run_gui(
             self.on_preview_copy_transfer()
 
         def on_apply(self) -> None:
-            src = Path(str(dpg.get_value(self.TAG_SOURCE)).strip())
-            tgt = Path(str(dpg.get_value(self.TAG_TARGET)).strip())
-            err = validate_roots(src, tgt)
+            work, err = self.resolve_work_paths()
             if err:
                 self._msg_error("Invalid paths", err)
                 return
-            src_r, tgt_r = src.resolve(), tgt.resolve()
+            src_r, tgt_r, only = work.source_root, work.target_root, work.only
 
             try:
-                result = scan_target(src_r, tgt_r, only=self.get_only_paths())
+                result = scan_target(src_r, tgt_r, only=only)
             except OSError as e:
                 self._msg_error("Scan failed", str(e))
                 return
@@ -1707,21 +1916,28 @@ def run_cli(argv: list[str]) -> int:
         return 0
 
     saved_src, saved_tgt, saved_strip = config_load_defaults()
-    src_s = (args.source or saved_src or "").strip()
+    src_s = args.source or saved_src or ""
     tgt_s = (args.target or saved_tgt or "").strip()
     strip_chars = normalize_strip_chars(
         args.strip_chars if args.strip_chars != "" else saved_strip
     )
 
-    src = Path(src_s)
-    tgt = Path(tgt_s)
-    err = validate_roots(src, tgt)
+    src_lines = [ln.strip() for ln in src_s.splitlines() if ln.strip()]
+    extra_only = read_only_paths(args.only_list, args.only_file)
+    if extra_only:
+        seen = {ln.casefold() for ln in src_lines}
+        for p in sorted(extra_only):
+            s = str(p)
+            if s.casefold() not in seen:
+                seen.add(s.casefold())
+                src_lines.append(s)
+
+    work, err = resolve_work_paths("\n".join(src_lines), tgt_s)
     if err:
         print(err, file=sys.stderr)
         return 2
 
-    src_r, tgt_r = src.resolve(), tgt.resolve()
-    only = read_only_paths(args.only_list, args.only_file)
+    src_r, tgt_r, only = work.source_root, work.target_root, work.only
     do_apply = bool(args.apply)
     do_preview = not do_apply or args.preview
 
