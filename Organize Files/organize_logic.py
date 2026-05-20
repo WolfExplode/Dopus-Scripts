@@ -128,6 +128,32 @@ def config_load_compare_threshold() -> int:
         return default
 
 
+def config_load_compare_debug() -> bool:
+    """Whether text compare writes fuzzy-matches.txt and fuzzy-mismatches.txt."""
+    try:
+        return bool(config_read().get("compare_debug"))
+    except OSError:
+        return False
+
+
+def config_load_compare_strip_extensions() -> bool:
+    """Whether text compare strips audio extensions before matching."""
+    try:
+        raw = config_read().get("compare_strip_extensions")
+        return True if raw is None else bool(raw)
+    except OSError:
+        return True
+
+
+def config_load_compare_romaji() -> bool:
+    """Whether text compare also scores Japanese lines converted to romaji."""
+    try:
+        raw = config_read().get("compare_romaji")
+        return True if raw is None else bool(raw)
+    except OSError:
+        return True
+
+
 def config_load_gui_sections() -> dict[str, bool]:
     """Which action panels were expanded last time the GUI closed."""
     out = dict(GUI_SECTION_DEFAULTS)
@@ -148,6 +174,9 @@ def config_save(
     gui_sections: Optional[dict[str, bool]] = None,
     *,
     compare_threshold: Optional[int] = None,
+    compare_debug: Optional[bool] = None,
+    compare_strip_extensions: Optional[bool] = None,
+    compare_romaji: Optional[bool] = None,
 ) -> None:
     data = config_read()
     data["source"] = source
@@ -156,6 +185,12 @@ def config_save(
     data["bracket_tag_text"] = bracket_tag_text
     if compare_threshold is not None:
         data["compare_threshold"] = max(0, min(100, int(compare_threshold)))
+    if compare_debug is not None:
+        data["compare_debug"] = bool(compare_debug)
+    if compare_strip_extensions is not None:
+        data["compare_strip_extensions"] = bool(compare_strip_extensions)
+    if compare_romaji is not None:
+        data["compare_romaji"] = bool(compare_romaji)
     if gui_sections is not None:
         data["gui_sections"] = {
             k: bool(gui_sections[k]) for k in GUI_SECTION_KEYS if k in gui_sections

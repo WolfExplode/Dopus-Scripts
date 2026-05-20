@@ -1,9 +1,9 @@
 // Organize Files — launches OrganizeFiles.py (Python / Dear PyGui) from this repo.
 //
-// Click: open GUI. Dual pane: source + destination tab paths as hints.
-// Files selected in source or destination pane: only those files are processed
-// (checkbox on in GUI; Ctrl+preview uses the same list).
-// No selection: whole source/target folders as before.
+// Click: open GUI. Target field = source tab folder; selected items fill Source paths.
+// Files/folders selected in the source pane: only those paths fill the GUI source field.
+// Ctrl+repeat also includes destination-pane selection for processing.
+// No selection: tab folder hint as --source (merged with saved paths in the GUI).
 //
 // Ctrl+click: run the last GUI action (e.g. tag apply) on the selection — always
 // Apply, not Preview. Uses saved tag/strip paths from %APPDATA%\OrganizeFiles\settings.json.
@@ -27,16 +27,16 @@ function tabFolderPath(tab) {
     return trimStr(tab.path + "");
 }
 
-function pushFilePath(paths, item, fso) {
+function pushItemPath(paths, item, fso) {
     var pathObj = item.realpath;
     pathObj.Resolve();
     var p = trimStr(pathObj + "");
-    if (p && fso.FileExists(p)) {
+    if (p && (fso.FileExists(p) || fso.FolderExists(p))) {
         paths.push(p);
     }
 }
 
-function collectSelectedFilePaths(tab, fso) {
+function collectSelectedPaths(tab, fso) {
     var paths = [];
     if (!tab) {
         return paths;
@@ -46,25 +46,25 @@ function collectSelectedFilePaths(tab, fso) {
         checkboxMode = tab.selstats.checkbox_mode;
     } catch (e0) {}
     if (checkboxMode) {
-        if (tab.selstats.checkedfiles === 0) {
+        if (tab.selstats.checkeditems === 0) {
             return paths;
         }
         var enChecked = new Enumerator(tab.files);
         for (; !enChecked.atEnd(); enChecked.moveNext()) {
             var checkedItem = enChecked.item();
-            if (!checkedItem.checked || checkedItem.is_dir) {
+            if (!checkedItem.checked) {
                 continue;
             }
-            pushFilePath(paths, checkedItem, fso);
+            pushItemPath(paths, checkedItem, fso);
         }
         return paths;
     }
-    if (tab.selstats.selfiles === 0) {
+    if (tab.selstats.selitems === 0) {
         return paths;
     }
-    var en = new Enumerator(tab.selected_files);
+    var en = new Enumerator(tab.selected);
     for (; !en.atEnd(); en.moveNext()) {
-        pushFilePath(paths, en.item(), fso);
+        pushItemPath(paths, en.item(), fso);
     }
     return paths;
 }
@@ -198,12 +198,12 @@ function OnClick(clickData) {
 
     var selected = [];
     if (tab) {
-        selected = mergeUniquePaths(selected, collectSelectedFilePaths(tab, fso));
+        selected = mergeUniquePaths(selected, collectSelectedPaths(tab, fso));
     }
-    if (destTab) {
+    if (isCtrl && destTab) {
         selected = mergeUniquePaths(
             selected,
-            collectSelectedFilePaths(destTab, fso)
+            collectSelectedPaths(destTab, fso)
         );
     }
     var onlyListPath = writeOnlyListFile(shell, fso, selected);
@@ -233,14 +233,16 @@ function OnClick(clickData) {
     if (srcHint && !onlyListPath) {
         execGui += " --source " + quoteArg(srcHint);
     }
-    if (tgtHint) {
-        execGui += " --target " + quoteArg(tgtHint);
+    if (srcHint) {
+        execGui += " --target " + quoteArg(srcHint);
     }
     execGui = appendOnlyList(execGui, onlyListPath);
     execGui = appendOnlyFiles(execGui, selected);
     if (onlyListPath) {
         DOpus.Output(
-            "Organize Files: " + selected.length + " selected file(s) only."
+            "Organize Files: " +
+                selected.length +
+                " selected path(s) in source field."
         );
     }
     DOpus.Output("Organize Files (GUI): " + execGui);

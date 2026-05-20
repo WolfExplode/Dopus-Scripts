@@ -94,6 +94,9 @@ def run_gui(
         TAG_STRIP = "strip_chars_input"
         TAG_BRACKET = "bracket_tag_input"
         TAG_COMPARE_THRESHOLD = "compare_threshold_input"
+        TAG_COMPARE_DEBUG = "compare_debug_checkbox"
+        TAG_COMPARE_STRIP_EXT = "compare_strip_ext_checkbox"
+        TAG_COMPARE_ROMAJI = "compare_romaji_checkbox"
         TAG_PREVIEW = "preview_text"
 
         TIP_FOLDERS = (
@@ -155,20 +158,35 @@ def run_gui(
             "videos are copied into Target (same relative path; Source is not deleted)."
         )
         TIP_COMPARE = (
-            "Compare two text files (one line per entry). Exact line match first, then word-based fuzzy "
-            "(words are space-separated; each word must score at or above the threshold against a word "
-            "in the other line).\n"
+            "Compare two text files (one line per entry). Exact line match first, then word-based fuzzy. "
+            "Line score uses the better of the two sides: matched words ÷ that side's word count, so a "
+            "short line can match inside a long one.\n"
             "Source paths: two files — first line file A, second line file B. Target folder: "
-            "missing-from-<other-file-name>.txt per side, plus fuzzy-matches.txt."
+            "missing-from-<other-file-name>.txt per side. "
+            "With Debug on, also writes fuzzy-matches.txt and fuzzy-mismatches.txt. "
+            "Romaji compares Japanese text converted to Hepburn romaji (useful with Mp3tag romanized filenames)."
         )
         TIP_COMPARE_THRESHOLD = (
-            "Minimum word match score (0–100). Line score = matched words ÷ longer line's word count."
+            "Minimum line score (0–100). Each word must reach this score against a word in the other line."
+        )
+        TIP_COMPARE_DEBUG = (
+            "Write fuzzy-matches.txt (pairs at or above threshold) and fuzzy-mismatches.txt "
+            "(best pairs below threshold for unmatched lines)."
+        )
+        TIP_COMPARE_STRIP_EXT = (
+            "Before matching, remove a trailing audio extension (.mp3, .flac, etc.) from each line."
+        )
+        TIP_COMPARE_ROMAJI = (
+            "Also score lines after converting Japanese to romaji; final score is the higher of normal vs romaji."
         )
         TIP_PREVIEW_PANEL = "Output from the last Preview or Apply scan."
 
         def __init__(self) -> None:
             s_default, t_default, strip_default, tag_default = config_load_defaults()
             cmp_thr = config_load_compare_threshold()
+            cmp_debug = config_load_compare_debug()
+            cmp_strip_ext = config_load_compare_strip_extensions()
+            cmp_romaji = config_load_compare_romaji()
             if initial_target and str(initial_target).strip():
                 t_default = str(initial_target).strip()
             s_default = build_initial_source_text(
@@ -185,7 +203,14 @@ def run_gui(
 
             with dpg.window(tag="primary_window", label="Organize Files", no_title_bar=True):
                 self._build_main_layout(
-                    s_default, t_default, strip_default, tag_default, cmp_thr
+                    s_default,
+                    t_default,
+                    strip_default,
+                    tag_default,
+                    cmp_thr,
+                    cmp_debug,
+                    cmp_strip_ext,
+                    cmp_romaji,
                 )
             self._build_fonts()
 
@@ -346,6 +371,9 @@ def run_gui(
             strip_default: str,
             tag_default: str,
             cmp_thr_default: int,
+            cmp_debug_default: bool,
+            cmp_strip_ext_default: bool,
+            cmp_romaji_default: bool,
         ) -> None:
             dpg.add_text("Organize Files", tag="title_main", color=(120, 200, 220))
             dpg.add_text(
@@ -498,6 +526,25 @@ def run_gui(
                                 callback=self.on_compare_playlists,
                                 width=-1,
                             )
+                        with dpg.group(horizontal=True):
+                            debug_cb = dpg.add_checkbox(
+                                label="Debug",
+                                tag=self.TAG_COMPARE_DEBUG,
+                                default_value=cmp_debug_default,
+                            )
+                            self._hover_tip(debug_cb, self.TIP_COMPARE_DEBUG)
+                            strip_ext_cb = dpg.add_checkbox(
+                                label="Strip extensions",
+                                tag=self.TAG_COMPARE_STRIP_EXT,
+                                default_value=cmp_strip_ext_default,
+                            )
+                            self._hover_tip(strip_ext_cb, self.TIP_COMPARE_STRIP_EXT)
+                            romaji_cb = dpg.add_checkbox(
+                                label="Romaji",
+                                tag=self.TAG_COMPARE_ROMAJI,
+                                default_value=cmp_romaji_default,
+                            )
+                            self._hover_tip(romaji_cb, self.TIP_COMPARE_ROMAJI)
                         dpg.bind_item_theme(btn_compare, self._theme_apply)
                         self._hover_tip(
                             btn_compare,
@@ -709,6 +756,11 @@ def run_gui(
                 str(dpg.get_value(self.TAG_BRACKET)).strip(),
                 gui_sections=self._gui_sections_snapshot(),
                 compare_threshold=int(dpg.get_value(self.TAG_COMPARE_THRESHOLD)),
+                compare_debug=bool(dpg.get_value(self.TAG_COMPARE_DEBUG)),
+                compare_strip_extensions=bool(
+                    dpg.get_value(self.TAG_COMPARE_STRIP_EXT)
+                ),
+                compare_romaji=bool(dpg.get_value(self.TAG_COMPARE_ROMAJI)),
             )
 
         def on_compare_playlists(self) -> None:
@@ -717,7 +769,7 @@ def run_gui(
             except ImportError:
                 self._msg(
                     "Text compare",
-                    "rapidfuzz is not installed.\n\n"
+                    "Compare dependencies are not installed.\n\n"
                     'Run: pip install -r "Organize Files/requirements.txt"',
                 )
                 return
@@ -729,6 +781,9 @@ def run_gui(
                 self._msg("Text compare", err)
                 return
             threshold = int(dpg.get_value(self.TAG_COMPARE_THRESHOLD))
+            debug = bool(dpg.get_value(self.TAG_COMPARE_DEBUG))
+            strip_extensions = bool(dpg.get_value(self.TAG_COMPARE_STRIP_EXT))
+            romaji_compare = bool(dpg.get_value(self.TAG_COMPARE_ROMAJI))
             self.persist_paths()
             self._set_preview("Comparing…\n")
             result = compare_playlists.run_compare(
@@ -736,6 +791,9 @@ def run_gui(
                 file_b,
                 output_dir=output_p,
                 threshold=threshold,
+                debug=debug,
+                strip_extensions=strip_extensions,
+                romaji_compare=romaji_compare,
             )
             self._set_preview(compare_playlists.format_compare_report(result))
 
