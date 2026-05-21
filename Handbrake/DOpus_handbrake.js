@@ -91,10 +91,16 @@ function getSettingsPath(shell) {
     return SETTINGS_FILE;
 }
 
+function trimStr(s) {
+    return String(s).replace(/^\s+|\s+$/g, "");
+}
+
 function loadHandbrakeSettings(shell, fso) {
     var out = {
         presetFile: "",
-        maxSide: String(DEFAULT_MAX_PICTURE_SIDE)
+        maxSide: String(DEFAULT_MAX_PICTURE_SIDE),
+        videoQuality: "",
+        videoFramerate: ""
     };
     try {
         var path = getSettingsPath(shell);
@@ -112,6 +118,8 @@ function loadHandbrakeSettings(shell, fso) {
                     var val = line.substring(eq + 1);
                     if (key === "presetFile") out.presetFile = val;
                     else if (key === "maxSide") out.maxSide = val;
+                    else if (key === "videoQuality") out.videoQuality = val;
+                    else if (key === "videoFramerate") out.videoFramerate = val;
                 }
             }
         }
@@ -119,21 +127,51 @@ function loadHandbrakeSettings(shell, fso) {
     return out;
 }
 
-function saveHandbrakeSettings(shell, fso, presetFile, maxSide) {
+function saveHandbrakeSettings(shell, fso, presetFile, maxSide, videoQuality, videoFramerate) {
     try {
         var path = getSettingsPath(shell);
         var stream = fso.OpenTextFile(path, 2, true);
         stream.WriteLine("presetFile=" + presetFile);
         stream.WriteLine("maxSide=" + maxSide);
+        stream.WriteLine("videoQuality=" + (videoQuality == null ? "" : videoQuality));
+        stream.WriteLine("videoFramerate=" + (videoFramerate == null ? "" : videoFramerate));
         stream.Close();
     } catch (e) { /* ignore */ }
 }
 
 function parseMaxPictureSide(shell, raw) {
-    var n = parseInt(String(raw).replace(/^\s+|\s+$/g, ""), 10);
+    var n = parseInt(trimStr(raw), 10);
     if (isNaN(n) || n < 1) {
         popup(shell, "Enter a positive number for max picture size (pixels).", "HandBrake", 16);
         return 0;
+    }
+    return n;
+}
+
+/** Blank = no override (null). Otherwise number for HandBrakeCLI -q. Invalid input returns false. */
+function parseVideoQualityOverride(shell, raw) {
+    var s = trimStr(raw);
+    if (s === "") {
+        return null;
+    }
+    var n = parseFloat(s);
+    if (isNaN(n)) {
+        popup(shell, "Video quality must be a number, or leave blank to use the preset.", "HandBrake", 16);
+        return false;
+    }
+    return n;
+}
+
+/** Blank = no override (null). Otherwise fps for HandBrakeCLI -r. Invalid input returns false. */
+function parseVideoFramerateOverride(shell, raw) {
+    var s = trimStr(raw);
+    if (s === "") {
+        return null;
+    }
+    var n = parseFloat(s);
+    if (isNaN(n) || n <= 0) {
+        popup(shell, "Frame rate must be a positive number, or leave blank to use the preset.", "HandBrake", 16);
+        return false;
     }
     return n;
 }
@@ -189,7 +227,8 @@ function populatePresetCombo(dlg, rows, selectFileName) {
 }
 
 /**
- * Show encode dialog. Returns { presetPath, maxPictureSide } or null if cancelled / no presets / invalid max.
+ * Show encode dialog. Returns encode options or null if cancelled / invalid input.
+ * videoQuality / videoFramerate are null when blank (use preset values).
  */
 function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     var rows = listPresetJsonFiles(fso);
@@ -211,6 +250,8 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     dlg.Create();
     populatePresetCombo(dlg, rows, saved.presetFile);
     dlg.control("maxside_edit").value = saved.maxSide || String(DEFAULT_MAX_PICTURE_SIDE);
+    dlg.control("quality_edit").value = saved.videoQuality || "";
+    dlg.control("framerate_edit").value = saved.videoFramerate || "";
     dlg.Show();
 
     var dialogResult = 0;
@@ -234,8 +275,30 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     if (!maxPictureSide) {
         return null;
     }
-    saveHandbrakeSettings(shell, fso, fso.GetFileName(presetPath), String(maxPictureSide));
-    return { presetPath: presetPath, maxPictureSide: maxPictureSide };
+    var qualityRaw = dlg.control("quality_edit").value;
+    var videoQuality = parseVideoQualityOverride(shell, qualityRaw);
+    if (videoQuality === false) {
+        return null;
+    }
+    var framerateRaw = dlg.control("framerate_edit").value;
+    var videoFramerate = parseVideoFramerateOverride(shell, framerateRaw);
+    if (videoFramerate === false) {
+        return null;
+    }
+    saveHandbrakeSettings(
+        shell,
+        fso,
+        fso.GetFileName(presetPath),
+        String(maxPictureSide),
+        trimStr(qualityRaw),
+        trimStr(framerateRaw)
+    );
+    return {
+        presetPath: presetPath,
+        maxPictureSide: maxPictureSide,
+        videoQuality: videoQuality,
+        videoFramerate: videoFramerate
+    };
 }
 
 function outputExtFromHandbrakeFileFormat(fileFormat) {
@@ -325,6 +388,8 @@ function OnClick(clickData) {
     }
     var presetPath = options.presetPath;
     var maxPictureSide = options.maxPictureSide;
+    var videoQuality = options.videoQuality;
+    var videoFramerate = options.videoFramerate;
     if (!fso.FileExists(presetPath)) {
         popup(shell, "Preset JSON not found at:\n" + presetPath, "HandBrake", 16);
         return;
@@ -344,15 +409,21 @@ function OnClick(clickData) {
     }
     var presetName = active.presetName;
     var outputExt = active.outputExt;
-    DOpus.Output(
+    var logMsg =
         "HandBrake: using preset \"" +
-            presetName +
-            "\" (max picture side " +
-            maxPictureSide +
-            ", output " +
-            outputExt +
-            ")"
-    );
+        presetName +
+        "\" (max picture side " +
+        maxPictureSide +
+        ", output " +
+        outputExt;
+    if (videoQuality != null) {
+        logMsg += ", quality -q " + videoQuality;
+    }
+    if (videoFramerate != null) {
+        logMsg += ", framerate -r " + videoFramerate;
+    }
+    logMsg += ")";
+    DOpus.Output(logMsg);
 
     var paths = [];
     var selectedFiles = tab.selected_files;
@@ -390,6 +461,8 @@ function OnClick(clickData) {
             " --maxHeight " +
             maxPictureSide +
             " --loose-anamorphic" +
+            (videoQuality != null ? " -q " + videoQuality : "") +
+            (videoFramerate != null ? " -r " + videoFramerate : "") +
             " -i " +
             quoteArg(inputPath) +
             " -o " +

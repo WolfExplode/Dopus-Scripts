@@ -1,16 +1,21 @@
 <resources>
   <resource name="DOpus_handbrake_Dlg" type="dialog">
-    <dialog fontsize="9" height="168" lang="english" title="HandBrake encode" width="420">
+    <dialog fontsize="9" height="220" lang="english" title="HandBrake encode" width="420">
 
       <control halign="left" height="10" name="preset_label" title="Preset JSON (from Handbrake folder):" type="static" width="380" x="12" y="10"/>
-      <control height="72" name="preset_combo" type="combo" width="396" x="12" y="22"/>
+      <control height="64" name="preset_combo" type="combo" width="396" x="12" y="22"/>
 
-      <control halign="left" height="10" name="maxside_label" title="Max picture size — longest side (pixels):" type="static" width="280" x="12" y="100"/>
-      <control height="14" name="maxside_edit" title="1920" type="edit" width="72" x="300" y="98"/>
-      <control halign="left" height="10" name="maxside_hint" title="Used for --maxWidth and --maxHeight (not from preset JSON)." type="static" width="396" x="12" y="116"/>
+      <control halign="left" height="10" name="maxside_label" title="Max picture size — longest side (pixels):" type="static" width="280" x="12" y="92"/>
+      <control height="14" name="maxside_edit" title="1920" type="edit" width="72" x="300" y="90"/>
 
-      <control close="1" default="yes" height="18" name="ok_btn" title="Encode" type="button" width="80" x="248" y="136"/>
-      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="342" y="136"/>
+      <control halign="left" height="10" name="quality_label" title="Video quality (VideoQualitySlider, optional):" type="static" width="280" x="12" y="112"/>
+      <control height="14" name="quality_edit" type="edit" width="72" x="300" y="110"/>
+
+      <control halign="left" height="10" name="framerate_label" title="Frame rate / VideoFramerate (optional):" type="static" width="280" x="12" y="132"/>
+      <control height="14" name="framerate_edit" type="edit" width="72" x="300" y="130"/>
+
+      <control close="1" default="yes" height="18" name="ok_btn" title="Encode" type="button" width="80" x="248" y="188"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="342" y="188"/>
 
     </dialog>
   </resource>
