@@ -6,7 +6,8 @@
 // No selection: tab folder hint as --source (merged with saved paths in the GUI).
 //
 // Ctrl+click: run the last GUI action (e.g. tag apply) on the selection — always
-// Apply, not Preview. Uses saved tag/strip paths from %APPDATA%\OrganizeFiles\settings.json.
+// Apply, not Preview. Filename tags use Source paths only (Target is ignored).
+// Uses saved tag/strip paths from %APPDATA%\OrganizeFiles\settings.json.
 // GUI also saves which panels were expanded (e.g. Filename tags) when you close the window.
 //
 /** Optional full path to OrganizeFiles.py if auto-detect fails. */

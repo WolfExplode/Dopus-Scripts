@@ -481,40 +481,55 @@ def _scan_target_renames(
     )
 
 
+def _scan_input_renames(
+    root: Path,
+    new_name_for: Callable[[Path], Optional[str]],
+    only: Optional[set[Path]] = None,
+) -> RenameScan:
+    """Plan in-place renames for files under Source paths (folder tree or explicit file list)."""
+    planned: list[tuple[Path, Path]] = []
+    skipped_collision: list[tuple[Path, Path]] = []
+    skipped_no_change = 0
+    planned_dest_keys: set[str] = set()
+
+    for path in iter_files_in_tree(root, only):
+        new_name = new_name_for(path)
+        if new_name is None:
+            skipped_no_change += 1
+            continue
+        new_path = path.with_name(new_name)
+        _try_plan_rename(path, new_path, planned, skipped_collision, planned_dest_keys)
+
+    return RenameScan(
+        planned=planned,
+        skipped_no_change=skipped_no_change,
+        skipped_collision=skipped_collision,
+        skipped_under_source=0,
+    )
+
+
 def scan_bracket_tag(
     source_root: Path,
-    target_root: Path,
     tag_text: str,
     only: Optional[set[Path]] = None,
-    source_library: Optional[Path] = None,
 ) -> RenameScan:
-    """Plan renames: append `` [tag_text]`` at end of each target-tree filename stem."""
+    """Plan renames: append `` [tag_text]`` at end of each source-path filename stem."""
     tag_inner = sanitize_tag_text(tag_text)
     if not tag_inner:
         return _EMPTY_RENAME_SCAN
-    return _scan_target_renames(
+    return _scan_input_renames(
         source_root,
-        target_root,
         lambda p: bracket_tag_new_name(p, tag_inner),
         only=only,
-        source_library=source_library,
     )
 
 
 def scan_bracket_tag_remove_all(
     source_root: Path,
-    target_root: Path,
     only: Optional[set[Path]] = None,
-    source_library: Optional[Path] = None,
 ) -> RenameScan:
-    """Plan renames: strip every ``[...]`` tag from target-tree filenames."""
-    return _scan_target_renames(
-        source_root,
-        target_root,
-        bracket_tag_remove_all_name,
-        only=only,
-        source_library=source_library,
-    )
+    """Plan renames: strip every ``[...]`` tag from source-path filenames."""
+    return _scan_input_renames(source_root, bracket_tag_remove_all_name, only=only)
 
 
 def normalize_duplicate_trailing_extensions(basename: str) -> str:
@@ -664,6 +679,28 @@ class WorkPaths:
     target_root: Path
     only: Optional[set[Path]]
     source_library: Optional[Path] = None
+
+
+@dataclass
+class BracketWorkPaths:
+    source_root: Path
+    only: Optional[set[Path]]
+
+
+def resolve_bracket_work_paths(
+    source_text: str,
+) -> tuple[Optional[BracketWorkPaths], Optional[str]]:
+    source_root, _source_library, only, err = parse_source_input_lines(
+        source_text.splitlines()
+    )
+    if err:
+        return None, err
+    if source_root is None:
+        return None, "Add a source folder or at least one file path."
+    root = source_root.resolve()
+    if only is None and not root.is_dir():
+        return None, f"Source is not a directory:\n{root}"
+    return BracketWorkPaths(root, only), None
 
 
 def resolve_compare_paths(
@@ -1241,17 +1278,19 @@ def _cli_apply_items(
 
 def _cli_scan_and_format(
     action: str,
-    work: WorkPaths,
+    work: WorkPaths | BracketWorkPaths,
     strip_chars: str,
     tag_text: str,
 ) -> tuple[object, str, Optional[int]]:
     """Scan for CLI action. Returns (result, preview_text, early_exit_code)."""
-    src_r, tgt_r, only, src_lib = (
-        work.source_root,
-        work.target_root,
-        work.only,
-        work.source_library,
-    )
+    src_r = work.source_root
+    only = work.only
+    if isinstance(work, BracketWorkPaths):
+        tgt_r = src_r
+        src_lib = None
+    else:
+        tgt_r = work.target_root
+        src_lib = work.source_library
     if action == "mark":
         result = scan_target(src_r, tgt_r, only=only, source_library=src_lib)
         return result, format_preview_mark(result, only), None
@@ -1273,15 +1312,13 @@ def _cli_scan_and_format(
     if action == "bracket-tag":
         if not tag_text:
             return None, "", 2
-        result = scan_bracket_tag(
-            src_r, tgt_r, tag_text, only=only, source_library=src_lib
-        )
+        result = scan_bracket_tag(src_r, tag_text, only=only)
         return (
             result,
             format_preview_rename(
                 result,
                 only,
-                f'Target files to rename (append " [{tag_text}]" at end):\n',
+                f'Files to rename (append " [{tag_text}]" at end):\n',
                 "already has tag at end / no change",
                 collision_basename_only=False,
             ),
@@ -1413,7 +1450,10 @@ def run_cli(argv: list[str]) -> int:
         saved_src, args.source, args.only_list, args.only_file
     )
 
-    work, err = resolve_work_paths(src_s, tgt_s)
+    if args.action == "bracket-tag":
+        work, err = resolve_bracket_work_paths(src_s)
+    else:
+        work, err = resolve_work_paths(src_s, tgt_s)
     if err:
         print(err, file=sys.stderr)
         return 2

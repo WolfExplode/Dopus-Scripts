@@ -95,6 +95,23 @@ var THUMB_AUDIO_EXT = {
     ".weba": 1
 };
 
+/**
+ * No attached_pic / ID3 / Matroska cover path — combine cover remuxes to .m4a.
+ * Keeps native cover: .mp3, .m4a/.m4b/.m4p, .flac, .mka (and video containers).
+ * .aac/.adts keep audio with -c copy; everything else here is re-encoded to AAC.
+ */
+var COVER_REMUX_TO_M4A_EXT = {
+    ".aac": 1, ".adts": 1,
+    ".wav": 1, ".aiff": 1, ".aif": 1, ".aifc": 1, ".caf": 1,
+    ".au": 1, ".snd": 1,
+    ".ogg": 1, ".oga": 1, ".opus": 1, ".weba": 1,
+    ".wma": 1,
+    ".ac3": 1, ".eac3": 1, ".dts": 1,
+    ".amr": 1, ".awb": 1,
+    ".mp2": 1, ".mpa": 1,
+    ".ape": 1, ".tta": 1, ".wv": 1
+};
+
 function isThumbImageName(name) {
     return THUMB_IMAGE_EXT[fileExtLower(name)] == 1;
 }
@@ -231,19 +248,94 @@ function isThumbMediaName(name) {
     return isThumbVideoName(name) || isThumbAudioName(name);
 }
 
-/** Output extension when embedding cover (.aac/.adts remux to .m4a). */
+/** Output extension when embedding cover (unsupported audio → .m4a). */
 function embedCoverOutExt(mediaExt) {
-    if (mediaExt == ".aac" || mediaExt == ".adts") {
+    if (COVER_REMUX_TO_M4A_EXT[mediaExt] == 1) {
         return ".m4a";
     }
     return mediaExt;
+}
+
+/** M4A with MJPEG attached_pic; encodeAudioToAac true when source audio cannot be copied into MP4. */
+function ffmpegM4aCoverEmbedExec(mediaPath, imgPath, tmpPath, encodeAudioToAac) {
+    var audioPart = encodeAudioToAac ? "-c:a aac -b:a 256k" : "-c copy";
+    return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 ' + audioPart + ' -c:v:0 mjpeg -disposition:v:0 attached_pic "' + tmpPath + '"';
+}
+
+/** ID3v2 APIC cover (PNG/JPEG/etc. via -map 1). */
+function ffmpegMp3CoverEmbedExec(mediaPath, imgPath, tmpPath) {
+    return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map 0:a? -map 1 -c:a copy -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" "' + tmpPath + '"';
+}
+
+/** First audio stream codec name (e.g. mp3, pcm_s16le), or "" if missing / ffprobe failed. */
+function probeFirstAudioCodecName(shell, fso, mediaPath) {
+    var tmp = shell.ExpandEnvironmentStrings("%TEMP%") + "\\DOpus_ffmpeg_acodec.txt";
+    if (fso.FileExists(tmp)) {
+        try {
+            fso.DeleteFile(tmp);
+        } catch (e0) { /* ignore */ }
+    }
+    var cmd = 'cmd /c ffprobe.exe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "';
+    cmd += mediaPath + '" 1> "' + tmp + '"';
+    var code;
+    try {
+        code = shell.Run(cmd, 0, true);
+    } catch (ex) {
+        return "";
+    }
+    if (code != 0 || !fso.FileExists(tmp)) {
+        try {
+            if (fso.FileExists(tmp)) {
+                fso.DeleteFile(tmp);
+            }
+        } catch (e1) { /* ignore */ }
+        return "";
+    }
+    var line = "";
+    try {
+        var ts = fso.OpenTextFile(tmp, 1);
+        line = ts.ReadAll().replace(/^\s+|\s+$/g, "").replace(/\r|\n/g, "");
+        ts.Close();
+    } catch (eR) {
+        line = "";
+    }
+    try {
+        fso.DeleteFile(tmp);
+    } catch (e2) { /* ignore */ }
+    return line;
+}
+
+function mp3FileHasMp3Audio(shell, fso, mediaPath) {
+    var c = probeFirstAudioCodecName(shell, fso, mediaPath);
+    return c == "mp3" || c == "mp2";
+}
+
+function coverEmbedOutExtForMedia(ext, shell, fso, mediaPath) {
+    var outExt = embedCoverOutExt(ext);
+    if (ext == ".mp3" && !mp3FileHasMp3Audio(shell, fso, mediaPath)) {
+        return ".m4a";
+    }
+    return outExt;
+}
+
+function coverEmbedForceM4aEncode(ext, shell, fso, mediaPath) {
+    if (COVER_REMUX_TO_M4A_EXT[ext] == 1 && ext != ".aac" && ext != ".adts") {
+        return true;
+    }
+    if (ext == ".mp3" && !mp3FileHasMp3Audio(shell, fso, mediaPath)) {
+        return true;
+    }
+    return false;
 }
 
 /**
  * ffmpeg command to embed imgPath as cover/poster into mediaPath -> tmpPath.
  * isVideoExt: from THUMB_VIDEO_EXT (mp4, mov, …), not audio-only extensions.
  */
-function ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt) {
+function ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt, forceM4aEncode) {
+    if (forceM4aEncode) {
+        return ffmpegM4aCoverEmbedExec(mediaPath, imgPath, tmpPath, true);
+    }
     if (ext == ".mkv" || ext == ".mka") {
         var mime = mimeTypeForImageExt(imgPathForMime);
         return 'ffmpeg.exe -y -i "' + mediaPath + '" -map_metadata 0 -map_chapters 0 -map 0 -map -0:t -c copy -attach "' + imgPath + '" -metadata:s:t mimetype=' + mime + ' "' + tmpPath + '"';
@@ -252,10 +344,10 @@ function ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath
         return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 0:a? -map 0:s? -map 0:d? -map 0:t? -map 1 -c copy -c:v:1 mjpeg -disposition:v:1 attached_pic "' + tmpPath + '"';
     }
     if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac" || ext == ".adts") {
-        return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 -c copy -c:v:0 mjpeg -disposition:v:0 attached_pic "' + tmpPath + '"';
+        return ffmpegM4aCoverEmbedExec(mediaPath, imgPath, tmpPath, false);
     }
     if (ext == ".mp3") {
-        return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map 0:a? -map 1:0 -c copy "' + tmpPath + '"';
+        return ffmpegMp3CoverEmbedExec(mediaPath, imgPath, tmpPath);
     }
     return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map 0:a? -map 1:0 -c copy "' + tmpPath + '"';
 }
@@ -294,7 +386,7 @@ function tryStripCoverToTmp(shell, fso, mediaPath, ext, stripTmp, isVideoExt) {
     if (isVideoExt) {
         return runAttempt(cmdVideo);
     }
-    if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac") {
+    if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac" || ext == ".adts") {
         return runAttempt(cmdM4a);
     }
     if (ext == ".mp3") {
@@ -304,7 +396,7 @@ function tryStripCoverToTmp(shell, fso, mediaPath, ext, stripTmp, isVideoExt) {
 }
 
 /**
- * Embed imgPath into mediaItem in place (tmp/bak replace). Raw .aac/.adts is remuxed to .m4a.
+ * Embed imgPath into mediaItem in place (tmp/bak replace). Unsupported audio (COVER_REMUX_TO_M4A_EXT) → .m4a.
  * @return {{ ok: boolean, err: string, outPath: string }}
  */
 function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
@@ -313,8 +405,9 @@ function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
     var folder = mediaItem.path + "";
     var stem = mediaItem.name_stem + "";
     var ext = fileExtLower(mediaName);
-    var outExt = embedCoverOutExt(ext);
+    var outExt = coverEmbedOutExtForMedia(ext, shell, fso, mediaPath);
     var remux = outExt != ext;
+    var forceM4aEncode = coverEmbedForceM4aEncode(ext, shell, fso, mediaPath);
     var isVideoExt = isThumbVideoName(mediaName);
     var outPath = folder + "\\" + stem + outExt;
     var tmpPath = folder + "\\" + stem + ".__opus_thumb_tmp" + outExt;
@@ -322,7 +415,7 @@ function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
     var finalPath = remux ? outPath : mediaPath;
 
     if (remux && fso.FileExists(outPath)) {
-        return { ok: false, err: "Cannot remux to .m4a — file already exists:\n\n" + outPath, outPath: "" };
+        return { ok: false, err: "Cannot remux to " + outExt + " — file already exists:\n\n" + outPath, outPath: "" };
     }
 
     if (fso.FileExists(tmpPath)) {
@@ -337,9 +430,13 @@ function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
     }
 
     if (remux) {
-        DOpus.Output("Embed cover: remux " + ext + " to " + outExt);
+        if (ext == ".mp3" && outExt == ".m4a") {
+            DOpus.Output("Embed cover: .mp3 is not MPEG audio (codec: " + probeFirstAudioCodecName(shell, fso, mediaPath) + "); remux to .m4a");
+        } else {
+            DOpus.Output("Embed cover: remux " + ext + " to " + outExt);
+        }
     }
-    var exec = ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt);
+    var exec = ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt, forceM4aEncode);
     DOpus.Output("Embed cover: " + exec);
 
     try {

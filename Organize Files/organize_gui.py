@@ -132,7 +132,8 @@ def run_gui(
             "always runs even when this is empty."
         )
         TIP_BRACKET = (
-            'Target only: type any tag text (e.g. NQ or Episode 3).\n'
+            "Source paths only: renames the files or folder tree listed in Source paths.\n"
+            'Type any tag text (e.g. NQ or Episode 3).\n'
             'Preview / Apply — append " [tag]" at the end (other bracket tags stay; skipped if '
             "that tag is already the final trailing tag).\n"
             "Remove all tags — strip every […] from filenames."
@@ -142,11 +143,11 @@ def run_gui(
             'are replaced with _. Example: NQ → "movie [NQ].mp4".'
         )
         TIP_BRACKET_APPLY = (
-            'Append " [tag]" at the end of each target filename. Other bracket tags are left '
+            'Append " [tag]" at the end of each source-path filename. Other bracket tags are left '
             "as-is; skipped if that tag is already the final trailing tag."
         )
         TIP_BRACKET_REMOVE_ALL = (
-            "Remove every […] bracket tag from target filenames (any tag text, anywhere in the name)."
+            "Remove every […] bracket tag from source-path filenames (any tag text, anywhere in the name)."
         )
         TIP_JPG = (
             "Move every .jpg under Source into Target using the same relative paths "
@@ -728,6 +729,9 @@ def run_gui(
                 str(dpg.get_value(self.TAG_TARGET)),
             )
 
+        def resolve_bracket_work_paths(self) -> tuple[Optional[BracketWorkPaths], Optional[str]]:
+            return resolve_bracket_work_paths(str(dpg.get_value(self.TAG_SOURCE)))
+
         def _process_frame(self) -> None:
             dpg.render_dearpygui_frame()
             jobs = dpg.get_callback_queue()
@@ -829,6 +833,7 @@ def run_gui(
             format_result,
             *,
             pre_check=None,
+            resolve_paths=None,
         ) -> None:
             config_record_last(action, "preview")
             if pre_check is not None:
@@ -837,7 +842,8 @@ def run_gui(
                     title, msg = err
                     self._msg(title, msg)
                     return
-            work, err = self.resolve_work_paths()
+            resolve = resolve_paths or self.resolve_work_paths
+            work, err = resolve()
             if err:
                 self._msg("Invalid paths", err)
                 return
@@ -863,6 +869,7 @@ def run_gui(
             fail_label: str = "Renamed",
             error_title: str = "Some renames failed",
             list_missing=None,
+            resolve_paths=None,
         ) -> None:
             config_record_last(action, "apply")
             if pre_check is not None:
@@ -871,7 +878,8 @@ def run_gui(
                     title, msg = err
                     self._msg(title, msg)
                     return
-            work, err = self.resolve_work_paths()
+            resolve = resolve_paths or self.resolve_work_paths
+            work, err = resolve()
             if err:
                 self._msg("Invalid paths", err)
                 return
@@ -979,39 +987,28 @@ def run_gui(
             tag = self._bracket_tag_text()
 
             def scan(w):
-                return scan_bracket_tag(
-                    w.source_root,
-                    w.target_root,
-                    tag,
-                    only=w.only,
-                    source_library=w.source_library,
-                )
+                return scan_bracket_tag(w.source_root, tag, only=w.only)
 
             self._gui_preview(
                 "bracket-tag",
-                f'Scanning target for tag "[{tag}]"…\n',
+                f'Scanning source paths for tag "[{tag}]"…\n',
                 scan,
                 lambda r, w: format_preview_rename(
                     r,
                     w.only,
-                    f'Target files to rename (append " [{tag}]" at end):\n',
+                    f'Files to rename (append " [{tag}]" at end):\n',
                     "already has tag at end / no change",
                     collision_basename_only=False,
                 ),
                 pre_check=lambda: self._bracket_tag_required("preview"),
+                resolve_paths=self.resolve_bracket_work_paths,
             )
 
         def on_apply_bracket_tag(self) -> None:
             tag = self._bracket_tag_text()
 
             def scan(w):
-                return scan_bracket_tag(
-                    w.source_root,
-                    w.target_root,
-                    tag,
-                    only=w.only,
-                    source_library=w.source_library,
-                )
+                return scan_bracket_tag(w.source_root, tag, only=w.only)
 
             self._gui_apply(
                 "bracket-tag",
@@ -1020,39 +1017,32 @@ def run_gui(
                 self._apply_renames_gui,
                 self.on_preview_bracket_tag,
                 pre_check=lambda: self._bracket_tag_required("apply"),
+                resolve_paths=self.resolve_bracket_work_paths,
             )
 
         def on_preview_bracket_tag_remove_all(self) -> None:
             self._gui_preview(
                 "bracket-tag",
-                "Scanning target to remove all bracket tags…\n",
-                lambda w: scan_bracket_tag_remove_all(
-                    w.source_root,
-                    w.target_root,
-                    only=w.only,
-                    source_library=w.source_library,
-                ),
+                "Scanning source paths to remove all bracket tags…\n",
+                lambda w: scan_bracket_tag_remove_all(w.source_root, only=w.only),
                 lambda r, w: format_preview_rename(
                     r,
                     w.only,
-                    "Target files to rename (remove all […] tags):\n",
+                    "Files to rename (remove all […] tags):\n",
                     "no bracket tags / no change",
                     collision_basename_only=False,
                 ),
+                resolve_paths=self.resolve_bracket_work_paths,
             )
 
         def on_apply_bracket_tag_remove_all(self) -> None:
             self._gui_apply(
                 "bracket-tag",
-                lambda w: scan_bracket_tag_remove_all(
-                    w.source_root,
-                    w.target_root,
-                    only=w.only,
-                    source_library=w.source_library,
-                ),
+                lambda w: scan_bracket_tag_remove_all(w.source_root, only=w.only),
                 lambda r: r.planned,
                 self._apply_renames_gui,
                 self.on_preview_bracket_tag_remove_all,
+                resolve_paths=self.resolve_bracket_work_paths,
             )
 
         def on_preview_jpg(self) -> None:
