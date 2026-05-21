@@ -231,6 +231,14 @@ function isThumbMediaName(name) {
     return isThumbVideoName(name) || isThumbAudioName(name);
 }
 
+/** Output extension when embedding cover (.aac/.adts remux to .m4a). */
+function embedCoverOutExt(mediaExt) {
+    if (mediaExt == ".aac" || mediaExt == ".adts") {
+        return ".m4a";
+    }
+    return mediaExt;
+}
+
 /**
  * ffmpeg command to embed imgPath as cover/poster into mediaPath -> tmpPath.
  * isVideoExt: from THUMB_VIDEO_EXT (mp4, mov, …), not audio-only extensions.
@@ -243,7 +251,7 @@ function ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath
     if (isVideoExt) {
         return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:v:0 -map 0:a? -map 0:s? -map 0:d? -map 0:t? -map 1 -c copy -c:v:1 mjpeg -disposition:v:1 attached_pic "' + tmpPath + '"';
     }
-    if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac") {
+    if (ext == ".m4a" || ext == ".m4b" || ext == ".m4p" || ext == ".aac" || ext == ".adts") {
         return 'ffmpeg.exe -y -i "' + mediaPath + '" -i "' + imgPath + '" -map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 -c copy -c:v:0 mjpeg -disposition:v:0 attached_pic "' + tmpPath + '"';
     }
     if (ext == ".mp3") {
@@ -296,8 +304,8 @@ function tryStripCoverToTmp(shell, fso, mediaPath, ext, stripTmp, isVideoExt) {
 }
 
 /**
- * Embed imgPath into mediaItem in place (tmp/bak replace).
- * @return {{ ok: boolean, err: string }}
+ * Embed imgPath into mediaItem in place (tmp/bak replace). Raw .aac/.adts is remuxed to .m4a.
+ * @return {{ ok: boolean, err: string, outPath: string }}
  */
 function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
     var mediaName = mediaItem.name + "";
@@ -305,9 +313,17 @@ function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
     var folder = mediaItem.path + "";
     var stem = mediaItem.name_stem + "";
     var ext = fileExtLower(mediaName);
+    var outExt = embedCoverOutExt(ext);
+    var remux = outExt != ext;
     var isVideoExt = isThumbVideoName(mediaName);
-    var tmpPath = folder + "\\" + stem + ".__opus_thumb_tmp" + ext;
+    var outPath = folder + "\\" + stem + outExt;
+    var tmpPath = folder + "\\" + stem + ".__opus_thumb_tmp" + outExt;
     var bakPath = folder + "\\" + stem + ".__opus_thumb_orig" + ext;
+    var finalPath = remux ? outPath : mediaPath;
+
+    if (remux && fso.FileExists(outPath)) {
+        return { ok: false, err: "Cannot remux to .m4a — file already exists:\n\n" + outPath, outPath: "" };
+    }
 
     if (fso.FileExists(tmpPath)) {
         try {
@@ -320,38 +336,41 @@ function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
         } catch (e1) { /* ignore */ }
     }
 
+    if (remux) {
+        DOpus.Output("Embed cover: remux " + ext + " to " + outExt);
+    }
     var exec = ffmpegSetThumbnailExec(mediaPath, imgPath, imgPathForMime, ext, tmpPath, isVideoExt);
     DOpus.Output("Embed cover: " + exec);
 
     try {
         var exitCode = shell.Run(exec, 0, true);
         if (exitCode != 0) {
-            return { ok: false, err: "ffmpeg failed (exit code " + exitCode + "). See DOpus Script Output." };
+            return { ok: false, err: "ffmpeg failed (exit code " + exitCode + "). See DOpus Script Output.", outPath: "" };
         }
         if (!fso.FileExists(tmpPath)) {
-            return { ok: false, err: "ffmpeg finished but the output file was not created." };
+            return { ok: false, err: "ffmpeg finished but the output file was not created.", outPath: "" };
         }
 
         try {
             fso.MoveFile(mediaPath, bakPath);
         } catch (eRen) {
-            return { ok: false, err: "Could not rename the original file (it may be open in another program).\n\nNew file left at:\n" + tmpPath };
+            return { ok: false, err: "Could not rename the original file (it may be open in another program).\n\nNew file left at:\n" + tmpPath, outPath: "" };
         }
         try {
-            fso.MoveFile(tmpPath, mediaPath);
+            fso.MoveFile(tmpPath, finalPath);
         } catch (eMv) {
             try {
                 fso.MoveFile(bakPath, mediaPath);
             } catch (eRest) { /* ignore */ }
-            return { ok: false, err: "Could not replace the media file; the original was restored." };
+            return { ok: false, err: "Could not replace the media file; the original was restored.", outPath: "" };
         }
         try {
             fso.DeleteFile(bakPath);
         } catch (eDel) { /* leave backup if locked */ }
 
-        return { ok: true, err: "" };
+        return { ok: true, err: "", outPath: finalPath };
     } catch (ex) {
-        return { ok: false, err: "Error: " + ex.message };
+        return { ok: false, err: "Error: " + ex.message, outPath: "" };
     }
 }
 
@@ -401,7 +420,8 @@ function runSplitOrCombineCover(clickData, fso, shell) {
         } catch (exDel) {
             DOpus.Output("[" + logTitle + "] Embedded OK but could not delete image file (in use?): " + imgPath + " — " + exDel.message);
         }
-        thumbInfo(shell, "Cover embedded in media (same as combine AV). Image file removed if possible:\n" + (mediaItem.realpath + ""), logTitle);
+        var outMedia = res.outPath || (mediaItem.realpath + "");
+        thumbInfo(shell, "Cover embedded in media (same as combine AV). Image file removed if possible:\n" + outMedia, logTitle);
         try {
             clickData.func.command.RunCommand("Go REFRESH");
         } catch (eRf) { /* ignore */ }

@@ -2,7 +2,9 @@
 
 var HANDBRAKE_CLI = "%ProgramFiles%\\HandBrake\\HandBrakeCLI.exe";
 var HANDBRAKE_GUI = "%ProgramFiles%\\HandBrake\\HandBrake.exe";
-var PRESET_JSON = "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\handbrake.json";
+var PRESET_DIR = "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\Handbrake";
+var DEFAULT_MAX_PICTURE_SIDE = 1920;
+var SETTINGS_FILE = null;
 /** 0xC000013A STATUS_CONTROL_C_EXIT — user closed console / Ctrl+C / killed process */
 var HANDBRAKE_EXIT_CONTROL_C = -1073741510;
 
@@ -81,6 +83,161 @@ function resolveHandBrakeGui(shell, fso) {
     return "";
 }
 
+function getSettingsPath(shell) {
+    if (!SETTINGS_FILE) {
+        SETTINGS_FILE =
+            shell.ExpandEnvironmentStrings("%APPDATA%") + "\\DOpus_handbrake_settings.ini";
+    }
+    return SETTINGS_FILE;
+}
+
+function loadHandbrakeSettings(shell, fso) {
+    var out = {
+        presetFile: "",
+        maxSide: String(DEFAULT_MAX_PICTURE_SIDE)
+    };
+    try {
+        var path = getSettingsPath(shell);
+        if (fso.FileExists(path)) {
+            var stream = fso.OpenTextFile(path, 1, false);
+            var content = stream.ReadAll();
+            stream.Close();
+            var lines = content.split("\n");
+            var i;
+            for (i = 0; i < lines.length; i++) {
+                var line = lines[i].replace(/\r$/, "");
+                var eq = line.indexOf("=");
+                if (eq > 0) {
+                    var key = line.substring(0, eq);
+                    var val = line.substring(eq + 1);
+                    if (key === "presetFile") out.presetFile = val;
+                    else if (key === "maxSide") out.maxSide = val;
+                }
+            }
+        }
+    } catch (e) { /* use defaults */ }
+    return out;
+}
+
+function saveHandbrakeSettings(shell, fso, presetFile, maxSide) {
+    try {
+        var path = getSettingsPath(shell);
+        var stream = fso.OpenTextFile(path, 2, true);
+        stream.WriteLine("presetFile=" + presetFile);
+        stream.WriteLine("maxSide=" + maxSide);
+        stream.Close();
+    } catch (e) { /* ignore */ }
+}
+
+function parseMaxPictureSide(shell, raw) {
+    var n = parseInt(String(raw).replace(/^\s+|\s+$/g, ""), 10);
+    if (isNaN(n) || n < 1) {
+        popup(shell, "Enter a positive number for max picture size (pixels).", "HandBrake", 16);
+        return 0;
+    }
+    return n;
+}
+
+/** Sorted list of { label, path } for *.json in PRESET_DIR. */
+function listPresetJsonFiles(fso) {
+    var rows = [];
+    if (!fso.FolderExists(PRESET_DIR)) {
+        return rows;
+    }
+    var folder = fso.GetFolder(PRESET_DIR);
+    var files = new Enumerator(folder.Files);
+    for (; !files.atEnd(); files.moveNext()) {
+        var file = files.item();
+        var name = String(file.Name);
+        if (name.toLowerCase().indexOf(".json") === name.length - 5) {
+            rows.push({ label: name, path: file.Path });
+        }
+    }
+    rows.sort(function (a, b) {
+        return String(a.label).toLowerCase() < String(b.label).toLowerCase() ? -1 : 1;
+    });
+    return rows;
+}
+
+function comboPresetPath(raw, rows) {
+    var n = parseInt(String(raw), 10);
+    if (!isNaN(n) && n >= 0 && n < rows.length) {
+        return rows[n].path;
+    }
+    return rows.length ? rows[0].path : "";
+}
+
+function populatePresetCombo(dlg, rows, selectFileName) {
+    var combo = dlg.control("preset_combo");
+    combo.RemoveItem(-1);
+    var i;
+    for (i = 0; i < rows.length; i++) {
+        combo.AddItem(rows[i].label, rows[i].path);
+    }
+    var sel = 0;
+    if (selectFileName) {
+        for (i = 0; i < rows.length; i++) {
+            if (String(rows[i].label).toLowerCase() === String(selectFileName).toLowerCase()) {
+                sel = i;
+                break;
+            }
+        }
+    }
+    if (rows.length > 0) {
+        combo.SelectItem(sel);
+    }
+}
+
+/**
+ * Show encode dialog. Returns { presetPath, maxPictureSide } or null if cancelled / no presets / invalid max.
+ */
+function pickHandbrakeEncodeOptions(clickData, shell, fso) {
+    var rows = listPresetJsonFiles(fso);
+    if (rows.length === 0) {
+        popup(
+            shell,
+            "No preset JSON files found in:\n" + PRESET_DIR + "\n\nAdd HandBrake-exported *.json files there.",
+            "HandBrake",
+            16
+        );
+        return null;
+    }
+
+    var saved = loadHandbrakeSettings(shell, fso);
+    var dlg = DOpus.dlg;
+    dlg.window = clickData.func.sourcetab;
+    dlg.template = "DOpus_handbrake_Dlg";
+    dlg.detach = true;
+    dlg.Create();
+    populatePresetCombo(dlg, rows, saved.presetFile);
+    dlg.control("maxside_edit").value = saved.maxSide || String(DEFAULT_MAX_PICTURE_SIDE);
+    dlg.Show();
+
+    var dialogResult = 0;
+    while (true) {
+        var msg = dlg.GetMsg();
+        if (!msg.result) {
+            dialogResult = dlg.result;
+            break;
+        }
+    }
+
+    if (dialogResult != "1") {
+        return null;
+    }
+
+    var presetPath = comboPresetPath(dlg.control("preset_combo").value, rows);
+    if (!presetPath) {
+        return null;
+    }
+    var maxPictureSide = parseMaxPictureSide(shell, dlg.control("maxside_edit").value);
+    if (!maxPictureSide) {
+        return null;
+    }
+    saveHandbrakeSettings(shell, fso, fso.GetFileName(presetPath), String(maxPictureSide));
+    return { presetPath: presetPath, maxPictureSide: maxPictureSide };
+}
+
 function outputExtFromHandbrakeFileFormat(fileFormat) {
     var key = String(fileFormat || "").toLowerCase();
     if (key === "av_mkv") return ".mkv";
@@ -93,8 +250,8 @@ function outputExtFromHandbrakeFileFormat(fileFormat) {
 }
 
 /**
- * Read UTF-8 handbrake.json: pick default preset (Default true) or first in PresetList.
- * Returns { presetName, maxPictureSide, outputExt }.
+ * Read UTF-8 preset JSON: pick default preset (Default true) or first in PresetList.
+ * Returns { presetName, outputExt }.
  */
 function activePresetFromHandbrakeJson(fso, presetPath) {
     var stream = new ActiveXObject("ADODB.Stream");
@@ -128,15 +285,8 @@ function activePresetFromHandbrakeJson(fso, presetPath) {
         throw new Error("Active preset has no PresetName.");
     }
     presetName = String(presetName);
-    var w = Number(p.PictureWidth) || 0;
-    var h = Number(p.PictureHeight) || 0;
-    var maxPictureSide = Math.max(w, h);
-    if (maxPictureSide < 1) {
-        throw new Error("Invalid PictureWidth/Height on preset \"" + presetName + "\".");
-    }
     return {
         presetName: presetName,
-        maxPictureSide: maxPictureSide,
         outputExt: outputExtFromHandbrakeFileFormat(p.FileFormat)
     };
 }
@@ -163,12 +313,18 @@ function OnClick(clickData) {
     }
 
     var cli = resolveHandBrakeCli(shell, fso);
-    var presetPath = shell.ExpandEnvironmentStrings(PRESET_JSON);
 
     if (!cli) {
         popup(shell, "HandBrakeCLI.exe not found under Program Files\\HandBrake.", "HandBrake", 16);
         return;
     }
+
+    var options = pickHandbrakeEncodeOptions(clickData, shell, fso);
+    if (!options) {
+        return;
+    }
+    var presetPath = options.presetPath;
+    var maxPictureSide = options.maxPictureSide;
     if (!fso.FileExists(presetPath)) {
         popup(shell, "Preset JSON not found at:\n" + presetPath, "HandBrake", 16);
         return;
@@ -180,14 +336,13 @@ function OnClick(clickData) {
     } catch (e) {
         popup(
             shell,
-            "Could not read handbrake.json:\n" + e.message + "\n\n" + presetPath,
+            "Could not read preset JSON:\n" + e.message + "\n\n" + presetPath,
             "HandBrake",
             16
         );
         return;
     }
     var presetName = active.presetName;
-    var maxPictureSide = active.maxPictureSide;
     var outputExt = active.outputExt;
     DOpus.Output(
         "HandBrake: using preset \"" +
