@@ -10,7 +10,7 @@ function getSettingsPath(shell) {
 
 function loadLastSettings(shell, fso) {
     var path = getSettingsPath(shell);
-    var out = { mode: 0, formatName: "", quality: "23", lastAction: "convert" };
+    var out = { mode: 0, formatName: "", quality: "23", lastAction: "convert", replaceVideoWithImage: false };
     try {
         if (fso.FileExists(path)) {
             var stream = fso.OpenTextFile(path, 1, false);
@@ -27,6 +27,7 @@ function loadLastSettings(shell, fso) {
                     else if (key == "formatName") out.formatName = val;
                     else if (key == "quality") out.quality = val;
                     else if (key == "lastAction") out.lastAction = val;
+                    else if (key == "replaceVideoWithImage") out.replaceVideoWithImage = (val == "1");
                 }
             }
         }
@@ -35,25 +36,31 @@ function loadLastSettings(shell, fso) {
     return out;
 }
 
-function saveLastSettings(shell, fso, mode, formatName, quality, lastAction) {
+function saveLastSettings(shell, fso, mode, formatName, quality, lastAction, replaceVideoWithImage) {
     try {
         if (lastAction === undefined || lastAction === null || lastAction === "") {
             lastAction = "convert";
         }
         var path = getSettingsPath(shell);
+        var last = loadLastSettings(shell, fso);
+        var rvi = replaceVideoWithImage;
+        if (rvi === undefined || rvi === null) {
+            rvi = last.replaceVideoWithImage;
+        }
         var stream = fso.OpenTextFile(path, 2, true);  // ForWriting, Create
         stream.WriteLine("mode=" + mode);
         stream.WriteLine("formatName=" + formatName);
         stream.WriteLine("quality=" + (quality || "23"));
         stream.WriteLine("lastAction=" + lastAction);
+        stream.WriteLine("replaceVideoWithImage=" + (rvi ? "1" : "0"));
         stream.Close();
     } catch (e) { /* ignore */ }
 }
 
 /** Remember which command was used (convert / cover / mono / splitav / splitch) while keeping convert presets. */
-function saveLastActionOnly(shell, fso, action) {
+function saveLastActionOnly(shell, fso, action, replaceVideoWithImage) {
     var last = loadLastSettings(shell, fso);
-    saveLastSettings(shell, fso, last.mode, last.formatName, last.quality, action);
+    saveLastSettings(shell, fso, last.mode, last.formatName, last.quality, action, replaceVideoWithImage);
 }
 
 function fileExtLower(name) {
@@ -310,6 +317,167 @@ function mp3FileHasMp3Audio(shell, fso, mediaPath) {
     return c == "mp3" || c == "mp2";
 }
 
+/** Image width/height via ffprobe (even dimensions for yuv420p), or null if unknown. */
+function probeImageDimensions(shell, fso, imgPath) {
+    var tmp = shell.ExpandEnvironmentStrings("%TEMP%") + "\\DOpus_ffmpeg_imgsize.txt";
+    if (fso.FileExists(tmp)) {
+        try {
+            fso.DeleteFile(tmp);
+        } catch (e0) { /* ignore */ }
+    }
+    var cmd = 'cmd /c ffprobe.exe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "';
+    cmd += imgPath + '" 1> "' + tmp + '"';
+    var code;
+    try {
+        code = shell.Run(cmd, 0, true);
+    } catch (ex) {
+        return null;
+    }
+    if (code != 0 || !fso.FileExists(tmp)) {
+        try {
+            if (fso.FileExists(tmp)) {
+                fso.DeleteFile(tmp);
+            }
+        } catch (e1) { /* ignore */ }
+        return null;
+    }
+    var line = "";
+    try {
+        var ts = fso.OpenTextFile(tmp, 1);
+        line = ts.ReadAll().replace(/^\s+|\s+$/g, "").replace(/\r|\n/g, "");
+        ts.Close();
+    } catch (eR) {
+        line = "";
+    }
+    try {
+        fso.DeleteFile(tmp);
+    } catch (e2) { /* ignore */ }
+    var parts = line.split("x");
+    if (parts.length < 2) {
+        return null;
+    }
+    var w = parseInt(parts[0], 10);
+    var h = parseInt(parts[1], 10);
+    if (!(w > 0) || !(h > 0)) {
+        return null;
+    }
+    if (w % 2) {
+        w++;
+    }
+    if (h % 2) {
+        h++;
+    }
+    return { width: w, height: h };
+}
+
+/** Still slideshow: 1 fps, heavy CRF, capped video bitrate; audio untouched (-c:a copy). */
+var STILL_REPLACE_FPS = "1";
+var STILL_REPLACE_CRF_X264 = "25";
+var STILL_REPLACE_CRF_VP9 = "25";
+var STILL_REPLACE_MAXRATE = "350k";
+var STILL_REPLACE_BUFSIZE = "500k";
+/** One I-frame for whole clip: GOP > any frame count, no scene-cut keyframes (x264). */
+var STILL_REPLACE_KEYFRAME_X264 = "-g 999999 -keyint_min 999999 -sc_threshold 0 -x264-params scenecut=0";
+var STILL_REPLACE_KEYFRAME_VP9 = "-g 999999 -keyint_min 999999";
+
+/** Video encode args for still-image slideshow output; container should match source extension. */
+function stillImageVideoEncodeArgsForExt(ext) {
+    var cap = "-maxrate " + STILL_REPLACE_MAXRATE + " -bufsize " + STILL_REPLACE_BUFSIZE;
+    if (ext == ".webm") {
+        return "libvpx-vp9 -pix_fmt yuv420p -crf " + STILL_REPLACE_CRF_VP9 + " -b:v 0 " + cap + " " + STILL_REPLACE_KEYFRAME_VP9;
+    }
+    if (ext == ".ogv" || ext == ".ogm") {
+        return "libtheora -q:v 25 " + cap;
+    }
+    if (ext == ".wmv" || ext == ".asf") {
+        return "wmv2 -b:v 500k " + cap;
+    }
+    return "libx264 -tune stillimage -pix_fmt yuv420p -crf " + STILL_REPLACE_CRF_X264 + " " + cap + " " + STILL_REPLACE_KEYFRAME_X264;
+}
+
+function ffmpegReplaceVideoWithImageExec(mediaPath, imgPath, tmpPath, width, height, outExt) {
+    var vEnc = stillImageVideoEncodeArgsForExt(outExt);
+    var scale = "scale=" + width + ":" + height;
+    return 'ffmpeg.exe -y -framerate ' + STILL_REPLACE_FPS + ' -loop 1 -i "' + imgPath + '" -i "' + mediaPath + '" -map_metadata 1 -map_chapters 1 -map 0:v:0 -map 1:a -vf ' + scale + ' -r ' + STILL_REPLACE_FPS + ' -c:v ' + vEnc + ' -c:a copy -shortest "' + tmpPath + '"';
+}
+
+/**
+ * Replace video (or add slideshow video to audio) using looped still + copied audio; in-place tmp/bak replace.
+ * @return {{ ok: boolean, err: string, outPath: string }}
+ */
+function thumbReplaceVideoWithImageCore(shell, fso, mediaItem, imgPath) {
+    var mediaName = mediaItem.name + "";
+    var mediaPath = mediaItem.realpath + "";
+    var folder = mediaItem.path + "";
+    var stem = mediaItem.name_stem + "";
+    var ext = fileExtLower(mediaName);
+    var outExt = coverEmbedOutExtForMedia(ext, shell, fso, mediaPath);
+    var remux = outExt != ext;
+    var dims = probeImageDimensions(shell, fso, imgPath);
+    if (!dims) {
+        return { ok: false, err: "Could not read image width/height (ffprobe). See DOpus Script Output.", outPath: "" };
+    }
+    if (!probeFirstAudioCodecName(shell, fso, mediaPath)) {
+        return { ok: false, err: "No audio stream in media file — cannot build still-image video.\n\n" + mediaName, outPath: "" };
+    }
+    var outPath = folder + "\\" + stem + outExt;
+    var tmpPath = folder + "\\" + stem + ".__opus_still_tmp" + outExt;
+    var bakPath = folder + "\\" + stem + ".__opus_still_orig" + ext;
+    var finalPath = remux ? outPath : mediaPath;
+
+    if (remux && fso.FileExists(outPath)) {
+        return { ok: false, err: "Cannot remux to " + outExt + " — file already exists:\n\n" + outPath, outPath: "" };
+    }
+
+    if (fso.FileExists(tmpPath)) {
+        try {
+            fso.DeleteFile(tmpPath);
+        } catch (e0) { /* ignore */ }
+    }
+    if (fso.FileExists(bakPath)) {
+        try {
+            fso.DeleteFile(bakPath);
+        } catch (e1) { /* ignore */ }
+    }
+
+    if (remux) {
+        DOpus.Output("Replace video with image: remux " + ext + " to " + outExt);
+    }
+    var exec = ffmpegReplaceVideoWithImageExec(mediaPath, imgPath, tmpPath, dims.width, dims.height, outExt);
+    DOpus.Output("Replace video with image: " + exec);
+
+    try {
+        var exitCode = shell.Run(exec, 0, true);
+        if (exitCode != 0) {
+            return { ok: false, err: "ffmpeg failed (exit code " + exitCode + "). See DOpus Script Output.", outPath: "" };
+        }
+        if (!fso.FileExists(tmpPath)) {
+            return { ok: false, err: "ffmpeg finished but the output file was not created.", outPath: "" };
+        }
+
+        try {
+            fso.MoveFile(mediaPath, bakPath);
+        } catch (eRen) {
+            return { ok: false, err: "Could not rename the original file (it may be open in another program).\n\nNew file left at:\n" + tmpPath, outPath: "" };
+        }
+        try {
+            fso.MoveFile(tmpPath, finalPath);
+        } catch (eMv) {
+            try {
+                fso.MoveFile(bakPath, mediaPath);
+            } catch (eRest) { /* ignore */ }
+            return { ok: false, err: "Could not replace the media file; the original was restored.", outPath: "" };
+        }
+        try {
+            fso.DeleteFile(bakPath);
+        } catch (eDel) { /* leave backup if locked */ }
+
+        return { ok: true, err: "", outPath: finalPath };
+    } catch (ex) {
+        return { ok: false, err: "Error: " + ex.message, outPath: "" };
+    }
+}
+
 function coverEmbedOutExtForMedia(ext, shell, fso, mediaPath) {
     var outExt = embedCoverOutExt(ext);
     if (ext == ".mp3" && !mp3FileHasMp3Audio(shell, fso, mediaPath)) {
@@ -472,10 +640,13 @@ function thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime) {
 }
 
 /**
- * Like split/combine AV: 1 image + 1 media → embed cover and delete the image file; 1 media → extract .jpg and remux media without embedded cover.
+ * Like split/combine AV: 1 image + 1 media → embed cover or replace video with still (checkbox); 1 media → extract .jpg and strip cover.
  */
-function runSplitOrCombineCover(clickData, fso, shell) {
+function runSplitOrCombineCover(clickData, fso, shell, replaceWithImage) {
     var logTitle = "Split/combine cover";
+    if (replaceWithImage) {
+        logTitle = "Replace video with image";
+    }
     var sel = clickData.func.sourcetab.selected_files;
     var imgItems = [];
     var mediaItems = [];
@@ -507,7 +678,12 @@ function runSplitOrCombineCover(clickData, fso, shell) {
         var mediaItem = mediaItems[0];
         var imgPath = imgItem.realpath + "";
         var imgPathForMime = fileExtLower(imgItem.name + "");
-        var res = thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime);
+        var res;
+        if (replaceWithImage) {
+            res = thumbReplaceVideoWithImageCore(shell, fso, mediaItem, imgPath);
+        } else {
+            res = thumbEmbedCoverCore(shell, fso, mediaItem, imgPath, imgPathForMime);
+        }
         if (!res.ok) {
             thumbErr(shell, res.err, logTitle);
             return;
@@ -515,10 +691,14 @@ function runSplitOrCombineCover(clickData, fso, shell) {
         try {
             fso.DeleteFile(imgPath);
         } catch (exDel) {
-            DOpus.Output("[" + logTitle + "] Embedded OK but could not delete image file (in use?): " + imgPath + " — " + exDel.message);
+            DOpus.Output("[" + logTitle + "] OK but could not delete image file (in use?): " + imgPath + " — " + exDel.message);
         }
         var outMedia = res.outPath || (mediaItem.realpath + "");
-        thumbInfo(shell, "Cover embedded in media (same as combine AV). Image file removed if possible:\n" + outMedia, logTitle);
+        if (replaceWithImage) {
+            thumbInfo(shell, "Replaced video with still image (audio copied). Image file removed if possible:\n" + outMedia, logTitle);
+        } else {
+            thumbInfo(shell, "Cover embedded in media (same as combine AV). Image file removed if possible:\n" + outMedia, logTitle);
+        }
         try {
             clickData.func.command.RunCommand("Go REFRESH");
         } catch (eRf) { /* ignore */ }
@@ -1336,7 +1516,7 @@ function OnClick(clickData) {
         }
         DOpus.Output("ffmpeg: Ctrl+click — last action: " + act + " (no dialog)");
         if (act == "cover") {
-            runSplitOrCombineCover(clickData, fso, shell);
+            runSplitOrCombineCover(clickData, fso, shell, lastQuick.replaceVideoWithImage);
             return;
         }
         if (act == "mono") {
@@ -1439,6 +1619,7 @@ function OnClick(clickData) {
     }
     qualityCtrl.value = last.quality || "23";
     syncQualityControlsEnabled();
+    dlg.control("replace_video_check").value = last.replaceVideoWithImage === true;
 
     // Show the fully initialized dialog
     dlg.Show();
@@ -1459,8 +1640,11 @@ function OnClick(clickData) {
         }
 
         if (msg.event == "click" && msg.control == "split_cover_btn") {
-            saveLastActionOnly(shell, fso, "cover");
-            runSplitOrCombineCover(clickData, fso, shell);
+            var replaceVid = dlg.control("replace_video_check").value;
+            var modeItemCov = modeCtrl.value;
+            var fmtItemCov = formatCtrl.value;
+            saveLastSettings(shell, fso, modeItemCov.index, fmtItemCov.name, qualityCtrl.value, "cover", replaceVid);
+            runSplitOrCombineCover(clickData, fso, shell, replaceVid);
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;
