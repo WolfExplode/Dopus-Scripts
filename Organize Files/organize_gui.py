@@ -121,9 +121,9 @@ def run_gui(
             "Does not move or delete files."
         )
         TIP_TITLE = (
-            "Target only: clean filenames — optional characters removed from the stem, spaces trimmed, "
-            "trailing dots before the extension removed, duplicated final extension collapsed "
-            "(e.g. video.mp4.mp4 → video.mp4), and Explorer-style copy suffixes removed "
+            "Source paths only: clean filenames in place — optional characters removed from the stem, "
+            "spaces trimmed, trailing dots before the extension removed, duplicated final extension "
+            "collapsed (e.g. video.mp4.mp4 → video.mp4), and Explorer-style copy suffixes removed "
             '(" (1)" / " (12)", 1–3 digits; years like " (2024)" are kept).\n'
             "Example: 「Juno Bike Exercise」..mp4 with 「」 stripped → Juno Bike Exercise.mp4."
         )
@@ -978,38 +978,27 @@ def run_gui(
             strip = str(dpg.get_value(self.TAG_STRIP))
 
             def scan(w):
-                return scan_title_strip(
-                    w.source_root,
-                    w.target_root,
-                    strip,
-                    only=w.only,
-                    source_library=w.source_library,
-                )
+                return scan_title_strip(w.source_root, strip, only=w.only)
 
             self._gui_preview(
                 "title-strip",
-                "Scanning target for title strip…\n",
+                "Scanning source paths for title strip…\n",
                 scan,
                 lambda r, w: format_preview_rename(
                     r,
                     w.only,
-                    "Target files to rename (strip characters from stem):\n",
+                    "Files to rename (strip characters from stem):\n",
                     "unchanged",
-                    collision_basename_only=True,
+                    collision_basename_only=False,
                 ),
+                resolve_paths=self.resolve_bracket_work_paths,
             )
 
         def on_apply_title_strip(self) -> None:
             strip = str(dpg.get_value(self.TAG_STRIP))
 
             def scan(w):
-                return scan_title_strip(
-                    w.source_root,
-                    w.target_root,
-                    strip,
-                    only=w.only,
-                    source_library=w.source_library,
-                )
+                return scan_title_strip(w.source_root, strip, only=w.only)
 
             self._gui_apply(
                 "title-strip",
@@ -1017,6 +1006,7 @@ def run_gui(
                 lambda r: r.planned,
                 self._apply_renames_gui,
                 self.on_preview_title_strip,
+                resolve_paths=self.resolve_bracket_work_paths,
             )
 
         def on_preview_bracket_tag(self) -> None:

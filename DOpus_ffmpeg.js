@@ -10,7 +10,7 @@ function getSettingsPath(shell) {
 
 function loadLastSettings(shell, fso) {
     var path = getSettingsPath(shell);
-    var out = { mode: 0, formatName: "", quality: "23", lastAction: "convert", replaceVideoWithImage: false };
+    var out = { mode: 0, formatName: "", quality: "23", lastAction: "convert", replaceVideoWithImage: false, trimFrames: "1" };
     try {
         if (fso.FileExists(path)) {
             var stream = fso.OpenTextFile(path, 1, false);
@@ -28,15 +28,17 @@ function loadLastSettings(shell, fso) {
                     else if (key == "quality") out.quality = val;
                     else if (key == "lastAction") out.lastAction = val;
                     else if (key == "replaceVideoWithImage") out.replaceVideoWithImage = (val == "1");
+                    else if (key == "trimFrames") out.trimFrames = val;
                 }
             }
         }
     } catch (e) { /* use defaults */ }
     if (!out.lastAction) out.lastAction = "convert";
+    if (!out.trimFrames) out.trimFrames = "1";
     return out;
 }
 
-function saveLastSettings(shell, fso, mode, formatName, quality, lastAction, replaceVideoWithImage) {
+function saveLastSettings(shell, fso, mode, formatName, quality, lastAction, replaceVideoWithImage, trimFrames) {
     try {
         if (lastAction === undefined || lastAction === null || lastAction === "") {
             lastAction = "convert";
@@ -47,12 +49,17 @@ function saveLastSettings(shell, fso, mode, formatName, quality, lastAction, rep
         if (rvi === undefined || rvi === null) {
             rvi = last.replaceVideoWithImage;
         }
+        var tf = trimFrames;
+        if (tf === undefined || tf === null || tf === "") {
+            tf = last.trimFrames || "1";
+        }
         var stream = fso.OpenTextFile(path, 2, true);  // ForWriting, Create
         stream.WriteLine("mode=" + mode);
         stream.WriteLine("formatName=" + formatName);
         stream.WriteLine("quality=" + (quality || "23"));
         stream.WriteLine("lastAction=" + lastAction);
         stream.WriteLine("replaceVideoWithImage=" + (rvi ? "1" : "0"));
+        stream.WriteLine("trimFrames=" + tf);
         stream.Close();
     } catch (e) { /* ignore */ }
 }
@@ -1284,6 +1291,191 @@ function videoEncodeForTransform(ext) {
     return "libx264 -crf 18 -preset fast -pix_fmt yuv420p";
 }
 
+function parseFpsRational(line) {
+    line = (line + "").replace(/^\s+|\s+$/g, "").replace(/\r|\n/g, "");
+    if (!line || line == "0/0" || line == "N/A") {
+        return -1;
+    }
+    var slash = line.indexOf("/");
+    if (slash >= 0) {
+        var num = parseFloat(line.substring(0, slash));
+        var den = parseFloat(line.substring(slash + 1));
+        if (den > 0 && num > 0) {
+            return num / den;
+        }
+        return -1;
+    }
+    var f = parseFloat(line);
+    return (f > 0) ? f : -1;
+}
+
+/** Average frame rate of first video stream, or -1 if missing / ffprobe failed. */
+function probeVideoAvgFrameRate(shell, fso, mediaPath) {
+    var tmp = shell.ExpandEnvironmentStrings("%TEMP%") + "\\DOpus_ffmpeg_fps.txt";
+    if (fso.FileExists(tmp)) {
+        try {
+            fso.DeleteFile(tmp);
+        } catch (e0) { /* ignore */ }
+    }
+    var cmd = 'cmd /c ffprobe.exe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "';
+    cmd += mediaPath + '" 1> "' + tmp + '"';
+    var code;
+    try {
+        code = shell.Run(cmd, 0, true);
+    } catch (ex) {
+        return -1;
+    }
+    if (code != 0 || !fso.FileExists(tmp)) {
+        try {
+            if (fso.FileExists(tmp)) {
+                fso.DeleteFile(tmp);
+            }
+        } catch (e1) { /* ignore */ }
+        return -1;
+    }
+    var line = "";
+    try {
+        var ts = fso.OpenTextFile(tmp, 1);
+        line = ts.ReadAll();
+        ts.Close();
+    } catch (eR) {
+        line = "";
+    }
+    try {
+        fso.DeleteFile(tmp);
+    } catch (e2) { /* ignore */ }
+    return parseFpsRational(line);
+}
+
+function parseTrimFrameCount(str) {
+    var s = (str + "").replace(/^\s+|\s+$/g, "");
+    if (!s) {
+        return -1;
+    }
+    var n = parseInt(s, 10);
+    if (isNaN(n) || n < 1 || String(n) != s) {
+        return -1;
+    }
+    return n;
+}
+
+function ffmpegTrimLeadingFramesExec(vidPath, tmpPath, frameCount, fps, ext) {
+    var startSec = frameCount / fps;
+    var ss = String(Math.round(startSec * 1000000) / 1000000);
+    var vEnc = videoEncodeForTransform(ext);
+    return 'ffmpeg.exe -y -i "' + vidPath + '" -ss ' + ss + ' -map_metadata 0 -map_chapters 0 -map 0:v:0 -map "0:a?" -c:v ' + vEnc + ' -c:a copy "' + tmpPath + '"';
+}
+
+/** Skip first N frames (from avg fps), re-encode video, copy audio; replace original in place. */
+function runTrimLeadingFrames(clickData, fso, shell, frameCountStr) {
+    var logTitle = "Trim leading frames";
+    var frameCount = parseTrimFrameCount(frameCountStr);
+    if (frameCount < 1) {
+        thumbErr(shell, "Enter a whole number of frames to skip (1 or more).", logTitle);
+        return;
+    }
+
+    var sel = clickData.func.sourcetab.selected_files;
+    if (sel.count < 1) {
+        thumbErr(shell, "Select one or more video files.", logTitle);
+        return;
+    }
+    var list = [];
+    var en = new Enumerator(sel);
+    for (; !en.atEnd(); en.moveNext()) {
+        var it = en.item();
+        if (!isThumbVideoName(it.name + "")) {
+            thumbErr(shell, "Not a supported video file:\n\n" + it.name, logTitle);
+            return;
+        }
+        list.push(it);
+    }
+
+    var ok = 0;
+    var fail = 0;
+
+    for (var i = 0; i < list.length; i++) {
+        var vidItem = list[i];
+        var vidPath = vidItem.realpath + "";
+        var folder = vidItem.path + "";
+        var ext = fileExtLower(vidItem.name + "");
+        var stem = vidItem.name_stem + "";
+        var fps = probeVideoAvgFrameRate(shell, fso, vidPath);
+        if (fps <= 0) {
+            DOpus.Output(logTitle + ": could not read video frame rate: " + vidItem.name);
+            fail++;
+            continue;
+        }
+
+        var tmpPath = folder + "\\" + stem + ".__opus_trim_tmp" + ext;
+        var bakPath = folder + "\\" + stem + ".__opus_trim_orig" + ext;
+
+        if (fso.FileExists(tmpPath)) {
+            try {
+                fso.DeleteFile(tmpPath);
+            } catch (eT0) { /* ignore */ }
+        }
+        if (fso.FileExists(bakPath)) {
+            try {
+                fso.DeleteFile(bakPath);
+            } catch (eT1) { /* ignore */ }
+        }
+
+        var exec = ffmpegTrimLeadingFramesExec(vidPath, tmpPath, frameCount, fps, ext);
+        DOpus.Output(logTitle + " (skip " + frameCount + " @ " + fps + " fps): " + exec);
+
+        try {
+            var exitCode = shell.Run(exec, 0, true);
+            if (exitCode != 0) {
+                DOpus.Output(logTitle + " failed (exit " + exitCode + "): " + vidItem.name);
+                fail++;
+                continue;
+            }
+            if (!fso.FileExists(tmpPath)) {
+                DOpus.Output(logTitle + ": output missing after ffmpeg: " + vidItem.name);
+                fail++;
+                continue;
+            }
+
+            try {
+                fso.MoveFile(vidPath, bakPath);
+            } catch (eRen) {
+                DOpus.Output(logTitle + ": could not rename original (in use?): " + vidItem.name + " — left temp: " + tmpPath);
+                fail++;
+                continue;
+            }
+            try {
+                fso.MoveFile(tmpPath, vidPath);
+            } catch (eMv) {
+                try {
+                    fso.MoveFile(bakPath, vidPath);
+                } catch (eRest) { /* ignore */ }
+                DOpus.Output(logTitle + ": could not replace file, restored original: " + vidItem.name);
+                fail++;
+                continue;
+            }
+            try {
+                fso.DeleteFile(bakPath);
+            } catch (eDel) { /* leave backup if locked */ }
+            ok++;
+        } catch (ex) {
+            DOpus.Output(logTitle + " error on " + vidItem.name + ": " + ex.message);
+            fail++;
+        }
+    }
+
+    if (fail > 0 && ok === 0) {
+        thumbErr(shell, "All " + fail + " file(s) failed. See DOpus Script Output.", logTitle);
+    } else if (fail > 0) {
+        thumbInfo(shell, "Finished with errors. OK: " + ok + ", Failed: " + fail + ". Details in Script Output.", logTitle);
+    } else {
+        thumbInfo(shell, logTitle + " finished (skipped first " + frameCount + " frame(s)). Files updated: " + ok, logTitle);
+    }
+    try {
+        clickData.func.command.RunCommand("Go REFRESH");
+    } catch (eRf) { /* ignore */ }
+}
+
 /**
  * Rotate or flip video in place (re-encode first video stream, copy audio). vfFilter e.g. transpose=1, hflip.
  */
@@ -1511,7 +1703,7 @@ function OnClick(clickData) {
     if (qualStr.indexOf("ctrl") >= 0) {
         var lastQuick = loadLastSettings(shell, fso);
         var act = lastQuick.lastAction || "convert";
-        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav" && act != "splitch" && act != "rotatecw" && act != "rotateccw" && act != "fliph" && act != "flipv") {
+        if (act != "convert" && act != "cover" && act != "mono" && act != "splitav" && act != "splitch" && act != "rotatecw" && act != "rotateccw" && act != "fliph" && act != "flipv" && act != "trimstart") {
             act = "convert";
         }
         DOpus.Output("ffmpeg: Ctrl+click — last action: " + act + " (no dialog)");
@@ -1545,6 +1737,10 @@ function OnClick(clickData) {
         }
         if (act == "flipv") {
             runVideoTransform(clickData, fso, shell, "vflip", "Flip vertical");
+            return;
+        }
+        if (act == "trimstart") {
+            runTrimLeadingFrames(clickData, fso, shell, lastQuick.trimFrames);
             return;
         }
         runConvertWithSelectedFiles(clickData, tab, fso, shell, videoFormats, audioFormats, lastQuick.mode, lastQuick.formatName, lastQuick.quality);
@@ -1620,6 +1816,7 @@ function OnClick(clickData) {
     qualityCtrl.value = last.quality || "23";
     syncQualityControlsEnabled();
     dlg.control("replace_video_check").value = last.replaceVideoWithImage === true;
+    dlg.control("trim_frames_edit").value = last.trimFrames || "1";
 
     // Show the fully initialized dialog
     dlg.Show();
@@ -1645,6 +1842,18 @@ function OnClick(clickData) {
             var fmtItemCov = formatCtrl.value;
             saveLastSettings(shell, fso, modeItemCov.index, fmtItemCov.name, qualityCtrl.value, "cover", replaceVid);
             runSplitOrCombineCover(clickData, fso, shell, replaceVid);
+            dialogClosedAfterTool = true;
+            dlg.EndDlg("0");
+            dialogResult = dlg.result;
+            break;
+        }
+
+        if (msg.event == "click" && msg.control == "trim_start_btn") {
+            var trimFramesVal = dlg.control("trim_frames_edit").value;
+            var modeItemTrim = modeCtrl.value;
+            var fmtItemTrim = formatCtrl.value;
+            saveLastSettings(shell, fso, modeItemTrim.index, fmtItemTrim.name, qualityCtrl.value, "trimstart", dlg.control("replace_video_check").value, trimFramesVal);
+            runTrimLeadingFrames(clickData, fso, shell, trimFramesVal);
             dialogClosedAfterTool = true;
             dlg.EndDlg("0");
             dialogResult = dlg.result;

@@ -606,18 +606,14 @@ def transform_title_filename(filename: str, strip_chars: str) -> Optional[str]:
 
 def scan_title_strip(
     source_root: Path,
-    target_root: Path,
     strip_chars: str,
     only: Optional[set[Path]] = None,
-    source_library: Optional[Path] = None,
 ) -> RenameScan:
-    """Plan renames under target_root only (stem cleanup). Skips paths inside source_root."""
-    return _scan_target_renames(
+    """Plan in-place renames under source paths (stem cleanup). No target folder."""
+    return _scan_input_renames(
         source_root,
-        target_root,
         lambda p: transform_title_filename(p.name, strip_chars),
         only=only,
-        source_library=source_library,
     )
 
 
@@ -1319,17 +1315,15 @@ def _cli_scan_and_format(
         result = scan_target(src_r, tgt_r, only=only, source_library=src_lib)
         return result, format_preview_mark(result, only), None
     if action == "title-strip":
-        result = scan_title_strip(
-            src_r, tgt_r, strip_chars, only=only, source_library=src_lib
-        )
+        result = scan_title_strip(src_r, strip_chars, only=only)
         return (
             result,
             format_preview_rename(
                 result,
                 only,
-                "Target files to rename (strip characters from stem):\n",
+                "Files to rename (strip characters from stem):\n",
                 "unchanged",
-                collision_basename_only=True,
+                collision_basename_only=False,
             ),
             None,
         )
@@ -1474,7 +1468,7 @@ def run_cli(argv: list[str]) -> int:
         saved_src, args.source, args.only_list, args.only_file
     )
 
-    if args.action == "bracket-tag":
+    if args.action in ("bracket-tag", "title-strip"):
         work, err = resolve_bracket_work_paths(src_s)
     else:
         work, err = resolve_work_paths(src_s, tgt_s)
