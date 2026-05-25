@@ -1,7 +1,7 @@
 """Compare two text files line-by-line: exact match, then word-based fuzzy.
 
 Library API: run_compare(), format_compare_report()
-CLI: python compare_playlists.py file_a.txt file_b.txt [-o output_dir]
+CLI: python compare_text.py file_a.txt file_b.txt [-o output_dir]
 """
 
 from __future__ import annotations
@@ -15,6 +15,10 @@ from pathlib import Path
 from rapidfuzz import fuzz
 
 FUZZY_THRESHOLD = 80
+COMPARE_NO_OUTPUT_MSG = (
+    "Text compare\n\n"
+    "Select at least one output option: Missing, Shared, or Debug."
+)
 _WIN_BAD_FILENAME = re.compile(r'[<>:"/\\|?*]')
 _WORD_SPLIT = re.compile(r"[\s,]+")
 AUDIO_EXTS = {".mp3", ".opus", ".m4a", ".flac", ".wav", ".ogg", ".aac", ".wma", ".webm"}
@@ -23,6 +27,10 @@ AUDIO_EXTS = {".mp3", ".opus", ".m4a", ".flac", ".wav", ".ogg", ".aac", ".wma", 
 @dataclass
 class Line:
     raw: str
+    norm: str = ""
+    key: str = ""
+    words: tuple[str, ...] = ()
+    romaji_words: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -74,22 +82,33 @@ def compare_text(line: str, *, strip_extensions: bool) -> str:
     return text
 
 
-def exact_key(line: str, *, strip_extensions: bool) -> str:
-    return compare_text(line, strip_extensions=strip_extensions).casefold()
+def _split_words_folded(text: str) -> tuple[str, ...]:
+    return tuple(w.casefold() for w in _WORD_SPLIT.split(text) if w)
 
 
-def split_words(line: str) -> list[str]:
-    return [w for w in _WORD_SPLIT.split(line) if w]
+def preprocess_lines(lines: list[Line], options: CompareOptions) -> None:
+    """Normalize each line once (text, exact key, word tokens, optional romaji)."""
+    strip = options.strip_extensions
+    romaji = options.romaji_compare
+    for item in lines:
+        norm = compare_text(item.raw, strip_extensions=strip)
+        item.norm = norm
+        item.key = norm.casefold()
+        item.words = _split_words_folded(norm)
+        if romaji:
+            item.romaji_words = _split_words_folded(to_romaji(norm))
+        else:
+            item.romaji_words = None
 
 
-def word_pair_score(a: str, b: str) -> float:
-    if a.casefold() == b.casefold():
+def word_pair_score_folded(a: str, b: str) -> float:
+    if a == b:
         return 100.0
-    return float(fuzz.ratio(a.casefold(), b.casefold()))
+    return float(fuzz.ratio(a, b))
 
 
 def word_coverage(
-    source: list[str], target: list[str], word_threshold: float
+    source: tuple[str, ...], target: tuple[str, ...], word_threshold: float
 ) -> float:
     """Share of ``source`` words that match a word in ``target``."""
     if not source:
@@ -103,7 +122,7 @@ def word_coverage(
         for j, other in enumerate(target):
             if j in used:
                 continue
-            score = word_pair_score(word, other)
+            score = word_pair_score_folded(word, other)
             if score > best:
                 best = score
                 best_j = j
@@ -133,9 +152,9 @@ def to_romaji(text: str) -> str:
     return " ".join(parts)
 
 
-def _word_match_score_text(text_a: str, text_b: str, threshold: float) -> float:
-    wa = split_words(text_a)
-    wb = split_words(text_b)
+def _word_match_score_words(
+    wa: tuple[str, ...], wb: tuple[str, ...], threshold: float
+) -> float:
     if not wa and not wb:
         return 100.0
     if not wa or not wb:
@@ -143,36 +162,26 @@ def _word_match_score_text(text_a: str, text_b: str, threshold: float) -> float:
     return max(word_coverage(wa, wb, threshold), word_coverage(wb, wa, threshold))
 
 
-def word_match_score(
-    line_a: str,
-    line_b: str,
-    threshold: float,
-    options: CompareOptions,
-) -> float:
+def line_match_score(line_a: Line, line_b: Line, threshold: float) -> float:
     """Max word coverage either way; optional romaji pass takes the higher score."""
-    text_a = compare_text(line_a, strip_extensions=options.strip_extensions)
-    text_b = compare_text(line_b, strip_extensions=options.strip_extensions)
-    score = _word_match_score_text(text_a, text_b, threshold)
-    if not options.romaji_compare:
+    score = _word_match_score_words(line_a.words, line_b.words, threshold)
+    if line_a.romaji_words is None or line_b.romaji_words is None:
         return score
-    romaji_a = to_romaji(text_a)
-    romaji_b = to_romaji(text_b)
-    return max(score, _word_match_score_text(romaji_a, romaji_b, threshold))
+    return max(
+        score,
+        _word_match_score_words(line_a.romaji_words, line_b.romaji_words, threshold),
+    )
 
 
-def build_exact_index(lines: list[Line], options: CompareOptions) -> dict[str, list[Line]]:
+def build_exact_index(lines: list[Line]) -> dict[str, list[Line]]:
     index: dict[str, list[Line]] = {}
     for item in lines:
-        index.setdefault(
-            exact_key(item.raw, strip_extensions=options.strip_extensions), []
-        ).append(item)
+        index.setdefault(item.key, []).append(item)
     return index
 
 
-def find_exact_match(
-    line: Line, index: dict[str, list[Line]], options: CompareOptions
-) -> Line | None:
-    hits = index.get(exact_key(line.raw, strip_extensions=options.strip_extensions))
+def find_exact_match(line: Line, index: dict[str, list[Line]]) -> Line | None:
+    hits = index.get(line.key)
     return hits[0] if hits else None
 
 
@@ -181,17 +190,18 @@ def find_best_fuzzy(
     candidates: list[Line],
     used: set[int],
     word_threshold: float,
-    options: CompareOptions,
 ) -> tuple[Line, float] | None:
     best: Line | None = None
     best_score = -1.0
     for cand in candidates:
         if id(cand) in used:
             continue
-        score = word_match_score(line.raw, cand.raw, word_threshold, options)
+        score = line_match_score(line, cand, word_threshold)
         if score > best_score:
             best_score = score
             best = cand
+            if best_score >= 100.0:
+                break
     if best is None or best_score < 0:
         return None
     return best, best_score
@@ -202,9 +212,8 @@ def find_fuzzy_match(
     candidates: list[Line],
     used: set[int],
     threshold: float,
-    options: CompareOptions,
 ) -> tuple[Line, float] | None:
-    best = find_best_fuzzy(line, candidates, used, threshold, options)
+    best = find_best_fuzzy(line, candidates, used, threshold)
     if best is None:
         return None
     other, score = best
@@ -217,12 +226,11 @@ def collect_fuzzy_mismatches(
     lines: list[Line],
     candidates: list[Line],
     threshold: float,
-    options: CompareOptions,
 ) -> list[tuple[Line, Line, float]]:
     """Best candidate pairs with line score below ``threshold`` (debug)."""
     pairs: list[tuple[Line, Line, float]] = []
     for line in lines:
-        best = find_best_fuzzy(line, candidates, set(), threshold, options)
+        best = find_best_fuzzy(line, candidates, set(), threshold)
         if best is None:
             continue
         other, score = best
@@ -236,7 +244,6 @@ def match_a_to_b(
     lines_b: list[Line],
     index_b: dict[str, list[Line]],
     threshold: float,
-    options: CompareOptions,
 ) -> tuple[list[Line], list[tuple[Line, Line, float]], set[int]]:
     """Lines in A missing from B, fuzzy pairs, used ids from B."""
     used_b: set[int] = set()
@@ -244,12 +251,12 @@ def match_a_to_b(
     fuzzy_pairs: list[tuple[Line, Line, float]] = []
 
     for line in lines_a:
-        hit = find_exact_match(line, index_b, options)
+        hit = find_exact_match(line, index_b)
         if hit is not None and id(hit) not in used_b:
             used_b.add(id(hit))
             continue
 
-        fuzzy = find_fuzzy_match(line, lines_b, used_b, threshold, options)
+        fuzzy = find_fuzzy_match(line, lines_b, used_b, threshold)
         if fuzzy is not None:
             other, score = fuzzy
             used_b.add(id(other))
@@ -287,10 +294,12 @@ class CompareResult:
     exact_matched: int
     missing_from_b: list[Line]
     missing_from_a: list[Line]
+    shared: list[Line]
     fuzzy_pairs: list[tuple[Line, Line, float]]
     fuzzy_mismatches: list[tuple[Line, Line, float]]
-    missing_from_b_path: Path
-    missing_from_a_path: Path
+    missing_from_b_path: Path | None
+    missing_from_a_path: Path | None
+    shared_path: Path | None
     fuzzy_path: Path | None
     fuzzy_mismatches_path: Path | None
     error: str | None = None
@@ -311,6 +320,8 @@ def run_compare(
     output_dir: Path | None = None,
     threshold: int = FUZZY_THRESHOLD,
     write_reports: bool = True,
+    write_missing: bool = True,
+    write_shared: bool = True,
     debug: bool = False,
     strip_extensions: bool = True,
     romaji_compare: bool = True,
@@ -320,8 +331,13 @@ def run_compare(
         romaji_compare=romaji_compare,
     )
     out_default = output_dir or file_a.parent
-    missing_from_b_path = missing_from_report_path(out_default, file_b)
-    missing_from_a_path = missing_from_report_path(out_default, file_a)
+    missing_from_b_path = (
+        missing_from_report_path(out_default, file_b) if write_missing else None
+    )
+    missing_from_a_path = (
+        missing_from_report_path(out_default, file_a) if write_missing else None
+    )
+    shared_path = out_default / "shared.txt" if write_shared else None
     fuzzy_path = out_default / "fuzzy-matches.txt" if debug else None
     fuzzy_mismatches_path = out_default / "fuzzy-mismatches.txt" if debug else None
 
@@ -335,14 +351,19 @@ def run_compare(
         exact_matched=0,
         missing_from_b=[],
         missing_from_a=[],
+        shared=[],
         fuzzy_pairs=[],
         fuzzy_mismatches=[],
         missing_from_b_path=missing_from_b_path,
         missing_from_a_path=missing_from_a_path,
+        shared_path=shared_path,
         fuzzy_path=fuzzy_path,
         fuzzy_mismatches_path=fuzzy_mismatches_path,
     )
 
+    if not (write_missing or write_shared or debug):
+        base.error = COMPARE_NO_OUTPUT_MSG
+        return base
     if not file_a.is_file():
         base.error = f"File not found:\n{file_a}"
         return base
@@ -352,31 +373,43 @@ def run_compare(
 
     lines_a = read_lines(file_a)
     lines_b = read_lines(file_b)
-    index_b = build_exact_index(lines_b, options)
+    preprocess_lines(lines_a, options)
+    preprocess_lines(lines_b, options)
+    index_b = build_exact_index(lines_b)
 
     missing_from_b, fuzzy_pairs, used_b = match_a_to_b(
-        lines_a, lines_b, index_b, float(threshold), options
+        lines_a, lines_b, index_b, float(threshold)
     )
     missing_from_a = [line for line in lines_b if id(line) not in used_b]
+    missing_b_ids = {id(line) for line in missing_from_b}
+    shared = [line for line in lines_a if id(line) not in missing_b_ids]
     exact_matched = len(lines_a) - len(missing_from_b) - len(fuzzy_pairs)
 
     thr = float(threshold)
     fuzzy_mismatches: list[tuple[Line, Line, float]] = []
     if debug:
         fuzzy_mismatches = collect_fuzzy_mismatches(
-            missing_from_b, lines_b, thr, options
-        ) + collect_fuzzy_mismatches(missing_from_a, lines_a, thr, options)
+            missing_from_b, lines_b, thr
+        ) + collect_fuzzy_mismatches(missing_from_a, lines_a, thr)
 
     out_dir = output_dir or file_a.parent
     out_dir.mkdir(parents=True, exist_ok=True)
-    missing_from_b_path = missing_from_report_path(out_dir, file_b)
-    missing_from_a_path = missing_from_report_path(out_dir, file_a)
+    missing_from_b_path = (
+        missing_from_report_path(out_dir, file_b) if write_missing else None
+    )
+    missing_from_a_path = (
+        missing_from_report_path(out_dir, file_a) if write_missing else None
+    )
+    shared_path = out_dir / "shared.txt" if write_shared else None
     fuzzy_path = out_dir / "fuzzy-matches.txt" if debug else None
     fuzzy_mismatches_path = out_dir / "fuzzy-mismatches.txt" if debug else None
 
     if write_reports:
-        write_lines(missing_from_b_path, missing_from_b)
-        write_lines(missing_from_a_path, missing_from_a)
+        if missing_from_b_path is not None and missing_from_a_path is not None:
+            write_lines(missing_from_b_path, missing_from_b)
+            write_lines(missing_from_a_path, missing_from_a)
+        if shared_path is not None:
+            write_lines(shared_path, shared)
         if debug:
             if fuzzy_path is not None:
                 write_fuzzy_matches(fuzzy_path, fuzzy_pairs)
@@ -393,10 +426,12 @@ def run_compare(
         exact_matched=exact_matched,
         missing_from_b=missing_from_b,
         missing_from_a=missing_from_a,
+        shared=shared,
         fuzzy_pairs=fuzzy_pairs,
         fuzzy_mismatches=fuzzy_mismatches,
         missing_from_b_path=missing_from_b_path,
         missing_from_a_path=missing_from_a_path,
+        shared_path=shared_path,
         fuzzy_path=fuzzy_path,
         fuzzy_mismatches_path=fuzzy_mismatches_path,
     )
@@ -419,25 +454,43 @@ def format_compare_report(result: CompareResult, *, preview_limit: int = 15) -> 
         f"Fuzzy matched:   {result.fuzzy_matched}",
         f"Total matched:   {result.total_matched}",
         "",
-        f"Missing from {result.file_b.name} ({len(result.missing_from_b)}):",
-        f"  -> {result.missing_from_b_path}",
     ]
-    for item in result.missing_from_b[:preview_limit]:
-        lines.append(f"     {item.raw}")
-    if len(result.missing_from_b) > preview_limit:
-        lines.append(
-            f"     ... and {len(result.missing_from_b) - preview_limit} more"
-        )
+    if result.shared_path is not None:
+        lines.append(f"Shared ({len(result.shared)}):")
+        lines.append(f"  -> {result.shared_path}")
+        for item in result.shared[:preview_limit]:
+            lines.append(f"     {item.raw}")
+        if len(result.shared) > preview_limit:
+            lines.append(
+                f"     ... and {len(result.shared) - preview_limit} more"
+            )
+        lines.append("")
 
-    lines.append("")
-    lines.append(f"Missing from {result.file_a.name} ({len(result.missing_from_a)}):")
-    lines.append(f"  -> {result.missing_from_a_path}")
-    for item in result.missing_from_a[:preview_limit]:
-        lines.append(f"     {item.raw}")
-    if len(result.missing_from_a) > preview_limit:
+    if result.missing_from_b_path is not None:
         lines.append(
-            f"     ... and {len(result.missing_from_a) - preview_limit} more"
+            f"Missing from {result.file_b.name} ({len(result.missing_from_b)}):"
         )
+        lines.append(f"  -> {result.missing_from_b_path}")
+        for item in result.missing_from_b[:preview_limit]:
+            lines.append(f"     {item.raw}")
+        if len(result.missing_from_b) > preview_limit:
+            lines.append(
+                f"     ... and {len(result.missing_from_b) - preview_limit} more"
+            )
+        lines.append("")
+
+    if result.missing_from_a_path is not None:
+        lines.append(
+            f"Missing from {result.file_a.name} ({len(result.missing_from_a)}):"
+        )
+        lines.append(f"  -> {result.missing_from_a_path}")
+        for item in result.missing_from_a[:preview_limit]:
+            lines.append(f"     {item.raw}")
+        if len(result.missing_from_a) > preview_limit:
+            lines.append(
+                f"     ... and {len(result.missing_from_a) - preview_limit} more"
+            )
+        lines.append("")
 
     if result.fuzzy_pairs and result.fuzzy_path is not None:
         lines.append("")
@@ -488,6 +541,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=f"Word fuzzy minimum score (default: {FUZZY_THRESHOLD})",
     )
     p.add_argument(
+        "--missing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Write missing-from-*.txt per side (default: on)",
+    )
+    p.add_argument(
+        "--shared",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Write shared.txt (lines in A that matched B; default: on)",
+    )
+    p.add_argument(
         "--debug",
         action="store_true",
         help="Write fuzzy-matches.txt and fuzzy-mismatches.txt",
@@ -520,6 +585,8 @@ def main(argv: list[str] | None = None) -> int:
         args.file_b,
         output_dir=args.output_dir,
         threshold=args.threshold,
+        write_missing=args.missing,
+        write_shared=args.shared,
         debug=args.debug,
         strip_extensions=args.strip_extensions,
         romaji_compare=args.romaji,

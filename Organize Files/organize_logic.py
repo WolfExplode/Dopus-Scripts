@@ -111,7 +111,7 @@ def config_load_compare_threshold() -> int:
     """Saved fuzzy threshold for text compare."""
     default = _COMPARE_THRESHOLD_DEFAULT
     try:
-        from compare_playlists import FUZZY_THRESHOLD
+        from compare_text import FUZZY_THRESHOLD
 
         default = FUZZY_THRESHOLD
     except ImportError:
@@ -134,6 +134,24 @@ def config_load_compare_debug() -> bool:
         return bool(config_read().get("compare_debug"))
     except OSError:
         return False
+
+
+def config_load_compare_missing() -> bool:
+    """Whether text compare writes missing-from-*.txt per side."""
+    try:
+        raw = config_read().get("compare_missing")
+        return True if raw is None else bool(raw)
+    except OSError:
+        return True
+
+
+def config_load_compare_shared() -> bool:
+    """Whether text compare writes shared.txt (lines in A that matched B)."""
+    try:
+        raw = config_read().get("compare_shared")
+        return True if raw is None else bool(raw)
+    except OSError:
+        return True
 
 
 def config_load_compare_strip_extensions() -> bool:
@@ -175,6 +193,8 @@ def config_save(
     *,
     compare_threshold: Optional[int] = None,
     compare_debug: Optional[bool] = None,
+    compare_missing: Optional[bool] = None,
+    compare_shared: Optional[bool] = None,
     compare_strip_extensions: Optional[bool] = None,
     compare_romaji: Optional[bool] = None,
 ) -> None:
@@ -187,6 +207,10 @@ def config_save(
         data["compare_threshold"] = max(0, min(100, int(compare_threshold)))
     if compare_debug is not None:
         data["compare_debug"] = bool(compare_debug)
+    if compare_missing is not None:
+        data["compare_missing"] = bool(compare_missing)
+    if compare_shared is not None:
+        data["compare_shared"] = bool(compare_shared)
     if compare_strip_extensions is not None:
         data["compare_strip_extensions"] = bool(compare_strip_extensions)
     if compare_romaji is not None:

@@ -94,7 +94,9 @@ def run_gui(
         TAG_STRIP = "strip_chars_input"
         TAG_BRACKET = "bracket_tag_input"
         TAG_COMPARE_THRESHOLD = "compare_threshold_input"
+        TAG_COMPARE_MISSING = "compare_missing_checkbox"
         TAG_COMPARE_DEBUG = "compare_debug_checkbox"
+        TAG_COMPARE_SHARED = "compare_shared_checkbox"
         TAG_COMPARE_STRIP_EXT = "compare_strip_ext_checkbox"
         TAG_COMPARE_ROMAJI = "compare_romaji_checkbox"
         TAG_PREVIEW = "preview_text"
@@ -163,12 +165,18 @@ def run_gui(
             "Line score uses the better of the two sides: matched words ÷ that side's word count, so a "
             "short line can match inside a long one.\n"
             "Source paths: two files — first line file A, second line file B. Target folder: "
-            "missing-from-<other-file-name>.txt per side. "
-            "With Debug on, also writes fuzzy-matches.txt and fuzzy-mismatches.txt. "
+            "report files for whichever output options are enabled (Missing, Shared, Debug). "
+            "At least one output option must be selected. "
             "Romaji compares Japanese text converted to Hepburn romaji (useful with Mp3tag romanized filenames)."
         )
         TIP_COMPARE_THRESHOLD = (
             "Minimum line score (0–100). Each word must reach this score against a word in the other line."
+        )
+        TIP_COMPARE_MISSING = (
+            "Write missing-from-<other-file-name>.txt per side (lines only in one file)."
+        )
+        TIP_COMPARE_SHARED = (
+            "Write shared.txt: lines from file A that matched B (exact or fuzzy), in A's order."
         )
         TIP_COMPARE_DEBUG = (
             "Write fuzzy-matches.txt (pairs at or above threshold) and fuzzy-mismatches.txt "
@@ -185,7 +193,9 @@ def run_gui(
         def __init__(self) -> None:
             s_default, t_default, strip_default, tag_default = config_load_defaults()
             cmp_thr = config_load_compare_threshold()
+            cmp_missing = config_load_compare_missing()
             cmp_debug = config_load_compare_debug()
+            cmp_shared = config_load_compare_shared()
             cmp_strip_ext = config_load_compare_strip_extensions()
             cmp_romaji = config_load_compare_romaji()
             if initial_target and str(initial_target).strip():
@@ -209,7 +219,9 @@ def run_gui(
                     strip_default,
                     tag_default,
                     cmp_thr,
+                    cmp_missing,
                     cmp_debug,
+                    cmp_shared,
                     cmp_strip_ext,
                     cmp_romaji,
                 )
@@ -372,7 +384,9 @@ def run_gui(
             strip_default: str,
             tag_default: str,
             cmp_thr_default: int,
+            cmp_missing_default: bool,
             cmp_debug_default: bool,
+            cmp_shared_default: bool,
             cmp_strip_ext_default: bool,
             cmp_romaji_default: bool,
         ) -> None:
@@ -524,16 +538,22 @@ def run_gui(
                             self._hover_tip(thr_input, self.TIP_COMPARE_THRESHOLD)
                             btn_compare = dpg.add_button(
                                 label="Compare",
-                                callback=self.on_compare_playlists,
+                                callback=self.on_compare_text,
                                 width=-1,
                             )
                         with dpg.group(horizontal=True):
-                            debug_cb = dpg.add_checkbox(
-                                label="Debug",
-                                tag=self.TAG_COMPARE_DEBUG,
-                                default_value=cmp_debug_default,
+                            missing_cb = dpg.add_checkbox(
+                                label="Missing",
+                                tag=self.TAG_COMPARE_MISSING,
+                                default_value=cmp_missing_default,
                             )
-                            self._hover_tip(debug_cb, self.TIP_COMPARE_DEBUG)
+                            self._hover_tip(missing_cb, self.TIP_COMPARE_MISSING)
+                            shared_cb = dpg.add_checkbox(
+                                label="Shared",
+                                tag=self.TAG_COMPARE_SHARED,
+                                default_value=cmp_shared_default,
+                            )
+                            self._hover_tip(shared_cb, self.TIP_COMPARE_SHARED)
                             strip_ext_cb = dpg.add_checkbox(
                                 label="Strip extensions",
                                 tag=self.TAG_COMPARE_STRIP_EXT,
@@ -546,6 +566,13 @@ def run_gui(
                                 default_value=cmp_romaji_default,
                             )
                             self._hover_tip(romaji_cb, self.TIP_COMPARE_ROMAJI)
+                        with dpg.group(horizontal=True):
+                            debug_cb = dpg.add_checkbox(
+                                label="Debug",
+                                tag=self.TAG_COMPARE_DEBUG,
+                                default_value=cmp_debug_default,
+                            )
+                            self._hover_tip(debug_cb, self.TIP_COMPARE_DEBUG)
                         dpg.bind_item_theme(btn_compare, self._theme_apply)
                         self._hover_tip(
                             btn_compare,
@@ -760,16 +787,18 @@ def run_gui(
                 str(dpg.get_value(self.TAG_BRACKET)).strip(),
                 gui_sections=self._gui_sections_snapshot(),
                 compare_threshold=int(dpg.get_value(self.TAG_COMPARE_THRESHOLD)),
+                compare_missing=bool(dpg.get_value(self.TAG_COMPARE_MISSING)),
                 compare_debug=bool(dpg.get_value(self.TAG_COMPARE_DEBUG)),
+                compare_shared=bool(dpg.get_value(self.TAG_COMPARE_SHARED)),
                 compare_strip_extensions=bool(
                     dpg.get_value(self.TAG_COMPARE_STRIP_EXT)
                 ),
                 compare_romaji=bool(dpg.get_value(self.TAG_COMPARE_ROMAJI)),
             )
 
-        def on_compare_playlists(self) -> None:
+        def on_compare_text(self) -> None:
             try:
-                import compare_playlists
+                import compare_text
             except ImportError:
                 self._msg(
                     "Text compare",
@@ -784,22 +813,29 @@ def run_gui(
             if err:
                 self._msg("Text compare", err)
                 return
-            threshold = int(dpg.get_value(self.TAG_COMPARE_THRESHOLD))
+            write_missing = bool(dpg.get_value(self.TAG_COMPARE_MISSING))
+            write_shared = bool(dpg.get_value(self.TAG_COMPARE_SHARED))
             debug = bool(dpg.get_value(self.TAG_COMPARE_DEBUG))
+            if not (write_missing or write_shared or debug):
+                self._set_preview(compare_text.COMPARE_NO_OUTPUT_MSG + "\n")
+                return
+            threshold = int(dpg.get_value(self.TAG_COMPARE_THRESHOLD))
             strip_extensions = bool(dpg.get_value(self.TAG_COMPARE_STRIP_EXT))
             romaji_compare = bool(dpg.get_value(self.TAG_COMPARE_ROMAJI))
             self.persist_paths()
             self._set_preview("Comparing…\n")
-            result = compare_playlists.run_compare(
+            result = compare_text.run_compare(
                 file_a,
                 file_b,
                 output_dir=output_p,
                 threshold=threshold,
+                write_missing=write_missing,
+                write_shared=write_shared,
                 debug=debug,
                 strip_extensions=strip_extensions,
                 romaji_compare=romaji_compare,
             )
-            self._set_preview(compare_playlists.format_compare_report(result))
+            self._set_preview(compare_text.format_compare_report(result))
 
         def _bracket_tag_text(self) -> str:
             return sanitize_tag_text(str(dpg.get_value(self.TAG_BRACKET)))
