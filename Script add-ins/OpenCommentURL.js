@@ -3,7 +3,7 @@
 function OnInit(initData) {
     initData.name = "Open Comment URL";
     initData.desc = "Ctrl+double-click opens the URL stored in a file's Comment metadata.";
-    initData.version = "1.0";
+    initData.version = "1.1";
     initData.copyright = "";
     initData.default_enable = true;
     return false;
@@ -13,15 +13,49 @@ function trimStr(s) {
     return String(s).replace(/^\s+|\s+$/g, "");
 }
 
-function getFileComment(item) {
+function metaComment(meta, group, field) {
     try {
-        var meta = item.metadata;
-        if (!meta) return "";
-        if (String(meta + "") === "none") return "";
-        var other = meta.other;
-        if (other && other.usercomment)
-            return trimStr(other.usercomment);
+        var obj = meta[group];
+        if (!obj) return "";
+        var val = obj[field];
+        if (val == null || val === undefined) return "";
+        return trimStr(val);
     } catch (e) { }
+    return "";
+}
+
+function getFileComment(item) {
+    var path = String(item.realpath || item.path || "");
+    var meta = null;
+    try {
+        if (path)
+            meta = DOpus.FSUtil.GetMetadata(path);
+    } catch (e) { }
+    if (!meta) {
+        try { meta = item.metadata; } catch (e2) { }
+    }
+
+    if (meta && String(meta + "") !== "none") {
+        // DOpus extended comment (NTFS ADS, descript.ion, or unified view)
+        var comment = metaComment(meta, "other", "usercomment");
+        if (comment) return comment;
+
+        // DOpus metadata editor stores Comment inside the file when the format supports it
+        comment = metaComment(meta, "doc", "comments");
+        if (comment) return comment;
+        comment = metaComment(meta, "image", "imagedesc");
+        if (comment) return comment;
+        comment = metaComment(meta, "audio", "mp3comment");
+        if (comment) return comment;
+    }
+
+    // Windows Properties > Details > Comments (System.Comment shell property)
+    try {
+        var shellComment = item.shellprop("System.Comment");
+        if (shellComment)
+            return trimStr(shellComment);
+    } catch (e) { }
+
     return "";
 }
 
