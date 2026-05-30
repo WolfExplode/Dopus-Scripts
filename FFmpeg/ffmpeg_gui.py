@@ -74,6 +74,18 @@ def _pick_native_files(title: str, initial: str = "") -> list[str]:
     return list(paths) if paths else []
 
 
+def _ask_yes_no_cancel(title: str, message: str) -> Optional[bool]:
+    import tkinter as tk
+    from tkinter import messagebox
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    result = messagebox.askyesnocancel(title, message, parent=root)
+    root.destroy()
+    return result if result is None else bool(result)
+
+
 def run_gui(
     initial_only_list: Optional[str] = None,
     initial_only_files: Optional[list[str]] = None,
@@ -327,13 +339,26 @@ def run_gui(
 
                     hdr_merge = self._section(
                         "Merge videos",
-                        "2+ videos → output.ext in the first file's folder (sorted by name) with chapter markers. Uses lossless copy when streams match.",
+                        "2+ videos → output.ext (sorted by name) with chapter markers. Lossless when streams match.\n"
+                        "Copy chapters: 2+ files uses filenames + durations; 1 merged file reads embedded chapters.",
                         "merge",
                     )
                     with dpg.group(parent=hdr_merge):
                         self._action_button(
                             hdr_merge, "Merge with chapters", "mergevid",
-                            "Merge sorted by filename; lossless copy when possible, otherwise re-encode with CRF from Convert.",
+                            "Lossless when streams match. If not, asks whether to fix outliers or re-encode all.",
+                        )
+                        btn = dpg.add_button(
+                            label="Copy chapters (YouTube)",
+                            callback=self._copy_youtube_chapters,
+                            parent=hdr_merge,
+                            width=-1,
+                        )
+                        dpg.bind_item_theme(btn, self._theme_apply)
+                        self._hover_tip(
+                            btn,
+                            "Copy chapter list for YouTube video description.\n"
+                            "Paste into the description field when uploading.",
                         )
 
                 with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
@@ -436,6 +461,21 @@ def run_gui(
                 return
             settings = self._collect_settings()
             settings.last_action = action
+
+            if action == "mergevid":
+                mismatch = merge_preflight_mismatch(paths)
+                if mismatch:
+                    message, eligible = mismatch
+                    choice = _ask_yes_no_cancel("Streams do not match", message)
+                    if choice is None:
+                        return
+                    if eligible:
+                        settings.merge_fix_outliers = choice
+                    elif not choice:
+                        return
+                    else:
+                        settings.merge_fix_outliers = False
+
             self.settings = settings
             config_save_settings(settings, last_action=action)
             self._log_queue = queue.Queue()
@@ -491,6 +531,21 @@ def run_gui(
 
         def _clear_files(self) -> None:
             dpg.set_value(self.TAG_FILES, "")
+
+        def _copy_youtube_chapters(self) -> None:
+            paths = self._file_paths()
+            if not paths:
+                self._set_output("No files listed.\n\nAdd files or launch from Directory Opus with a selection.")
+                return
+            text, err = chapters_to_youtube_text(paths)
+            if err:
+                self._set_output(err)
+                return
+            if not copy_text_to_clipboard(text or ""):
+                self._set_output("Could not copy to clipboard.")
+                return
+            n = len([ln for ln in (text or "").splitlines() if ln.strip()])
+            self._set_output(f"Copied {n} chapter(s) to clipboard (YouTube format):\n\n{text}")
 
         def _init_os_drag_drop(self) -> None:
             if sys.platform != "win32":

@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
@@ -116,6 +117,7 @@ class Settings:
     replace_video_with_image: bool = False
     trim_frames: str = "1"
     files_text: str = ""
+    merge_fix_outliers: bool = True
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
 
@@ -264,6 +266,7 @@ def config_load_settings() -> Settings:
         replace_video_with_image=bool(data.get("replace_video_with_image")),
         trim_frames=str(data.get("trim_frames") or "1") or "1",
         files_text=str(data.get("files_text") or ""),
+        merge_fix_outliers=bool(data.get("merge_fix_outliers", True)),
         gui_sections=gui_sections,
     )
 
@@ -280,6 +283,7 @@ def config_save_settings(
     data["replace_video_with_image"] = settings.replace_video_with_image
     data["trim_frames"] = settings.trim_frames
     data["files_text"] = settings.files_text
+    data["merge_fix_outliers"] = settings.merge_fix_outliers
     data["gui_sections"] = settings.gui_sections
     if last_action:
         if last_action in LAST_ACTIONS:
@@ -452,6 +456,7 @@ def _cleanup_appdata_temp_files() -> None:
     for pattern in (
         "DOpus_ffmpeg_merge_*.ffmeta",
         "DOpus_ffmpeg_merge_*.concat.txt",
+        "DOpus_ffmpeg_merge_*_fixed.*",
         "DOpus_ffmpeg_chfilt_*.txt",
         "FFmpegTool_only_*.txt",
     ):
@@ -750,6 +755,210 @@ def merge_lossless_compatible(infos: list[MergeStreamInfo], ext: str, paths: lis
             if info.audio_channels != ref.audio_channels:
                 return False
     return True
+
+
+def merge_stream_signature(info: MergeStreamInfo) -> tuple:
+    return (
+        info.video_codec,
+        info.width,
+        info.height,
+        info.pix_fmt,
+        info.audio_codec,
+        info.audio_sample_rate,
+        info.audio_channels,
+    )
+
+
+def merge_majority_signature(infos: list[MergeStreamInfo]) -> tuple:
+    return Counter(merge_stream_signature(info) for info in infos).most_common(1)[0][0]
+
+
+def merge_info_from_signature(sig: tuple) -> MergeStreamInfo:
+    return MergeStreamInfo(
+        duration=0.0,
+        width=sig[1],
+        height=sig[2],
+        video_codec=sig[0],
+        pix_fmt=sig[3],
+        audio_codec=sig[4],
+        audio_sample_rate=sig[5],
+        audio_channels=sig[6],
+    )
+
+
+def merge_stream_diffs(info: MergeStreamInfo, target: MergeStreamInfo) -> list[str]:
+    diffs: list[str] = []
+    if info.video_codec != target.video_codec:
+        diffs.append(f"video codec {info.video_codec} (expected {target.video_codec})")
+    if info.width != target.width or info.height != target.height:
+        diffs.append(f"size {info.width}x{info.height} (expected {target.width}x{target.height})")
+    if info.pix_fmt != target.pix_fmt:
+        diffs.append(f"pixel format {info.pix_fmt} (expected {target.pix_fmt})")
+    if bool(info.audio_codec) != bool(target.audio_codec):
+        got = info.audio_codec or "none"
+        want = target.audio_codec or "none"
+        diffs.append(f"audio {got} (expected {want})")
+    elif target.audio_codec:
+        if info.audio_codec != target.audio_codec:
+            diffs.append(f"audio codec {info.audio_codec} (expected {target.audio_codec})")
+        if info.audio_sample_rate != target.audio_sample_rate:
+            diffs.append(
+                f"audio rate {info.audio_sample_rate} (expected {target.audio_sample_rate})"
+            )
+        if info.audio_channels != target.audio_channels:
+            diffs.append(
+                f"audio channels {info.audio_channels} (expected {target.audio_channels})"
+            )
+    return diffs
+
+
+def merge_stream_mismatch_warnings(
+    paths: list[Path], infos: list[MergeStreamInfo]
+) -> tuple[list[str], MergeStreamInfo, list[int]]:
+    target_sig = merge_majority_signature(infos)
+    target = merge_info_from_signature(target_sig)
+    outlier_idxs = [
+        i for i, info in enumerate(infos) if merge_stream_signature(info) != target_sig
+    ]
+    if not outlier_idxs:
+        return [], target, outlier_idxs
+
+    lines = [
+        "Warning: streams do not match - lossless merge is not possible as-is.",
+        (
+            f"Majority profile: {target.width}x{target.height} {target.video_codec}, "
+            f"audio {target.audio_codec or 'none'}"
+            + (
+                f" {target.audio_sample_rate} Hz {target.audio_channels}ch"
+                if target.audio_codec
+                else ""
+            )
+            + f". {len(outlier_idxs)} outlier(s):"
+        ),
+    ]
+    for i in outlier_idxs:
+        diffs = merge_stream_diffs(infos[i], target)
+        lines.append(f"  {paths[i].name}: {', '.join(diffs)}")
+    return lines, target, outlier_idxs
+
+
+def merge_preflight_mismatch(
+    paths: list[Path],
+) -> Optional[tuple[str, bool]]:
+    """Return popup message and whether outlier-only fix is possible, or None if lossless-ready."""
+    if len(paths) < 2:
+        return None
+    sorted_paths = sorted(paths, key=lambda p: p.name.lower())
+    if any(not is_thumb_video(p.name) for p in sorted_paths):
+        return None
+
+    infos: list[MergeStreamInfo] = []
+    for p in sorted_paths:
+        info = probe_merge_stream_info(p)
+        if not info:
+            return None
+        infos.append(info)
+
+    ext = file_ext_lower(sorted_paths[0].name)
+    if merge_lossless_compatible(infos, ext, sorted_paths):
+        return None
+
+    warnings, target, outlier_idxs = merge_stream_mismatch_warnings(sorted_paths, infos)
+    if not outlier_idxs:
+        return None
+
+    body = "\n".join(
+        line for line in warnings if not line.startswith("Warning:")
+    ).strip()
+    body = f"Streams do not match.\n\n{body}"
+    eligible = merge_outlier_fix_eligible(infos, target)
+    if eligible:
+        body += (
+            "\n\nRe-encode only the mismatched file(s) and quick-merge the rest?\n\n"
+            "Yes = fix outlier(s) + quick merge\n"
+            "No = re-encode all files\n"
+            "Cancel = abort merge"
+        )
+    else:
+        body += (
+            "\n\nOutlier-only fix is not available (e.g. missing/extra audio).\n\n"
+            "Yes = re-encode all files\n"
+            "No or Cancel = abort merge"
+        )
+    return body, eligible
+
+
+def merge_outlier_fix_eligible(infos: list[MergeStreamInfo], target: MergeStreamInfo) -> bool:
+    for info in infos:
+        if merge_stream_signature(info) == merge_stream_signature(target):
+            continue
+        if bool(info.audio_codec) != bool(target.audio_codec):
+            return False
+    return True
+
+
+def build_merge_outlier_fix_cmd(
+    src: Path,
+    dst: Path,
+    info: MergeStreamInfo,
+    target: MergeStreamInfo,
+    ext: str,
+    crf_str: str,
+) -> str:
+    w, h = target.width, target.height
+    vf = (
+        f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format={target.pix_fmt}"
+    )
+    q = (crf_str or "").strip() or "23"
+    cmd = (
+        f"ffmpeg.exe -y -i {_quote(src)} -vf \"{vf}\" -map_metadata 0 "
+        f"-map 0:v:0"
+    )
+    if target.audio_codec:
+        cmd += " -map 0:a:0"
+        audio_matches = (
+            info.audio_codec == target.audio_codec
+            and info.audio_sample_rate == target.audio_sample_rate
+            and info.audio_channels == target.audio_channels
+        )
+        if audio_matches:
+            cmd += " -c:a copy"
+        else:
+            cmd += (
+                f" -af aresample={target.audio_sample_rate}:async=1:first_pts=0,"
+                f"aformat=sample_rates={target.audio_sample_rate}:"
+                f"channel_layouts={'stereo' if target.audio_channels == 2 else 'mono'}"
+            )
+            if ext == ".webm":
+                cmd += " -c:a libopus -b:a 128k"
+            else:
+                cmd += " -c:a aac -b:a 192k"
+    cmd += f" -c:v libx264 -crf {q} -preset ultrafast -pix_fmt {target.pix_fmt}"
+    if ext in (".mp4", ".m4v"):
+        cmd += " -movflags +faststart"
+    cmd += f" {_quote(dst)}"
+    return cmd
+
+
+def build_lossless_merge_cmd(
+    list_path: Path,
+    meta_path: Path,
+    out_path: Path,
+    ext: str,
+    has_audio: bool,
+) -> str:
+    cmd = (
+        f"ffmpeg.exe -y -f concat -safe 0 -i {_quote(list_path)} -i {_quote(meta_path)}"
+        f" -map 0:v:0"
+    )
+    if has_audio:
+        cmd += " -map 0:a:0"
+    cmd += " -map_metadata 1 -map_chapters 1 -c copy"
+    if ext in (".mp4", ".m4v"):
+        cmd += " -movflags +faststart"
+    cmd += f" {_quote(out_path)}"
+    return cmd
 
 
 def write_concat_list_file(list_path: Path, paths: list[Path]) -> None:
@@ -1214,6 +1423,108 @@ def write_merge_chapter_metadata(meta_path: Path, chapters: list[dict]) -> None:
     meta_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def format_youtube_timestamp(start_ms: int) -> str:
+    total_sec = max(0, round(start_ms / 1000))
+    h = total_sec // 3600
+    m = (total_sec % 3600) // 60
+    s = total_sec % 60
+    if h > 0:
+        return f"{h}:{m:02d}:{s:02d}"
+    return f"{m}:{s:02d}"
+
+
+def format_youtube_chapters(chapters: list[dict]) -> str:
+    lines: list[str] = []
+    for ch in chapters:
+        title = str(ch.get("title", "")).strip() or "Chapter"
+        lines.append(f"{format_youtube_timestamp(ch['start_ms'])} {title}")
+    return "\n".join(lines)
+
+
+def probe_embedded_chapters(media_path: Path) -> list[dict]:
+    cmd = [
+        "ffprobe.exe", "-v", "quiet", "-print_format", "json",
+        "-show_chapters", os.fspath(media_path),
+    ]
+    try:
+        r = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            creationflags=_win_subprocess_flags(),
+        )
+        if r.returncode != 0:
+            return []
+        data = json.loads(r.stdout)
+    except (OSError, json.JSONDecodeError):
+        return []
+    chapters: list[dict] = []
+    for ch in data.get("chapters") or []:
+        try:
+            start_ms = round(float(ch.get("start_time", 0)) * 1000)
+        except (TypeError, ValueError):
+            start_ms = 0
+        tags = ch.get("tags") or {}
+        title = tags.get("title") or tags.get("TITLE") or ""
+        chapters.append({"title": str(title), "start_ms": start_ms})
+    return chapters
+
+
+def build_chapters_from_video_list(paths: list[Path]) -> tuple[list[dict], Optional[str]]:
+    paths = sorted(paths, key=lambda p: p.name.lower())
+    for p in paths:
+        if not is_thumb_video(p.name):
+            return [], f"Not a video: {p.name}"
+    chapters: list[dict] = []
+    start_ms = 0
+    for p in paths:
+        dur = probe_media_duration_sec(p)
+        if dur <= 0:
+            return [], f"Could not read duration: {p.name}"
+        chapters.append({"title": p.stem, "start_ms": start_ms})
+        start_ms += round(dur * 1000)
+    return chapters, None
+
+
+def chapters_to_youtube_text(paths: list[Path]) -> tuple[Optional[str], Optional[str]]:
+    if not paths:
+        return None, "No files selected."
+    videos = [p for p in paths if is_thumb_video(p.name)]
+    if not videos:
+        return None, "No video files in selection."
+
+    if len(videos) == 1:
+        chapters = probe_embedded_chapters(videos[0])
+        if not chapters:
+            return None, f"No embedded chapters in {videos[0].name}."
+    else:
+        chapters, err = build_chapters_from_video_list(videos)
+        if err:
+            return None, err
+
+    if chapters:
+        chapters[0]["start_ms"] = 0
+    return format_youtube_chapters(chapters), None
+
+
+def copy_text_to_clipboard(text: str) -> bool:
+    if sys.platform != "win32":
+        return False
+    try:
+        import tkinter as tk
+
+        root = tk.Tk()
+        root.withdraw()
+        root.clipboard_clear()
+        root.clipboard_append(text)
+        root.update()
+        root.destroy()
+        return True
+    except Exception:
+        return False
+
+
 def parse_trim_frame_count(s: str) -> int:
     s = (s or "").strip()
     if not s or not s.isdigit():
@@ -1522,7 +1833,7 @@ def run_split_av_copy(paths: list[Path]) -> ActionResult:
     return ActionResult(fail == 0 or ok > 0 or partial > 0, summary, log)
 
 
-def run_merge_videos(paths: list[Path], crf_str: str) -> ActionResult:
+def run_merge_videos(paths: list[Path], crf_str: str, *, fix_outliers: bool = True) -> ActionResult:
     log = _job_log()
     title = "Merge videos"
     if len(paths) < 2:
@@ -1562,60 +1873,109 @@ def run_merge_videos(paths: list[Path], crf_str: str) -> ActionResult:
 
     lossless = merge_lossless_compatible(infos, ext, paths)
     list_path: Optional[Path] = None
+    fixed_temps: list[Path] = []
+    merge_mode = "lossless copy"
+    merge_has_audio = has_audio[0]
 
-    if lossless:
+    try:
+        if lossless:
+            merge_paths = paths
+        else:
+            warnings, target, outlier_idxs = merge_stream_mismatch_warnings(paths, infos)
+            for line in warnings:
+                log.append(line)
+
+            if fix_outliers and outlier_idxs and merge_outlier_fix_eligible(infos, target):
+                merge_paths = list(paths)
+                merge_mode = "fix outliers + lossless copy"
+                merge_has_audio = bool(target.audio_codec)
+                log.append(
+                    f"Re-encoding {len(outlier_idxs)} outlier(s) to match, then lossless merge."
+                )
+                for i in outlier_idxs:
+                    tmp = (
+                        Path(os.environ.get("TEMP", "."))
+                        / f"DOpus_ffmpeg_merge_{time.time_ns()}_{i}_fixed{ext}"
+                    )
+                    register_temp_path(tmp)
+                    fixed_temps.append(tmp)
+                    cmd_fix = build_merge_outlier_fix_cmd(
+                        paths[i], tmp, infos[i], target, ext, crf_str
+                    )
+                    log.append(f"{title} (fix outlier {paths[i].name}): {cmd_fix}")
+                    if _run_cmd(cmd_fix, log, job_output=tmp) != 0 or not tmp.is_file():
+                        return ActionResult(
+                            False, f"Failed to fix outlier: {paths[i].name}", log
+                        )
+                    fixed_info = probe_merge_stream_info(tmp)
+                    if not fixed_info or merge_stream_signature(fixed_info) != merge_stream_signature(target):
+                        return ActionResult(
+                            False,
+                            f"Fixed outlier still does not match: {paths[i].name}",
+                            log,
+                        )
+                    merge_paths[i] = tmp
+            else:
+                if fix_outliers and outlier_idxs and not merge_outlier_fix_eligible(infos, target):
+                    log.append(
+                        "Outlier fix not possible (e.g. missing/extra audio). Re-encoding all files."
+                    )
+                elif not fix_outliers:
+                    log.append("Re-encoding all files (fix outliers option is off).")
+                merge_mode = "re-encoded"
+                width = max(info.width for info in infos)
+                height = max(info.height for info in infos)
+                if width % 2:
+                    width += 1
+                if height % 2:
+                    height += 1
+
+                meta_idx = len(paths)
+                cmd = "ffmpeg.exe -y"
+                for p in paths:
+                    cmd += f" -i {_quote(p)}"
+                cmd += f" -i {_quote(meta_path)}"
+                cmd += (
+                    f' -filter_complex "{build_merge_filter_complex(len(paths), durations, has_audio, width, height)}"'
+                )
+                cmd += f" -map [outv] -map [outa] -map_metadata {meta_idx} -map_chapters {meta_idx}"
+                cmd += f" {merge_output_encode_args(ext, crf_str)} {_quote(out_path)}"
+                log.append(f"{title} (re-encode): {cmd}")
+                exit_code = _run_cmd(cmd, log, job_output=out_path)
+                if exit_code != 0 or not out_path.is_file():
+                    return ActionResult(False, f"Merge failed (exit {exit_code}).", log)
+                return ActionResult(
+                    True,
+                    f"Merged {len(paths)} video(s) ({merge_mode}):\n{out_path}\n\nChapters: {', '.join(titles)}",
+                    log,
+                )
+
         list_path = Path(os.environ.get("TEMP", ".")) / f"DOpus_ffmpeg_merge_{time.time_ns()}.concat.txt"
         register_temp_path(list_path)
         try:
-            write_concat_list_file(list_path, paths)
+            write_concat_list_file(list_path, merge_paths)
         except OSError as ex:
             return ActionResult(False, f"Could not write concat list: {ex}", log)
 
-        cmd = (
-            f"ffmpeg.exe -y -f concat -safe 0 -i {_quote(list_path)} -i {_quote(meta_path)}"
-            f" -map 0:v:0"
+        cmd = build_lossless_merge_cmd(
+            list_path, meta_path, out_path, ext, merge_has_audio
         )
-        if has_audio[0]:
-            cmd += " -map 0:a:0"
-        cmd += " -map_metadata 1 -map_chapters 1 -c copy"
-        if ext in (".mp4", ".m4v"):
-            cmd += " -movflags +faststart"
-        cmd += f" {_quote(out_path)}"
-        log.append(f"{title} (lossless copy): {cmd}")
-    else:
-        width = max(info.width for info in infos)
-        height = max(info.height for info in infos)
-        if width % 2:
-            width += 1
-        if height % 2:
-            height += 1
+        log.append(f"{title} ({merge_mode}): {cmd}")
+        exit_code = _run_cmd(cmd, log, job_output=out_path)
+        if exit_code != 0 or not out_path.is_file():
+            return ActionResult(False, f"Merge failed (exit {exit_code}).", log)
 
-        meta_idx = len(paths)
-        cmd = "ffmpeg.exe -y"
-        for p in paths:
-            cmd += f" -i {_quote(p)}"
-        cmd += f" -i {_quote(meta_path)}"
-        cmd += (
-            f' -filter_complex "{build_merge_filter_complex(len(paths), durations, has_audio, width, height)}"'
+        return ActionResult(
+            True,
+            f"Merged {len(paths)} video(s) ({merge_mode}):\n{out_path}\n\nChapters: {', '.join(titles)}",
+            log,
         )
-        cmd += f" -map [outv] -map [outa] -map_metadata {meta_idx} -map_chapters {meta_idx}"
-        cmd += f" {merge_output_encode_args(ext, crf_str)} {_quote(out_path)}"
-        log.append(f"{title} (re-encode): {cmd}")
-
-    exit_code = _run_cmd(cmd, log, job_output=out_path)
-    _safe_delete(meta_path)
-    if list_path:
-        _safe_delete(list_path)
-
-    if exit_code != 0 or not out_path.is_file():
-        return ActionResult(False, f"Merge failed (exit {exit_code}).", log)
-
-    mode = "lossless copy" if lossless else "re-encoded"
-    return ActionResult(
-        True,
-        f"Merged {len(paths)} video(s) ({mode}):\n{out_path}\n\nChapters: {', '.join(titles)}",
-        log,
-    )
+    finally:
+        _safe_delete(meta_path)
+        if list_path:
+            _safe_delete(list_path)
+        for tmp in fixed_temps:
+            _safe_delete(tmp)
 
 
 def run_video_transform(paths: list[Path], vf_filter: str, log_title: str) -> ActionResult:
@@ -1727,7 +2087,7 @@ def _run_action_impl(
     if action == "splitch":
         return run_extract_audio_channels(paths)
     if action == "mergevid":
-        return run_merge_videos(paths, settings.quality)
+        return run_merge_videos(paths, settings.quality, fix_outliers=settings.merge_fix_outliers)
     if action == "rotatecw":
         return run_video_transform(paths, "transpose=1", "Rotate 90° CW")
     if action == "rotateccw":
