@@ -3,12 +3,27 @@
 from __future__ import annotations
 
 import os
+import queue
 import sys
+import textwrap
 import threading
 from pathlib import Path
 from typing import Optional
 
 from ffmpeg_logic import *
+
+OUTPUT_WRAP_WIDTH = 100
+
+
+def _wrap_output_line(line: str) -> str:
+    if not line:
+        return line
+    return textwrap.fill(
+        line,
+        width=OUTPUT_WRAP_WIDTH,
+        break_long_words=True,
+        replace_whitespace=False,
+    )
 
 
 def _shutdown_gui_app(app) -> None:
@@ -77,6 +92,11 @@ def run_gui(
         def __init__(self) -> None:
             self._only_list_path = initial_only_list
             self._shutdown_called = False
+            self._job_thread: threading.Thread | None = None
+            self._job_result_box: list = []
+            self._job_reported = False
+            self._log_queue: queue.Queue[tuple[str, bool]] = queue.Queue()
+            self._output_lines: list[str] = []
             self.settings = config_load_settings()
             files_default = build_initial_files_text(
                 self.settings.files_text, initial_only_list, initial_only_files
@@ -307,13 +327,13 @@ def run_gui(
 
                     hdr_merge = self._section(
                         "Merge videos",
-                        "2+ videos → output.ext in the first file's folder with chapter markers.",
+                        "2+ videos → output.ext in the first file's folder (sorted by name) with chapter markers. Uses lossless copy when streams match.",
                         "merge",
                     )
                     with dpg.group(parent=hdr_merge):
                         self._action_button(
                             hdr_merge, "Merge with chapters", "mergevid",
-                            "Merge in list order; uses CRF from Convert section for re-encode.",
+                            "Merge sorted by filename; lossless copy when possible, otherwise re-encode with CRF from Convert.",
                         )
 
                 with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
@@ -327,7 +347,7 @@ def run_gui(
                         width=-1,
                         height=-1,
                         tab_input=False,
-                        default_value="Pick an action on the left.\n\nResults and ffmpeg commands show here.",
+                        default_value="Pick an action on the left.\n\nFFmpeg output streams here while a job runs.",
                     )
 
         def _current_formats(self) -> tuple[FormatPreset, ...]:
@@ -378,20 +398,38 @@ def run_gui(
                 gui_sections=sections,
             )
 
+        def _sync_output_display(self) -> None:
+            dpg.set_value(
+                self.TAG_OUTPUT,
+                "\n".join(_wrap_output_line(line) for line in self._output_lines),
+            )
+
         def _set_output(self, text: str) -> None:
-            dpg.set_value(self.TAG_OUTPUT, text)
+            self._output_lines = text.splitlines()
+            self._sync_output_display()
             if dpg.is_dearpygui_running():
                 dpg.render_dearpygui_frame()
                 dpg.run_callbacks(dpg.get_callback_queue())
 
-        def _format_live_output(self, lines: list[str], progress: str) -> str:
-            parts = ["Running…", ""]
-            parts.extend(lines)
-            if progress:
-                parts.append(progress)
-            return "\n".join(parts)
+        def _append_stream_line(self, text: str, replace_last: bool) -> None:
+            if replace_last and self._output_lines:
+                self._output_lines[-1] = text
+            else:
+                self._output_lines.append(text)
+            self._sync_output_display()
+
+        def _drain_log_queue(self) -> None:
+            while True:
+                try:
+                    text, replace_last = self._log_queue.get_nowait()
+                except queue.Empty:
+                    break
+                self._append_stream_line(text, replace_last)
 
         def _run(self, action: str) -> None:
+            if self._job_thread and self._job_thread.is_alive():
+                self._set_output("A job is already running — wait for it to finish or close the window to cancel.")
+                return
             paths = self._file_paths()
             if not paths:
                 self._set_output("No files listed.\n\nAdd files or launch from Directory Opus with a selection.")
@@ -400,49 +438,36 @@ def run_gui(
             settings.last_action = action
             self.settings = settings
             config_save_settings(settings, last_action=action)
-            live_lines: list[str] = []
-            live_progress = ""
-            live_lock = threading.Lock()
-
-            def on_stderr(line: str) -> None:
-                nonlocal live_progress
-                with live_lock:
-                    if _is_ffmpeg_progress(line):
-                        live_progress = line
-                    else:
-                        live_lines.append(line)
-                        live_progress = ""
-
-            set_live_stderr_handler(on_stderr)
+            self._log_queue = queue.Queue()
             self._set_output("Running…\n")
-
-            result_box: list = []
+            self._job_result_box = []
+            self._job_reported = False
 
             def worker() -> None:
-                result_box.append(run_action(action, paths, settings))
+                def on_output(text: str, replace_last: bool) -> None:
+                    self._log_queue.put((text, replace_last))
 
-            thread = threading.Thread(target=worker, daemon=True)
-            thread.start()
-            try:
-                while thread.is_alive() and dpg.is_dearpygui_running() and not self._shutdown_called:
-                    with live_lock:
-                        self._set_output(self._format_live_output(live_lines, live_progress))
-                    thread.join(timeout=0.05)
-            finally:
-                set_live_stderr_handler(None)
+                self._job_result_box.append(
+                    run_action(action, paths, settings, on_output=on_output)
+                )
 
-            if thread.is_alive():
-                if not self._shutdown_called:
-                    cancel_running_jobs()
-                thread.join(timeout=2.0)
+            self._job_thread = threading.Thread(target=worker, daemon=True)
+            self._job_thread.start()
 
-            if self._shutdown_called:
+        def _poll_job(self) -> None:
+            thread = self._job_thread
+            if not thread or thread.is_alive() or self._job_reported:
                 return
-
-            if result_box:
-                self._set_output(format_action_log(result_box[0]))
-            elif thread.is_alive():
-                self._set_output("Stopped — window closed while a job was running.\n")
+            self._job_reported = True
+            if self._shutdown_called:
+                self._job_thread = None
+                return
+            self._drain_log_queue()
+            if self._job_result_box:
+                result = self._job_result_box[0]
+                self._append_stream_line("", False)
+                self._append_stream_line(result.summary, False)
+            self._job_thread = None
 
         def _browse_add_files(self) -> None:
             if sys.platform != "win32":
@@ -516,6 +541,9 @@ def run_gui(
             if self._shutdown_called:
                 return
             self._shutdown_called = True
+            if self._job_thread and self._job_thread.is_alive():
+                cancel_running_jobs()
+                self._job_thread.join(timeout=3.0)
             try:
                 config_save_settings(self._collect_settings())
             except OSError:
@@ -531,6 +559,8 @@ def run_gui(
         def run(self) -> None:
             try:
                 while dpg.is_dearpygui_running():
+                    self._drain_log_queue()
+                    self._poll_job()
                     dpg.render_dearpygui_frame()
                     dpg.run_callbacks(dpg.get_callback_queue())
             finally:

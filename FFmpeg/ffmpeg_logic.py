@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+OutputSink = Callable[[str, bool], None]
+
 # --- extensions ---
 
 THUMB_IMAGE_EXT = {
@@ -303,50 +305,24 @@ _shutting_down = False
 _cleanup_done = False
 _active_procs: list[subprocess.Popen] = []
 _registered_temps: list[Path] = []
-_live_stderr_handler: Optional[Callable[[str], None]] = None
-
-_FFMPEG_PROGRESS_RE = re.compile(r"frame=\s*\d+.*\btime=")
-
-
-def set_live_stderr_handler(handler: Optional[Callable[[str], None]]) -> None:
-    global _live_stderr_handler
-    _live_stderr_handler = handler
+_job_outputs: dict[Path, bool] = {}
+_output_sink: OutputSink | None = None
 
 
-def _is_ffmpeg_progress(line: str) -> bool:
-    return bool(_FFMPEG_PROGRESS_RE.search(line))
+class JobLog(list):
+    def append(self, item) -> None:  # type: ignore[override]
+        super().append(item)
+        if _output_sink is not None and isinstance(item, str):
+            _output_sink(item, False)
 
 
-def _emit_live_stderr(line: str) -> None:
-    if _live_stderr_handler:
-        _live_stderr_handler(line)
+def _job_log() -> JobLog:
+    return JobLog()
 
 
-def _read_process_stderr(proc: subprocess.Popen) -> list[str]:
-    if proc.stderr is None:
-        return []
-    lines: list[str] = []
-    carry = ""
-    while True:
-        chunk = proc.stderr.read(4096)
-        if not chunk:
-            break
-        carry += chunk.decode(errors="replace")
-        while carry:
-            sep = re.search(r"[\r\n]", carry)
-            if not sep:
-                break
-            piece = carry[: sep.start()].strip()
-            carry = carry[sep.end() :]
-            if piece:
-                lines.append(piece)
-                _emit_live_stderr(piece)
-    tail = carry.strip()
-    if tail:
-        lines.append(tail)
-        _emit_live_stderr(tail)
-    proc.stderr.close()
-    return lines
+def _emit_output(text: str, *, replace_last: bool = False) -> None:
+    if _output_sink is not None:
+        _output_sink(text, replace_last)
 
 
 def _cancelled() -> bool:
@@ -359,6 +335,46 @@ def register_temp_path(path: Path | str) -> None:
         _registered_temps.append(p)
 
 
+def begin_job(*, on_output: OutputSink | None = None) -> None:
+    global _shutting_down, _output_sink
+    _shutting_down = False
+    _output_sink = on_output
+    _job_outputs.clear()
+
+
+def _win_subprocess_flags() -> int:
+    if sys.platform != "win32":
+        return 0
+    return subprocess.CREATE_NO_WINDOW
+
+
+def register_job_output(path: Path | str) -> None:
+    _job_outputs[Path(path)] = False
+
+
+def complete_job_output(path: Path | str) -> None:
+    _job_outputs[Path(path)] = True
+
+
+def _cleanup_incomplete_job_outputs() -> None:
+    for path, done in list(_job_outputs.items()):
+        if not done:
+            _safe_delete(path)
+    _job_outputs.clear()
+
+
+def _finish_job_outputs(outputs: list[Path], rc: int) -> None:
+    if not outputs:
+        return
+    if rc == 0 and not _cancelled():
+        for p in outputs:
+            complete_job_output(p)
+    else:
+        for p in outputs:
+            _safe_delete(p)
+            _job_outputs.pop(p, None)
+
+
 def _kill_process_tree(proc: subprocess.Popen) -> None:
     if proc.poll() is not None:
         return
@@ -368,6 +384,7 @@ def _kill_process_tree(proc: subprocess.Popen) -> None:
             shell=True,
             capture_output=True,
             check=False,
+            creationflags=_win_subprocess_flags(),
         )
     else:
         proc.terminate()
@@ -434,6 +451,7 @@ def _cleanup_appdata_temp_files() -> None:
         return
     for pattern in (
         "DOpus_ffmpeg_merge_*.ffmeta",
+        "DOpus_ffmpeg_merge_*.concat.txt",
         "DOpus_ffmpeg_chfilt_*.txt",
         "FFmpegTool_only_*.txt",
     ):
@@ -454,6 +472,7 @@ def cancel_running_jobs() -> None:
     global _shutting_down
     _shutting_down = True
     _stop_all_processes()
+    _cleanup_incomplete_job_outputs()
 
 
 def shutdown_ffmpeg_tool(
@@ -478,48 +497,103 @@ def shutdown_ffmpeg_tool(
     for p in list(_registered_temps):
         _safe_delete(p)
     _registered_temps.clear()
+    _cleanup_incomplete_job_outputs()
     _cleanup_appdata_temp_files()
     _delete_only_list_file(only_list)
 
 
-def _run_cmd(cmd: str, log: list[str]) -> int:
+def _stream_process_stderr(proc: subprocess.Popen) -> None:
+    if proc.stderr is None:
+        return
+    carry = ""
+    try:
+        while True:
+            chunk = proc.stderr.read(4096)
+            if not chunk:
+                break
+            carry += chunk.decode("utf-8", errors="replace")
+            while carry:
+                r = carry.find("\r")
+                n = carry.find("\n")
+                if r == -1 and n == -1:
+                    break
+                if n != -1 and (r == -1 or n < r):
+                    line, carry = carry[:n], carry[n + 1 :]
+                    line = line.strip("\r")
+                    if line:
+                        _emit_output(line, replace_last=False)
+                else:
+                    line, carry = carry[:r], carry[r + 1 :]
+                    if line:
+                        _emit_output(line, replace_last=True)
+        tail = carry.strip("\r\n")
+        if tail:
+            _emit_output(tail, replace_last=False)
+    except OSError:
+        pass
+
+
+def _run_cmd(
+    cmd: str,
+    log: list[str],
+    *,
+    job_output: Optional[Path | str] = None,
+    job_outputs: Optional[list[Path | str]] = None,
+) -> int:
     if _cancelled():
         log.append("Cancelled.")
         return -1
+
+    outputs: list[Path] = []
+    if job_output is not None:
+        outputs.append(Path(job_output))
+    if job_outputs:
+        outputs.extend(Path(p) for p in job_outputs)
+    for p in outputs:
+        register_job_output(p)
+
     log.append(cmd)
-    _emit_live_stderr(cmd)
     try:
         popen_kwargs: dict = {
             "shell": True,
-            "stdout": subprocess.DEVNULL,
             "stderr": subprocess.PIPE,
+            "stdout": subprocess.DEVNULL,
+            "creationflags": _win_subprocess_flags(),
         }
-        if sys.platform == "win32":
-            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         proc = subprocess.Popen(cmd, **popen_kwargs)
         _active_procs.append(proc)
-        stderr_lines: list[str] = []
-        reader = threading.Thread(target=lambda: stderr_lines.extend(_read_process_stderr(proc)), daemon=True)
+        reader = threading.Thread(target=_stream_process_stderr, args=(proc,), daemon=True)
         reader.start()
         try:
-            exit_code = proc.wait()
+            rc = proc.wait()
         finally:
-            reader.join(timeout=5)
             if proc in _active_procs:
                 _active_procs.remove(proc)
-        for line in stderr_lines:
-            if not _is_ffmpeg_progress(line):
-                log.append(line)
-        return exit_code
+            if proc.stderr is not None:
+                try:
+                    proc.stderr.close()
+                except OSError:
+                    pass
+            reader.join(timeout=2.0)
     except OSError as ex:
         log.append(f"Error: {ex}")
+        _finish_job_outputs(outputs, -1)
         return -1
+
+    _finish_job_outputs(outputs, rc)
+    return rc
 
 
 def _ffprobe_line(media_path: Path, args: list[str]) -> str:
     cmd = ["ffprobe.exe", "-v", "error", *args, os.fspath(media_path)]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        r = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            creationflags=_win_subprocess_flags(),
+        )
         if r.returncode != 0:
             return ""
         return r.stdout.strip().replace("\r", "").replace("\n", "")
@@ -558,11 +632,7 @@ def probe_media_duration_sec(media_path: Path) -> float:
         return -1.0
 
 
-def probe_image_dimensions(img_path: Path) -> Optional[tuple[int, int]]:
-    line = _ffprobe_line(
-        img_path,
-        ["-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x"],
-    )
+def _parse_video_dimensions(line: str) -> Optional[tuple[int, int]]:
     parts = line.split("x")
     if len(parts) < 2:
         return None
@@ -577,6 +647,117 @@ def probe_image_dimensions(img_path: Path) -> Optional[tuple[int, int]]:
     if h % 2:
         h += 1
     return w, h
+
+
+def probe_image_dimensions(img_path: Path) -> Optional[tuple[int, int]]:
+    line = _ffprobe_line(
+        img_path,
+        ["-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x"],
+    )
+    return _parse_video_dimensions(line)
+
+
+def probe_video_dimensions(media_path: Path) -> Optional[tuple[int, int]]:
+    line = _ffprobe_line(
+        media_path,
+        ["-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x"],
+    )
+    return _parse_video_dimensions(line)
+
+
+@dataclass
+class MergeStreamInfo:
+    duration: float
+    width: int
+    height: int
+    video_codec: str
+    pix_fmt: str
+    audio_codec: str
+    audio_sample_rate: int
+    audio_channels: int
+
+
+def probe_merge_stream_info(media_path: Path) -> Optional[MergeStreamInfo]:
+    dur = probe_media_duration_sec(media_path)
+    if dur <= 0:
+        return None
+    v_line = _ffprobe_line(
+        media_path,
+        [
+            "-select_streams", "v:0",
+            "-show_entries", "stream=codec_name,width,height,pix_fmt",
+            "-of", "csv=p=0",
+        ],
+    )
+    if not v_line:
+        return None
+    parts = v_line.split(",")
+    if len(parts) < 4:
+        return None
+    try:
+        width, height = int(parts[1]), int(parts[2])
+    except ValueError:
+        return None
+    if width <= 0 or height <= 0:
+        return None
+
+    audio_codec = probe_first_audio_codec(media_path)
+    audio_sample_rate = 0
+    audio_channels = 0
+    if audio_codec:
+        rate_line = _ffprobe_line(
+            media_path,
+            ["-select_streams", "a:0", "-show_entries", "stream=sample_rate", "-of", "csv=p=0"],
+        )
+        try:
+            audio_sample_rate = int(rate_line)
+        except ValueError:
+            return None
+        audio_channels = probe_audio_channel_count(media_path)
+        if audio_channels < 1:
+            return None
+
+    return MergeStreamInfo(
+        duration=dur,
+        width=width,
+        height=height,
+        video_codec=parts[0],
+        pix_fmt=parts[3],
+        audio_codec=audio_codec,
+        audio_sample_rate=audio_sample_rate,
+        audio_channels=audio_channels,
+    )
+
+
+def merge_lossless_compatible(infos: list[MergeStreamInfo], ext: str, paths: list[Path]) -> bool:
+    if any(file_ext_lower(p.name) != ext for p in paths):
+        return False
+    ref = infos[0]
+    for info in infos[1:]:
+        if info.video_codec != ref.video_codec:
+            return False
+        if info.width != ref.width or info.height != ref.height:
+            return False
+        if info.pix_fmt != ref.pix_fmt:
+            return False
+        if bool(info.audio_codec) != bool(ref.audio_codec):
+            return False
+        if ref.audio_codec:
+            if info.audio_codec != ref.audio_codec:
+                return False
+            if info.audio_sample_rate != ref.audio_sample_rate:
+                return False
+            if info.audio_channels != ref.audio_channels:
+                return False
+    return True
+
+
+def write_concat_list_file(list_path: Path, paths: list[Path]) -> None:
+    lines: list[str] = []
+    for p in paths:
+        escaped = p.as_posix().replace("'", "'\\''")
+        lines.append(f"file '{escaped}'")
+    list_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _parse_fps_rational(line: str) -> float:
@@ -979,11 +1160,21 @@ def merge_output_encode_args(ext: str, crf_str: str) -> str:
     return f"-c:v libx264 -crf {q} -preset fast -pix_fmt yuv420p -c:a aac -b:a 192k{mov}"
 
 
-def build_merge_filter_complex(count: int, durations_sec: list[float], has_audio: list[bool]) -> str:
+def build_merge_filter_complex(
+    count: int,
+    durations_sec: list[float],
+    has_audio: list[bool],
+    width: int,
+    height: int,
+) -> str:
     parts: list[str] = []
     concat_in = ""
     for i in range(count):
-        parts.append(f"[{i}:v:0]fps=30,format=yuv420p,setpts=PTS-STARTPTS[v{i}]")
+        parts.append(
+            f"[{i}:v:0]scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p,"
+            f"setpts=PTS-STARTPTS[v{i}]"
+        )
         if has_audio[i]:
             parts.append(
                 f"[{i}:a:0]aformat=sample_rates=48000:channel_layouts=stereo,"
@@ -1060,7 +1251,7 @@ def quality_applicable(is_video: bool, fmt: FormatPreset) -> bool:
 def run_convert(
     paths: list[Path], mode: int, format_name: str, quality: str
 ) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     if not paths:
         return ActionResult(False, "No files selected.", log)
 
@@ -1094,7 +1285,7 @@ def run_convert(
             )
 
         log.append(f"Converting: {item.name} -> {fmt.name}")
-        if _run_cmd(cmd, log) == 0:
+        if _run_cmd(cmd, log, job_output=out) == 0:
             processed += 1
             log.append(f"Success: {out}")
         else:
@@ -1110,7 +1301,7 @@ def run_convert(
 def run_split_or_combine_cover(
     paths: list[Path], replace_with_image: bool
 ) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     title = "Replace video with image" if replace_with_image else "Split/combine cover"
 
     imgs = [p for p in paths if is_thumb_image(p.name)]
@@ -1164,7 +1355,7 @@ def run_split_or_combine_cover(
 
 
 def run_audio_to_mono(paths: list[Path]) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     videos = [p for p in paths if is_thumb_video(p.name)]
     if not videos:
         return ActionResult(False, "Select one or more video files.", log)
@@ -1199,7 +1390,7 @@ def run_audio_to_mono(paths: list[Path]) -> ActionResult:
 
 
 def run_extract_audio_channels(paths: list[Path]) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     title = "Extract audio channels"
     items = [p for p in paths if is_thumb_video(p.name) or is_thumb_audio(p.name)]
     if not items:
@@ -1227,6 +1418,7 @@ def run_extract_audio_channels(paths: list[Path]) -> ActionResult:
             continue
 
         cmd = f'ffmpeg.exe -y -i {_quote(item)} -filter_complex_script {_quote(filt_path)} -c:a pcm_s16le'
+        wav_outs: list[Path] = []
         for c in range(ch):
             idx = c + 1
             suffix = f"0{idx}" if idx < 10 else str(idx)
@@ -1235,10 +1427,11 @@ def run_extract_audio_channels(paths: list[Path]) -> ActionResult:
             while out.exists():
                 out = item.parent / f"{item.stem}.ch{suffix}_{counter}.wav"
                 counter += 1
+            wav_outs.append(out)
             cmd += f' -map "[ch{c}]" {_quote(out)}'
 
         log.append(f"{title} ({ch} ch): {cmd}")
-        if _run_cmd(cmd, log) == 0:
+        if _run_cmd(cmd, log, job_outputs=wav_outs) == 0:
             ok += 1
         else:
             fail += 1
@@ -1251,7 +1444,7 @@ def run_extract_audio_channels(paths: list[Path]) -> ActionResult:
 
 
 def run_split_av_copy(paths: list[Path]) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     title = "Split/combine AV"
     videos = [p for p in paths if is_thumb_video(p.name)]
     audios = [p for p in paths if is_thumb_audio(p.name)]
@@ -1315,7 +1508,7 @@ def run_split_av_copy(paths: list[Path]) -> ActionResult:
             f"-map 0:a:0 -c copy -vn {_quote(aud_out)}"
         )
         log.append(f"{title} (split audio): {cmd_a}")
-        audio_ok = _run_cmd(cmd_a, log) == 0 and aud_out.is_file()
+        audio_ok = _run_cmd(cmd_a, log, job_output=aud_out) == 0 and aud_out.is_file()
 
         if _replace_in_place(vid, vid_tmp, bak, log, title):
             ok += 1 if audio_ok else 0
@@ -1330,24 +1523,25 @@ def run_split_av_copy(paths: list[Path]) -> ActionResult:
 
 
 def run_merge_videos(paths: list[Path], crf_str: str) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     title = "Merge videos"
     if len(paths) < 2:
         return ActionResult(False, "Select two or more video files.", log)
+    paths = sorted(paths, key=lambda p: p.name.lower())
     if any(not is_thumb_video(p.name) for p in paths):
         bad = [p.name for p in paths if not is_thumb_video(p.name)]
         return ActionResult(False, f"Not video: {', '.join(bad)}", log)
 
-    durations: list[float] = []
-    has_audio: list[bool] = []
-    titles: list[str] = []
+    infos: list[MergeStreamInfo] = []
     for p in paths:
-        dur = probe_media_duration_sec(p)
-        if dur <= 0:
-            return ActionResult(False, f"Could not read duration: {p.name}", log)
-        durations.append(dur)
-        has_audio.append(bool(probe_first_audio_codec(p)))
-        titles.append(p.stem)
+        info = probe_merge_stream_info(p)
+        if not info:
+            return ActionResult(False, f"Could not read media info: {p.name}", log)
+        infos.append(info)
+
+    titles = [p.stem for p in paths]
+    durations = [info.duration for info in infos]
+    has_audio = [bool(info.audio_codec) for info in infos]
 
     ext = file_ext_lower(paths[0].name)
     out_path = paths[0].parent / f"output{ext}"
@@ -1366,31 +1560,66 @@ def run_merge_videos(paths: list[Path], crf_str: str) -> ActionResult:
     except OSError as ex:
         return ActionResult(False, f"Could not write chapter metadata: {ex}", log)
 
-    meta_idx = len(paths)
-    cmd = "ffmpeg.exe -y"
-    for p in paths:
-        cmd += f" -i {_quote(p)}"
-    cmd += f" -i {_quote(meta_path)}"
-    cmd += f' -filter_complex "{build_merge_filter_complex(len(paths), durations, has_audio)}"'
-    cmd += f" -map [outv] -map [outa] -map_metadata {meta_idx} -map_chapters {meta_idx}"
-    cmd += f" {merge_output_encode_args(ext, crf_str)} {_quote(out_path)}"
+    lossless = merge_lossless_compatible(infos, ext, paths)
+    list_path: Optional[Path] = None
 
-    log.append(f"{title}: {cmd}")
-    exit_code = _run_cmd(cmd, log)
+    if lossless:
+        list_path = Path(os.environ.get("TEMP", ".")) / f"DOpus_ffmpeg_merge_{time.time_ns()}.concat.txt"
+        register_temp_path(list_path)
+        try:
+            write_concat_list_file(list_path, paths)
+        except OSError as ex:
+            return ActionResult(False, f"Could not write concat list: {ex}", log)
+
+        cmd = (
+            f"ffmpeg.exe -y -f concat -safe 0 -i {_quote(list_path)} -i {_quote(meta_path)}"
+            f" -map 0:v:0"
+        )
+        if has_audio[0]:
+            cmd += " -map 0:a:0"
+        cmd += " -map_metadata 1 -map_chapters 1 -c copy"
+        if ext in (".mp4", ".m4v"):
+            cmd += " -movflags +faststart"
+        cmd += f" {_quote(out_path)}"
+        log.append(f"{title} (lossless copy): {cmd}")
+    else:
+        width = max(info.width for info in infos)
+        height = max(info.height for info in infos)
+        if width % 2:
+            width += 1
+        if height % 2:
+            height += 1
+
+        meta_idx = len(paths)
+        cmd = "ffmpeg.exe -y"
+        for p in paths:
+            cmd += f" -i {_quote(p)}"
+        cmd += f" -i {_quote(meta_path)}"
+        cmd += (
+            f' -filter_complex "{build_merge_filter_complex(len(paths), durations, has_audio, width, height)}"'
+        )
+        cmd += f" -map [outv] -map [outa] -map_metadata {meta_idx} -map_chapters {meta_idx}"
+        cmd += f" {merge_output_encode_args(ext, crf_str)} {_quote(out_path)}"
+        log.append(f"{title} (re-encode): {cmd}")
+
+    exit_code = _run_cmd(cmd, log, job_output=out_path)
     _safe_delete(meta_path)
+    if list_path:
+        _safe_delete(list_path)
 
     if exit_code != 0 or not out_path.is_file():
         return ActionResult(False, f"Merge failed (exit {exit_code}).", log)
 
+    mode = "lossless copy" if lossless else "re-encoded"
     return ActionResult(
         True,
-        f"Merged {len(paths)} video(s):\n{out_path}\n\nChapters: {', '.join(titles)}",
+        f"Merged {len(paths)} video(s) ({mode}):\n{out_path}\n\nChapters: {', '.join(titles)}",
         log,
     )
 
 
 def run_video_transform(paths: list[Path], vf_filter: str, log_title: str) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     videos = [p for p in paths if is_thumb_video(p.name)]
     if not videos:
         return ActionResult(False, "Select one or more video files.", log)
@@ -1426,7 +1655,7 @@ def run_video_transform(paths: list[Path], vf_filter: str, log_title: str) -> Ac
 
 
 def run_trim_leading_frames(paths: list[Path], frame_count_str: str) -> ActionResult:
-    log: list[str] = []
+    log = _job_log()
     title = "Trim leading frames"
     frame_count = parse_trim_frame_count(frame_count_str)
     if frame_count < 1:
@@ -1468,6 +1697,21 @@ def run_trim_leading_frames(paths: list[Path], frame_count_str: str) -> ActionRe
 
 
 def run_action(
+    action: str,
+    paths: list[Path],
+    settings: Settings,
+    *,
+    on_output: OutputSink | None = None,
+) -> ActionResult:
+    begin_job(on_output=on_output)
+    try:
+        return _run_action_impl(action, paths, settings)
+    finally:
+        global _output_sink
+        _output_sink = None
+
+
+def _run_action_impl(
     action: str,
     paths: list[Path],
     settings: Settings,
