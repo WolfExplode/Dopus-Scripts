@@ -100,7 +100,12 @@ function loadHandbrakeSettings(shell, fso) {
         presetFile: "",
         maxSide: String(DEFAULT_MAX_PICTURE_SIDE),
         videoQuality: "",
-        videoFramerate: ""
+        videoFramerate: "",
+        smallFileCutoffMb: "",
+        smallFileQuality: "",
+        smallFileFramerate: "",
+        frameRangeStart: "",
+        frameRangeEnd: ""
     };
     try {
         var path = getSettingsPath(shell);
@@ -120,6 +125,11 @@ function loadHandbrakeSettings(shell, fso) {
                     else if (key === "maxSide") out.maxSide = val;
                     else if (key === "videoQuality") out.videoQuality = val;
                     else if (key === "videoFramerate") out.videoFramerate = val;
+                    else if (key === "smallFileCutoffMb") out.smallFileCutoffMb = val;
+                    else if (key === "smallFileQuality") out.smallFileQuality = val;
+                    else if (key === "smallFileFramerate") out.smallFileFramerate = val;
+                    else if (key === "frameRangeStart") out.frameRangeStart = val;
+                    else if (key === "frameRangeEnd") out.frameRangeEnd = val;
                 }
             }
         }
@@ -127,14 +137,25 @@ function loadHandbrakeSettings(shell, fso) {
     return out;
 }
 
-function saveHandbrakeSettings(shell, fso, presetFile, maxSide, videoQuality, videoFramerate) {
+function saveHandbrakeSettings(shell, fso, settings) {
     try {
         var path = getSettingsPath(shell);
         var stream = fso.OpenTextFile(path, 2, true);
-        stream.WriteLine("presetFile=" + presetFile);
-        stream.WriteLine("maxSide=" + maxSide);
-        stream.WriteLine("videoQuality=" + (videoQuality == null ? "" : videoQuality));
-        stream.WriteLine("videoFramerate=" + (videoFramerate == null ? "" : videoFramerate));
+        stream.WriteLine("presetFile=" + settings.presetFile);
+        stream.WriteLine("maxSide=" + settings.maxSide);
+        stream.WriteLine("videoQuality=" + (settings.videoQuality == null ? "" : settings.videoQuality));
+        stream.WriteLine("videoFramerate=" + (settings.videoFramerate == null ? "" : settings.videoFramerate));
+        stream.WriteLine(
+            "smallFileCutoffMb=" + (settings.smallFileCutoffMb == null ? "" : settings.smallFileCutoffMb)
+        );
+        stream.WriteLine(
+            "smallFileQuality=" + (settings.smallFileQuality == null ? "" : settings.smallFileQuality)
+        );
+        stream.WriteLine(
+            "smallFileFramerate=" + (settings.smallFileFramerate == null ? "" : settings.smallFileFramerate)
+        );
+        stream.WriteLine("frameRangeStart=" + (settings.frameRangeStart == null ? "" : settings.frameRangeStart));
+        stream.WriteLine("frameRangeEnd=" + (settings.frameRangeEnd == null ? "" : settings.frameRangeEnd));
         stream.Close();
     } catch (e) { /* ignore */ }
 }
@@ -162,6 +183,109 @@ function parseVideoQualityOverride(shell, raw) {
     return n;
 }
 
+/**
+ * Cutoff and -q both blank = disabled (null).
+ * Cutoff set requires -q; -r is optional when the rule is active.
+ */
+function parseSmallFileRule(shell, cutoffRaw, qualityRaw, framerateRaw) {
+    var cutoffStr = trimStr(cutoffRaw);
+    var qualityStr = trimStr(qualityRaw);
+    var framerateStr = trimStr(framerateRaw);
+    if (cutoffStr === "" && qualityStr === "" && framerateStr === "") {
+        return null;
+    }
+    if (cutoffStr === "" || qualityStr === "") {
+        popup(
+            shell,
+            "For small-file overrides, enter both the MB cutoff and -q, or leave cutoff, -q, and -r all blank.",
+            "HandBrake",
+            16
+        );
+        return false;
+    }
+    var cutoffMb = parseFloat(cutoffStr);
+    if (isNaN(cutoffMb) || cutoffMb <= 0) {
+        popup(shell, "Small-file cutoff must be a positive number (MB).", "HandBrake", 16);
+        return false;
+    }
+    var quality = parseFloat(qualityStr);
+    if (isNaN(quality)) {
+        popup(shell, "Small-file quality must be a number.", "HandBrake", 16);
+        return false;
+    }
+    var framerate = null;
+    if (framerateStr !== "") {
+        framerate = parseFloat(framerateStr);
+        if (isNaN(framerate) || framerate <= 0) {
+            popup(shell, "Small-file frame rate must be a positive number, or leave -r blank.", "HandBrake", 16);
+            return false;
+        }
+    }
+    return { cutoffMb: cutoffMb, quality: quality, framerate: framerate };
+}
+
+/**
+ * Blank start and end = disabled (null).
+ * HandBrake --stop-at frames:N is duration from --start-at (or from 0).
+ */
+function parseFrameRange(shell, startRaw, endRaw) {
+    var startStr = trimStr(startRaw);
+    var endStr = trimStr(endRaw);
+    if (startStr === "" && endStr === "") {
+        return null;
+    }
+    var startFrame = 0;
+    var hasStart = startStr !== "";
+    var hasEnd = endStr !== "";
+    if (hasStart) {
+        startFrame = parseInt(startStr, 10);
+        if (isNaN(startFrame) || startFrame < 0) {
+            popup(shell, "Frame range start must be 0 or a positive whole number.", "HandBrake", 16);
+            return false;
+        }
+    }
+    var endFrame = 0;
+    if (hasEnd) {
+        endFrame = parseInt(endStr, 10);
+        if (isNaN(endFrame) || endFrame < 0) {
+            popup(shell, "Frame range end must be 0 or a positive whole number.", "HandBrake", 16);
+            return false;
+        }
+    }
+    if (hasStart && hasEnd && endFrame < startFrame) {
+        popup(shell, "Frame range end must be >= start.", "HandBrake", 16);
+        return false;
+    }
+    var stopDuration = null;
+    if (hasEnd) {
+        stopDuration = endFrame - (hasStart ? startFrame : 0) + 1;
+        if (stopDuration < 1) {
+            popup(shell, "Frame range must include at least one frame.", "HandBrake", 16);
+            return false;
+        }
+    }
+    return {
+        startFrame: hasStart ? startFrame : 0,
+        useStartAt: hasStart,
+        stopDuration: stopDuration
+    };
+}
+
+/** HandBrakeCLI --start-at / --stop-at in frames (units must match). */
+function frameRangeCliArgs(frameRange) {
+    if (!frameRange) {
+        return "";
+    }
+    var args = "";
+    if (frameRange.useStartAt) {
+        args += " --start-at frames:" + frameRange.startFrame;
+    }
+    if (frameRange.stopDuration != null) {
+        args += " --stop-at frames:" + frameRange.stopDuration;
+    }
+    return args;
+}
+
 /** Blank = no override (null). Otherwise fps for HandBrakeCLI -r. Invalid input returns false. */
 function parseVideoFramerateOverride(shell, raw) {
     var s = trimStr(raw);
@@ -174,6 +298,21 @@ function parseVideoFramerateOverride(shell, raw) {
         return false;
     }
     return n;
+}
+
+/** Per input: small-file rule overrides, else global quality / framerate (may be null). */
+function handbrakeOverridesForInput(fso, inputPath, videoQuality, videoFramerate, smallFileRule) {
+    if (!smallFileRule) {
+        return { quality: videoQuality, framerate: videoFramerate };
+    }
+    var sizeMb = fso.GetFile(inputPath).Size / (1024 * 1024);
+    if (sizeMb < smallFileRule.cutoffMb) {
+        return {
+            quality: smallFileRule.quality,
+            framerate: smallFileRule.framerate != null ? smallFileRule.framerate : videoFramerate
+        };
+    }
+    return { quality: videoQuality, framerate: videoFramerate };
 }
 
 /** Sorted list of { label, path } for *.json in PRESET_DIR. */
@@ -252,6 +391,11 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     dlg.control("maxside_edit").value = saved.maxSide || String(DEFAULT_MAX_PICTURE_SIDE);
     dlg.control("quality_edit").value = saved.videoQuality || "";
     dlg.control("framerate_edit").value = saved.videoFramerate || "";
+    dlg.control("smallsize_cutoff_edit").value = saved.smallFileCutoffMb || "";
+    dlg.control("smallsize_quality_edit").value = saved.smallFileQuality || "";
+    dlg.control("smallsize_framerate_edit").value = saved.smallFileFramerate || "";
+    dlg.control("framerange_start_edit").value = saved.frameRangeStart || "";
+    dlg.control("framerange_end_edit").value = saved.frameRangeEnd || "";
     dlg.Show();
 
     var dialogResult = 0;
@@ -285,19 +429,37 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     if (videoFramerate === false) {
         return null;
     }
-    saveHandbrakeSettings(
-        shell,
-        fso,
-        fso.GetFileName(presetPath),
-        String(maxPictureSide),
-        trimStr(qualityRaw),
-        trimStr(framerateRaw)
-    );
+    var smallCutoffRaw = dlg.control("smallsize_cutoff_edit").value;
+    var smallQualityRaw = dlg.control("smallsize_quality_edit").value;
+    var smallFramerateRaw = dlg.control("smallsize_framerate_edit").value;
+    var smallFileRule = parseSmallFileRule(shell, smallCutoffRaw, smallQualityRaw, smallFramerateRaw);
+    if (smallFileRule === false) {
+        return null;
+    }
+    var frameStartRaw = dlg.control("framerange_start_edit").value;
+    var frameEndRaw = dlg.control("framerange_end_edit").value;
+    var frameRange = parseFrameRange(shell, frameStartRaw, frameEndRaw);
+    if (frameRange === false) {
+        return null;
+    }
+    saveHandbrakeSettings(shell, fso, {
+        presetFile: fso.GetFileName(presetPath),
+        maxSide: String(maxPictureSide),
+        videoQuality: trimStr(qualityRaw),
+        videoFramerate: trimStr(framerateRaw),
+        smallFileCutoffMb: trimStr(smallCutoffRaw),
+        smallFileQuality: trimStr(smallQualityRaw),
+        smallFileFramerate: trimStr(smallFramerateRaw),
+        frameRangeStart: trimStr(frameStartRaw),
+        frameRangeEnd: trimStr(frameEndRaw)
+    });
     return {
         presetPath: presetPath,
         maxPictureSide: maxPictureSide,
         videoQuality: videoQuality,
-        videoFramerate: videoFramerate
+        videoFramerate: videoFramerate,
+        smallFileRule: smallFileRule,
+        frameRange: frameRange
     };
 }
 
@@ -390,6 +552,8 @@ function OnClick(clickData) {
     var maxPictureSide = options.maxPictureSide;
     var videoQuality = options.videoQuality;
     var videoFramerate = options.videoFramerate;
+    var smallFileRule = options.smallFileRule;
+    var frameRange = options.frameRange;
     if (!fso.FileExists(presetPath)) {
         popup(shell, "Preset JSON not found at:\n" + presetPath, "HandBrake", 16);
         return;
@@ -422,6 +586,22 @@ function OnClick(clickData) {
     if (videoFramerate != null) {
         logMsg += ", framerate -r " + videoFramerate;
     }
+    if (smallFileRule != null) {
+        logMsg +=
+            ", files < " + smallFileRule.cutoffMb + " MB use -q " + smallFileRule.quality;
+        if (smallFileRule.framerate != null) {
+            logMsg += " -r " + smallFileRule.framerate;
+        }
+    }
+    if (frameRange != null) {
+        logMsg += ", frames";
+        if (frameRange.useStartAt) {
+            logMsg += " from " + frameRange.startFrame;
+        }
+        if (frameRange.stopDuration != null) {
+            logMsg += " length " + frameRange.stopDuration;
+        }
+    }
     logMsg += ")";
     DOpus.Output(logMsg);
 
@@ -450,6 +630,13 @@ function OnClick(clickData) {
     for (i = 0; i < paths.length; i++) {
         var inputPath = paths[i];
         var outputPath = outputPathForInput(fso, inputPath, outputExt);
+        var overrides = handbrakeOverridesForInput(
+            fso,
+            inputPath,
+            videoQuality,
+            videoFramerate,
+            smallFileRule
+        );
         var cmd =
             quoteArg(cli) +
             " --preset-import-file " +
@@ -461,8 +648,9 @@ function OnClick(clickData) {
             " --maxHeight " +
             maxPictureSide +
             " --loose-anamorphic" +
-            (videoQuality != null ? " -q " + videoQuality : "") +
-            (videoFramerate != null ? " -r " + videoFramerate : "") +
+            (overrides.quality != null ? " -q " + overrides.quality : "") +
+            (overrides.framerate != null ? " -r " + overrides.framerate : "") +
+            frameRangeCliArgs(frameRange) +
             " -i " +
             quoteArg(inputPath) +
             " -o " +

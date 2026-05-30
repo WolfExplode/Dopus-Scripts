@@ -1,22 +1,27 @@
 <resources>
   <resource name="DOpus_handbrake_Dlg" type="dialog">
-    <dialog fontsize="9" height="220" lang="english" title="HandBrake encode" width="420">
-
-      <control halign="left" height="10" name="preset_label" title="Preset JSON (from Handbrake folder):" type="static" width="380" x="12" y="10"/>
-      <control height="64" name="preset_combo" type="combo" width="396" x="12" y="22"/>
-
-      <control halign="left" height="10" name="maxside_label" title="Max picture size — longest side (pixels):" type="static" width="280" x="12" y="92"/>
-      <control height="14" name="maxside_edit" title="1920" type="edit" width="72" x="300" y="90"/>
-
-      <control halign="left" height="10" name="quality_label" title="Video quality (VideoQualitySlider, optional):" type="static" width="280" x="12" y="112"/>
-      <control height="14" name="quality_edit" type="edit" width="72" x="300" y="110"/>
-
-      <control halign="left" height="10" name="framerate_label" title="Frame rate / VideoFramerate (optional):" type="static" width="280" x="12" y="132"/>
-      <control height="14" name="framerate_edit" type="edit" width="72" x="300" y="130"/>
-
-      <control close="1" default="yes" height="18" name="ok_btn" title="Encode" type="button" width="80" x="248" y="188"/>
-      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="342" y="188"/>
-
+    <dialog fontsize="9" height="280" lang="english" title="HandBrake encode" width="420">
+      <control halign="left" height="10" name="preset_label" title="Preset JSON (from Handbrake folder):" type="static" width="396" x="12" y="10"/>
+      <control height="64" name="preset_combo" tip="HandBrake preset JSON from the Handbrake folder. Defines encoder, format, and default quality." type="combo" width="396" x="12" y="22"/>
+      <control halign="left" height="10" name="maxside_label" title="Max picture side (px):" type="static" width="168" x="12" y="92"/>
+      <control height="14" name="maxside_edit" number="yes" tip="Longest side in pixels (--maxWidth / --maxHeight). Video is scaled down if larger; not upscaled." title="1920" type="edit" updown="yes" val_max="16384" val_min="1" width="72" x="188" y="90"/>
+      <control halign="left" height="10" name="quality_label" title="Video quality (optional):" type="static" width="168" x="12" y="112"/>
+      <control double="yes" height="14" name="quality_edit" tip="HandBrake -q for larger files (same as Video Quality slider). Leave blank to use the preset. Lower = higher quality (x265 CQ)." type="edit" updown="yes" val_max="51" val_min="0" width="72" x="188" y="110"/>
+      <control halign="left" height="10" name="framerate_label" title="Frame rate (optional):" type="static" width="168" x="12" y="132"/>
+      <control double="yes" height="14" name="framerate_edit" tip="HandBrake -r frame rate in fps. Leave blank to use the preset." type="edit" updown="yes" val_max="240" val_min="1" width="72" x="188" y="130"/>
+      <control halign="left" height="10" name="smallsize_label" title="If smaller than (MB):" type="static" width="168" x="12" y="152"/>
+      <control double="yes" height="14" name="smallsize_cutoff_edit" tip="Size cutoff in MB. Files smaller than this use -q / -r on this row. Leave cutoff and -q blank to disable." type="edit" updown="yes" val_max="99999" val_min="1" width="48" x="188" y="150"/>
+      <control halign="left" height="10" name="smallsize_q_label" title="-q:" type="static" width="20" x="244" y="152"/>
+      <control double="yes" height="14" name="smallsize_quality_edit" tip="Quality (-q) for files under the MB cutoff. Required with cutoff; larger files use Video quality above or the preset." type="edit" updown="yes" val_max="51" val_min="0" width="40" x="266" y="150"/>
+      <control halign="left" height="10" name="smallsize_r_label" title="-r:" type="static" width="20" x="312" y="152"/>
+      <control double="yes" height="14" name="smallsize_framerate_edit" tip="Frame rate (-r) for files under the MB cutoff. Optional; leave blank to use Frame rate above or the preset." type="edit" updown="yes" val_max="240" val_min="1" width="40" x="334" y="150"/>
+      <control halign="left" height="10" name="framerange_label" title="Frame range (optional):" type="static" width="168" x="12" y="172"/>
+      <control halign="left" height="10" name="framerange_start_label" title="start:" type="static" width="28" x="188" y="172"/>
+      <control height="14" name="framerange_start_edit" number="yes" tip="First frame to encode (--start-at frames:N). Leave blank to start at frame 0." type="edit" updown="yes" val_max="999999999" val_min="0" width="48" x="218" y="170"/>
+      <control halign="left" height="10" name="framerange_end_label" title="end:" type="static" width="24" x="274" y="172"/>
+      <control height="14" name="framerange_end_edit" number="yes" tip="Last frame to encode, inclusive. Uses --stop-at frames:(count). Leave blank to encode to the end." type="edit" updown="yes" val_max="999999999" val_min="0" width="48" x="300" y="170"/>
+      <control close="1" default="yes" height="18" name="ok_btn" title="Encode" type="button" width="80" x="248" y="248"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="342" y="248"/>
     </dialog>
   </resource>
 </resources>
