@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from pathlib import Path
 from typing import Optional
 
 from ffmpeg_logic import *
+
+
+def _shutdown_gui_app(app) -> None:
+    shutdown_ffmpeg_tool(paths=app._file_paths(), only_list=app._only_list_path)
 
 
 def _windows_fonts_dir() -> Path:
@@ -70,6 +75,8 @@ def run_gui(
         TAG_OUTPUT = "output_text"
 
         def __init__(self) -> None:
+            self._only_list_path = initial_only_list
+            self._shutdown_called = False
             self.settings = config_load_settings()
             files_default = build_initial_files_text(
                 self.settings.files_text, initial_only_list, initial_only_files
@@ -377,6 +384,13 @@ def run_gui(
                 dpg.render_dearpygui_frame()
                 dpg.run_callbacks(dpg.get_callback_queue())
 
+        def _format_live_output(self, lines: list[str], progress: str) -> str:
+            parts = ["Running…", ""]
+            parts.extend(lines)
+            if progress:
+                parts.append(progress)
+            return "\n".join(parts)
+
         def _run(self, action: str) -> None:
             paths = self._file_paths()
             if not paths:
@@ -386,9 +400,49 @@ def run_gui(
             settings.last_action = action
             self.settings = settings
             config_save_settings(settings, last_action=action)
+            live_lines: list[str] = []
+            live_progress = ""
+            live_lock = threading.Lock()
+
+            def on_stderr(line: str) -> None:
+                nonlocal live_progress
+                with live_lock:
+                    if _is_ffmpeg_progress(line):
+                        live_progress = line
+                    else:
+                        live_lines.append(line)
+                        live_progress = ""
+
+            set_live_stderr_handler(on_stderr)
             self._set_output("Running…\n")
-            result = run_action(action, paths, settings)
-            self._set_output(format_action_log(result))
+
+            result_box: list = []
+
+            def worker() -> None:
+                result_box.append(run_action(action, paths, settings))
+
+            thread = threading.Thread(target=worker, daemon=True)
+            thread.start()
+            try:
+                while thread.is_alive() and dpg.is_dearpygui_running() and not self._shutdown_called:
+                    with live_lock:
+                        self._set_output(self._format_live_output(live_lines, live_progress))
+                    thread.join(timeout=0.05)
+            finally:
+                set_live_stderr_handler(None)
+
+            if thread.is_alive():
+                if not self._shutdown_called:
+                    cancel_running_jobs()
+                thread.join(timeout=2.0)
+
+            if self._shutdown_called:
+                return
+
+            if result_box:
+                self._set_output(format_action_log(result_box[0]))
+            elif thread.is_alive():
+                self._set_output("Stopped — window closed while a job was running.\n")
 
         def _browse_add_files(self) -> None:
             if sys.platform != "win32":
@@ -456,15 +510,31 @@ def run_gui(
             dpg_dnd.set_drop_effect()
 
         def on_close(self) -> None:
+            self._shutdown()
+
+        def _shutdown(self) -> None:
+            if self._shutdown_called:
+                return
+            self._shutdown_called = True
             try:
                 config_save_settings(self._collect_settings())
             except OSError:
                 pass
+            _shutdown_gui_app(self)
+            if sys.platform == "win32":
+                try:
+                    import DearPyGui_DragAndDrop as dpg_dnd
+                    dpg_dnd.destroy()
+                except Exception:
+                    pass
 
         def run(self) -> None:
-            while dpg.is_dearpygui_running():
-                dpg.render_dearpygui_frame()
-                dpg.run_callbacks(dpg.get_callback_queue())
+            try:
+                while dpg.is_dearpygui_running():
+                    dpg.render_dearpygui_frame()
+                    dpg.run_callbacks(dpg.get_callback_queue())
+            finally:
+                self._shutdown()
             dpg.destroy_context()
 
     App().run()

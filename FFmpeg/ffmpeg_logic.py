@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -298,10 +299,218 @@ def _quote(path: Path | str) -> str:
     return f'"{path}"'
 
 
+_shutting_down = False
+_cleanup_done = False
+_active_procs: list[subprocess.Popen] = []
+_registered_temps: list[Path] = []
+_live_stderr_handler: Optional[Callable[[str], None]] = None
+
+_FFMPEG_PROGRESS_RE = re.compile(r"frame=\s*\d+.*\btime=")
+
+
+def set_live_stderr_handler(handler: Optional[Callable[[str], None]]) -> None:
+    global _live_stderr_handler
+    _live_stderr_handler = handler
+
+
+def _is_ffmpeg_progress(line: str) -> bool:
+    return bool(_FFMPEG_PROGRESS_RE.search(line))
+
+
+def _emit_live_stderr(line: str) -> None:
+    if _live_stderr_handler:
+        _live_stderr_handler(line)
+
+
+def _read_process_stderr(proc: subprocess.Popen) -> list[str]:
+    if proc.stderr is None:
+        return []
+    lines: list[str] = []
+    carry = ""
+    while True:
+        chunk = proc.stderr.read(4096)
+        if not chunk:
+            break
+        carry += chunk.decode(errors="replace")
+        while carry:
+            sep = re.search(r"[\r\n]", carry)
+            if not sep:
+                break
+            piece = carry[: sep.start()].strip()
+            carry = carry[sep.end() :]
+            if piece:
+                lines.append(piece)
+                _emit_live_stderr(piece)
+    tail = carry.strip()
+    if tail:
+        lines.append(tail)
+        _emit_live_stderr(tail)
+    proc.stderr.close()
+    return lines
+
+
+def _cancelled() -> bool:
+    return _shutting_down
+
+
+def register_temp_path(path: Path | str) -> None:
+    p = Path(path)
+    if p not in _registered_temps:
+        _registered_temps.append(p)
+
+
+def _kill_process_tree(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        return
+    if sys.platform == "win32":
+        subprocess.run(
+            f"taskkill /F /T /PID {proc.pid}",
+            shell=True,
+            capture_output=True,
+            check=False,
+        )
+    else:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+
+def _stop_all_processes() -> None:
+    for proc in list(_active_procs):
+        _kill_process_tree(proc)
+    for proc in list(_active_procs):
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+    _active_procs.clear()
+
+
+def _original_path_from_bak(bak: Path) -> Optional[Path]:
+    name = bak.name
+    marker = ".__opus_"
+    i = name.find(marker)
+    orig_tag = "_orig"
+    j = name.rfind(orig_tag)
+    if i < 0 or j < 0:
+        return None
+    stem = name[:i]
+    ext = name[j + len(orig_tag) :]
+    if not ext.startswith("."):
+        return None
+    return bak.parent / f"{stem}{ext}"
+
+
+def _restore_interrupted_in_place_files(search_dirs: set[Path]) -> None:
+    for folder in search_dirs:
+        if not folder.is_dir():
+            continue
+        for bak in folder.glob("*.__opus_*_orig*"):
+            original = _original_path_from_bak(bak)
+            if not original or not bak.is_file():
+                continue
+            if not original.is_file():
+                try:
+                    shutil.move(bak, original)
+                except OSError:
+                    pass
+            else:
+                _safe_delete(bak)
+
+
+def _cleanup_opus_temp_files(search_dirs: set[Path]) -> None:
+    for folder in search_dirs:
+        if not folder.is_dir():
+            continue
+        for p in folder.glob("*.__opus_*"):
+            _safe_delete(p)
+
+
+def _cleanup_appdata_temp_files() -> None:
+    temp = Path(os.environ.get("TEMP", "."))
+    if not temp.is_dir():
+        return
+    for pattern in (
+        "DOpus_ffmpeg_merge_*.ffmeta",
+        "DOpus_ffmpeg_chfilt_*.txt",
+        "FFmpegTool_only_*.txt",
+    ):
+        for p in temp.glob(pattern):
+            _safe_delete(p)
+
+
+def _delete_only_list_file(only_list: Optional[str]) -> None:
+    if not only_list:
+        return
+    p = Path(only_list)
+    name = p.name
+    if name.startswith("FFmpegTool_only_") and name.endswith(".txt"):
+        _safe_delete(p)
+
+
+def cancel_running_jobs() -> None:
+    global _shutting_down
+    _shutting_down = True
+    _stop_all_processes()
+
+
+def shutdown_ffmpeg_tool(
+    *,
+    paths: Optional[list[Path]] = None,
+    only_list: Optional[str] = None,
+) -> None:
+    global _cleanup_done
+    if _cleanup_done:
+        return
+    _cleanup_done = True
+    cancel_running_jobs()
+
+    search_dirs: set[Path] = set()
+    for p in paths or []:
+        search_dirs.add(p.parent)
+    for p in _registered_temps:
+        search_dirs.add(p.parent)
+
+    _restore_interrupted_in_place_files(search_dirs)
+    _cleanup_opus_temp_files(search_dirs)
+    for p in list(_registered_temps):
+        _safe_delete(p)
+    _registered_temps.clear()
+    _cleanup_appdata_temp_files()
+    _delete_only_list_file(only_list)
+
+
 def _run_cmd(cmd: str, log: list[str]) -> int:
+    if _cancelled():
+        log.append("Cancelled.")
+        return -1
     log.append(cmd)
+    _emit_live_stderr(cmd)
     try:
-        return subprocess.run(cmd, shell=True, check=False).returncode
+        popen_kwargs: dict = {
+            "shell": True,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.PIPE,
+        }
+        if sys.platform == "win32":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        proc = subprocess.Popen(cmd, **popen_kwargs)
+        _active_procs.append(proc)
+        stderr_lines: list[str] = []
+        reader = threading.Thread(target=lambda: stderr_lines.extend(_read_process_stderr(proc)), daemon=True)
+        reader.start()
+        try:
+            exit_code = proc.wait()
+        finally:
+            reader.join(timeout=5)
+            if proc in _active_procs:
+                _active_procs.remove(proc)
+        for line in stderr_lines:
+            if not _is_ffmpeg_progress(line):
+                log.append(line)
+        return exit_code
     except OSError as ex:
         log.append(f"Error: {ex}")
         return -1
@@ -679,12 +888,7 @@ def try_strip_cover_to_tmp(
 ) -> bool:
     def attempt(cmd: str) -> bool:
         _safe_delete(strip_tmp)
-        log.append(f"Strip cover: {cmd}")
-        try:
-            ex = subprocess.run(cmd, shell=True, check=False).returncode
-            return ex == 0 and strip_tmp.is_file()
-        except OSError:
-            return False
+        return _run_cmd(cmd, log) == 0 and strip_tmp.is_file()
 
     cmd_video = (
         f"ffmpeg.exe -y -i {_quote(media_path)} -map_metadata 0 -map_chapters 0 "
@@ -867,6 +1071,8 @@ def run_convert(
 
     processed = failed = 0
     for item in paths:
+        if _cancelled():
+            break
         out = item.parent / f"{item.stem}{fmt.ext}"
         counter = 1
         while out.exists():
@@ -1011,6 +1217,7 @@ def run_extract_audio_channels(paths: list[Path]) -> ActionResult:
             continue
 
         filt_path = Path(os.environ.get("TEMP", ".")) / f"DOpus_ffmpeg_chfilt_{i}_{time.time_ns()}.txt"
+        register_temp_path(filt_path)
         parts = [f"[0:a:0]pan=mono|c0=c{c}[ch{c}]" for c in range(ch)]
         try:
             filt_path.write_text(";".join(parts) + "\n", encoding="utf-8")
@@ -1145,6 +1352,7 @@ def run_merge_videos(paths: list[Path], crf_str: str) -> ActionResult:
     ext = file_ext_lower(paths[0].name)
     out_path = paths[0].parent / f"output{ext}"
     meta_path = Path(os.environ.get("TEMP", ".")) / f"DOpus_ffmpeg_merge_{time.time_ns()}.ffmeta"
+    register_temp_path(meta_path)
 
     start_ms = 0
     chapters: list[dict] = []
