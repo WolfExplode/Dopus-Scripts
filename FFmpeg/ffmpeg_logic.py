@@ -1441,6 +1441,11 @@ def format_youtube_chapters(chapters: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def copy_youtube_chapters(chapters: list[dict]) -> tuple[str, bool]:
+    text = format_youtube_chapters(chapters)
+    return text, copy_text_to_clipboard(text)
+
+
 def probe_embedded_chapters(media_path: Path) -> list[dict]:
     cmd = [
         "ffprobe.exe", "-v", "quiet", "-print_format", "json",
@@ -1505,22 +1510,71 @@ def chapters_to_youtube_text(paths: list[Path]) -> tuple[Optional[str], Optional
 
     if chapters:
         chapters[0]["start_ms"] = 0
-    return format_youtube_chapters(chapters), None
+    text = format_youtube_chapters(chapters)
+    return text, None
+
+
+def merge_success_summary(
+    path_count: int, merge_mode: str, out_path: Path, chapters: list[dict]
+) -> str:
+    youtube_text, copied = copy_youtube_chapters(chapters)
+    summary = (
+        f"Merged {path_count} video(s) ({merge_mode}):\n{out_path}\n\n"
+        f"Chapters: {', '.join(ch['title'] for ch in chapters)}"
+    )
+    if copied:
+        summary += f"\n\nYouTube chapters copied to clipboard:\n{youtube_text}"
+    else:
+        summary += "\n\nCould not copy YouTube chapters to clipboard."
+    return summary
 
 
 def copy_text_to_clipboard(text: str) -> bool:
-    if sys.platform != "win32":
+    if sys.platform != "win32" or not text:
         return False
     try:
-        import tkinter as tk
+        import ctypes
 
-        root = tk.Tk()
-        root.withdraw()
-        root.clipboard_clear()
-        root.clipboard_append(text)
-        root.update()
-        root.destroy()
-        return True
+        CF_UNICODETEXT = 13
+        GMEM_MOVEABLE = 0x0002
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+
+        kernel32.GlobalAlloc.restype = ctypes.c_void_p
+        kernel32.GlobalLock.restype = ctypes.c_void_p
+        kernel32.GlobalLock.argtypes = [ctypes.c_void_p]
+        kernel32.GlobalUnlock.argtypes = [ctypes.c_void_p]
+        kernel32.GlobalFree.argtypes = [ctypes.c_void_p]
+        user32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
+        user32.SetClipboardData.restype = ctypes.c_void_p
+
+        data = text.replace("\r\n", "\n").replace("\n", "\r\n").encode("utf-16-le") + b"\x00\x00"
+        h_global = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+        if not h_global:
+            return False
+        p_global = kernel32.GlobalLock(h_global)
+        if not p_global:
+            kernel32.GlobalFree(h_global)
+            return False
+        ctypes.memmove(p_global, data, len(data))
+        kernel32.GlobalUnlock(h_global)
+
+        for _ in range(10):
+            if user32.OpenClipboard(None):
+                try:
+                    if not user32.EmptyClipboard():
+                        kernel32.GlobalFree(h_global)
+                        return False
+                    if user32.SetClipboardData(CF_UNICODETEXT, h_global):
+                        return True
+                    kernel32.GlobalFree(h_global)
+                    return False
+                finally:
+                    user32.CloseClipboard()
+            time.sleep(0.05)
+
+        kernel32.GlobalFree(h_global)
+        return False
     except Exception:
         return False
 
@@ -1946,7 +2000,7 @@ def run_merge_videos(paths: list[Path], crf_str: str, *, fix_outliers: bool = Tr
                     return ActionResult(False, f"Merge failed (exit {exit_code}).", log)
                 return ActionResult(
                     True,
-                    f"Merged {len(paths)} video(s) ({merge_mode}):\n{out_path}\n\nChapters: {', '.join(titles)}",
+                    merge_success_summary(len(paths), merge_mode, out_path, chapters),
                     log,
                 )
 
@@ -1967,7 +2021,7 @@ def run_merge_videos(paths: list[Path], crf_str: str, *, fix_outliers: bool = Tr
 
         return ActionResult(
             True,
-            f"Merged {len(paths)} video(s) ({merge_mode}):\n{out_path}\n\nChapters: {', '.join(titles)}",
+            merge_success_summary(len(paths), merge_mode, out_path, chapters),
             log,
         )
     finally:
