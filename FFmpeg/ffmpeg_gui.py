@@ -86,6 +86,17 @@ def _ask_yes_no_cancel(title: str, message: str) -> Optional[bool]:
     return result if result is None else bool(result)
 
 
+def _show_error(title: str, message: str) -> None:
+    import tkinter as tk
+    from tkinter import messagebox
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    messagebox.showerror(title, message, parent=root)
+    root.destroy()
+
+
 def run_gui(
     initial_only_list: Optional[str] = None,
     initial_only_files: Optional[list[str]] = None,
@@ -305,7 +316,9 @@ def run_gui(
 
                     hdr_cover = self._section(
                         "Cover (split/combine)",
-                        "1 image + 1 media: embed cover or replace video with still.\n"
+                        "Image + media: paired when one file name contains the other "
+                        "(e.g. song.wav + song_cover.jpg).\n"
+                        "Ambiguous or unmatched pairs show an error before running.\n"
                         "Media only: extract .jpg and strip cover.",
                         "cover",
                     )
@@ -475,6 +488,12 @@ def run_gui(
                         return
                     else:
                         settings.merge_fix_outliers = False
+
+            if action == "cover":
+                cover_err = cover_combine_preflight(paths)
+                if cover_err:
+                    _show_error("Cover match error", cover_err)
+                    return
 
             self.settings = settings
             config_save_settings(settings, last_action=action)

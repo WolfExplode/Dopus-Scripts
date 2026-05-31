@@ -34,19 +34,14 @@ THUMB_AUDIO_EXT = {
     ".wma", ".ac3", ".eac3", ".dts", ".amr", ".awb", ".au", ".snd", ".ape",
     ".tta", ".wv", ".weba",
 }
-COVER_REMUX_TO_M4A_EXT = {
-    ".aac", ".adts", ".wav", ".aiff", ".aif", ".aifc", ".caf", ".au", ".snd",
-    ".ogg", ".oga", ".opus", ".weba", ".wma", ".ac3", ".eac3", ".dts", ".amr",
-    ".awb", ".mp2", ".mpa", ".ape", ".tta", ".wv",
-}
-
 STILL_REPLACE_FPS = "1"
-STILL_REPLACE_CRF_X264 = "25"
-STILL_REPLACE_CRF_VP9 = "25"
-STILL_REPLACE_MAXRATE = "350k"
-STILL_REPLACE_BUFSIZE = "500k"
+STILL_REPLACE_CRF_X264 = "22"
+STILL_REPLACE_CRF_VP9 = "22"
+STILL_REPLACE_MAXRATE = "1M"
+STILL_REPLACE_BUFSIZE = "2M"
 STILL_REPLACE_KEYFRAME_X264 = "-g 999999 -keyint_min 999999 -sc_threshold 0 -x264-params scenecut=0"
 STILL_REPLACE_KEYFRAME_VP9 = "-g 999999 -keyint_min 999999"
+STILL_REPLACE_MAX_LONG_SIDE = 1920
 
 LAST_ACTIONS = (
     "convert", "cover", "mono", "splitav", "splitch", "mergevid",
@@ -654,6 +649,20 @@ def _parse_video_dimensions(line: str) -> Optional[tuple[int, int]]:
     return w, h
 
 
+def clamp_dims_longest_side(w: int, h: int, max_side: int = STILL_REPLACE_MAX_LONG_SIDE) -> tuple[int, int]:
+    longest = max(w, h)
+    if longest <= max_side:
+        return w, h
+    scale = max_side / longest
+    w = int(w * scale)
+    h = int(h * scale)
+    if w % 2:
+        w -= 1
+    if h % 2:
+        h -= 1
+    return max(w, 2), max(h, 2)
+
+
 def probe_image_dimensions(img_path: Path) -> Optional[tuple[int, int]]:
     line = _ffprobe_line(
         img_path,
@@ -1091,33 +1100,71 @@ def try_extract_cover_to_path(
     return extract_cover_via_video_streams(media_path, out_path, False, log)
 
 
-def embed_cover_out_ext(ext: str) -> str:
-    return ".m4a" if ext in COVER_REMUX_TO_M4A_EXT else ext
+@dataclass(frozen=True)
+class CoverEmbedPlan:
+    out_ext: str
+    strategy: str  # mp3 | m4a | mkv_attach | attached_pic
+    remux: bool
 
 
-def mp3_file_has_mp3_audio(media_path: Path) -> bool:
-    c = probe_first_audio_codec(media_path)
-    return c in ("mp3", "mp2")
+def _is_pcm_codec(codec: str) -> bool:
+    return codec.startswith("pcm_")
 
 
-def cover_embed_out_ext_for_media(ext: str, media_path: Path) -> str:
-    out = embed_cover_out_ext(ext)
-    if ext == ".mp3" and not mp3_file_has_mp3_audio(media_path):
-        return ".m4a"
-    return out
+def cover_embed_plan(media_path: Path) -> tuple[Optional[CoverEmbedPlan], str]:
+    """Pick a cover-capable container that can keep the audio stream copied (-c:a copy)."""
+    ext = file_ext_lower(media_path.name)
+    codec = probe_first_audio_codec(media_path)
+    if not codec:
+        return None, f"No audio stream — cannot embed cover:\n{media_path.name}"
+
+    if _is_pcm_codec(codec):
+        return None, (
+            f"Cannot embed cover in {ext} without re-encoding audio.\n"
+            f"Use Convert to FLAC/M4A first, or keep a sidecar .jpg next to the file."
+        )
+
+    if codec in ("mp3", "mp2"):
+        out_ext = ".mp3"
+        return CoverEmbedPlan(out_ext, "mp3", out_ext != ext), ""
+
+    if codec in ("aac", "alac"):
+        out_ext = ".m4a"
+        return CoverEmbedPlan(out_ext, "m4a", out_ext != ext), ""
+
+    if codec == "flac":
+        return CoverEmbedPlan(".flac", "attached_pic", ext != ".flac"), ""
+
+    if codec in ("vorbis", "opus"):
+        if ext in (".ogg", ".oga", ".opus", ".ogv", ".ogm"):
+            out_ext = ext
+        elif ext == ".weba":
+            out_ext = ".weba"
+        else:
+            out_ext = ".ogg"
+        return CoverEmbedPlan(out_ext, "attached_pic", out_ext != ext), ""
+
+    if codec in ("ac3", "eac3", "dts"):
+        out_ext = ".mka" if ext not in (".mkv", ".mka") else ext
+        return CoverEmbedPlan(out_ext, "mkv_attach", out_ext != ext), ""
+
+    if codec in ("wmav1", "wmav2", "wmapro", "wmalossless"):
+        out_ext = ext if ext in (".wma", ".asf") else ".wma"
+        return CoverEmbedPlan(out_ext, "attached_pic", out_ext != ext), ""
+
+    if codec in ("ape", "tta", "wavpack", "mlp", "truehd"):
+        return CoverEmbedPlan(ext, "attached_pic", False), ""
+
+    if ext in (".mkv", ".mka"):
+        return CoverEmbedPlan(ext, "mkv_attach", False), ""
+
+    return CoverEmbedPlan(ext, "attached_pic", False), ""
 
 
-def cover_embed_force_m4a_encode(ext: str, media_path: Path) -> bool:
-    if ext in COVER_REMUX_TO_M4A_EXT and ext not in (".aac", ".adts"):
-        return True
-    return ext == ".mp3" and not mp3_file_has_mp3_audio(media_path)
-
-
-def ffmpeg_m4a_cover_embed(media_path: Path, img_path: Path, tmp_path: Path, encode_aac: bool) -> str:
-    audio = "-c:a aac -b:a 256k" if encode_aac else "-c copy"
+def ffmpeg_m4a_cover_embed(media_path: Path, img_path: Path, tmp_path: Path) -> str:
     return (
         f"ffmpeg.exe -y -i {_quote(media_path)} -i {_quote(img_path)} "
-        f"-map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 {audio} "
+        f"-map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 -c copy "
         f"-c:v:0 mjpeg -disposition:v:0 attached_pic {_quote(tmp_path)}"
     )
 
@@ -1131,19 +1178,40 @@ def ffmpeg_mp3_cover_embed(media_path: Path, img_path: Path, tmp_path: Path) -> 
     )
 
 
-def ffmpeg_set_thumbnail_exec(
-    media_path: Path, img_path: Path, img_ext: str, ext: str, tmp_path: Path,
-    is_video_ext: bool, force_m4a: bool,
+def ffmpeg_attached_pic_copy_embed(media_path: Path, img_path: Path, tmp_path: Path) -> str:
+    return (
+        f"ffmpeg.exe -y -i {_quote(media_path)} -i {_quote(img_path)} "
+        f"-map_metadata 0 -map_chapters 0 -map 0:a? -map 1:0 -c copy "
+        f"-c:v:1 mjpeg -disposition:v:1 attached_pic {_quote(tmp_path)}"
+    )
+
+
+def ffmpeg_mkv_cover_attach(
+    media_path: Path, img_path: Path, img_ext: str, tmp_path: Path, *, audio_only: bool
 ) -> str:
-    if force_m4a:
-        return ffmpeg_m4a_cover_embed(media_path, img_path, tmp_path, True)
-    if ext in (".mkv", ".mka"):
-        mime = mime_type_for_image_ext(img_ext)
+    mime = mime_type_for_image_ext(img_ext)
+    if audio_only:
         return (
             f"ffmpeg.exe -y -i {_quote(media_path)} -map_metadata 0 -map_chapters 0 "
-            f"-map 0 -map -0:t -c copy -attach {_quote(img_path)} "
+            f"-map 0:a? -c copy -attach {_quote(img_path)} "
             f"-metadata:s:t mimetype={mime} {_quote(tmp_path)}"
         )
+    return (
+        f"ffmpeg.exe -y -i {_quote(media_path)} -map_metadata 0 -map_chapters 0 "
+        f"-map 0 -map -0:t -c copy -attach {_quote(img_path)} "
+        f"-metadata:s:t mimetype={mime} {_quote(tmp_path)}"
+    )
+
+
+def build_cover_embed_cmd(
+    media_path: Path,
+    img_path: Path,
+    img_ext: str,
+    tmp_path: Path,
+    *,
+    is_video_ext: bool,
+    plan: Optional[CoverEmbedPlan],
+) -> str:
     if is_video_ext:
         return (
             f"ffmpeg.exe -y -i {_quote(media_path)} -i {_quote(img_path)} "
@@ -1151,14 +1219,16 @@ def ffmpeg_set_thumbnail_exec(
             f"-map 0:d? -map 0:t? -map 1 -c copy -c:v:1 mjpeg "
             f"-disposition:v:1 attached_pic {_quote(tmp_path)}"
         )
-    if ext in (".m4a", ".m4b", ".m4p", ".aac", ".adts"):
-        return ffmpeg_m4a_cover_embed(media_path, img_path, tmp_path, False)
-    if ext == ".mp3":
+    if plan is None:
+        raise ValueError("cover embed plan required for audio")
+
+    if plan.strategy == "mp3":
         return ffmpeg_mp3_cover_embed(media_path, img_path, tmp_path)
-    return (
-        f"ffmpeg.exe -y -i {_quote(media_path)} -i {_quote(img_path)} "
-        f"-map_metadata 0 -map 0:a? -map 1:0 -c copy {_quote(tmp_path)}"
-    )
+    if plan.strategy == "m4a":
+        return ffmpeg_m4a_cover_embed(media_path, img_path, tmp_path)
+    if plan.strategy == "mkv_attach":
+        return ffmpeg_mkv_cover_attach(media_path, img_path, img_ext, tmp_path, audio_only=True)
+    return ffmpeg_attached_pic_copy_embed(media_path, img_path, tmp_path)
 
 
 def still_image_video_encode_args(ext: str) -> str:
@@ -1194,10 +1264,17 @@ def thumb_embed_cover(
     folder = media_path.parent
     stem = media_path.stem
     ext = file_ext_lower(name)
-    out_ext = cover_embed_out_ext_for_media(ext, media_path)
-    remux = out_ext != ext
-    force_m4a = cover_embed_force_m4a_encode(ext, media_path)
     is_video_ext = is_thumb_video(name)
+    if is_video_ext:
+        out_ext = ext
+        remux = False
+        plan = None
+    else:
+        plan, plan_err = cover_embed_plan(media_path)
+        if not plan:
+            return False, plan_err, None
+        out_ext = plan.out_ext
+        remux = plan.remux
     out_path = folder / f"{stem}{out_ext}"
     tmp = folder / f"{stem}.__opus_thumb_tmp{out_ext}"
     bak = folder / f"{stem}.__opus_thumb_orig{ext}"
@@ -1209,9 +1286,11 @@ def thumb_embed_cover(
     _safe_delete(tmp)
     _safe_delete(bak)
     if remux:
-        log.append(f"Embed cover: remux {ext} to {out_ext}")
+        log.append(f"Embed cover: remux {ext} to {out_ext} (audio copy)")
 
-    cmd = ffmpeg_set_thumbnail_exec(media_path, img_path, img_ext, ext, tmp, is_video_ext, force_m4a)
+    cmd = build_cover_embed_cmd(
+        media_path, img_path, img_ext, tmp, is_video_ext=is_video_ext, plan=plan
+    )
     if _run_cmd(cmd, log) != 0 or not tmp.is_file():
         return False, "ffmpeg failed or output missing.", None
 
@@ -1236,8 +1315,8 @@ def thumb_replace_video_with_image(
     folder = media_path.parent
     stem = media_path.stem
     ext = file_ext_lower(name)
-    out_ext = cover_embed_out_ext_for_media(ext, media_path)
-    remux = out_ext != ext
+    out_ext = ext
+    remux = False
     dims = probe_image_dimensions(img_path)
     if not dims:
         return False, "Could not read image width/height (ffprobe).", None
@@ -1248,7 +1327,7 @@ def thumb_replace_video_with_image(
     tmp = folder / f"{stem}.__opus_still_tmp{out_ext}"
     bak = folder / f"{stem}.__opus_still_orig{ext}"
     final = out_path if remux else media_path
-    w, h = dims
+    w, h = clamp_dims_longest_side(*dims)
 
     if remux and out_path.exists():
         return False, f"Cannot remux to {out_ext} — file already exists:\n{out_path}", None
@@ -1610,6 +1689,86 @@ def quality_applicable(is_video: bool, fmt: FormatPreset) -> bool:
     return is_video and fmt.crf
 
 
+# --- cover pairing ---
+
+
+def cover_stems_fuzzy_match(media_stem: str, image_stem: str) -> bool:
+    """True when one stem is fully contained in the other (e.g. song + song_cover)."""
+    a, b = media_stem.casefold(), image_stem.casefold()
+    if a == b:
+        return True
+    return a in b or b in a
+
+
+def match_cover_image_media_pairs(
+    imgs: list[Path], media: list[Path]
+) -> tuple[list[tuple[Path, Path]], Optional[str]]:
+    """Pair each media file with one image by fuzzy stem match (full stem substring)."""
+    problems: list[str] = []
+
+    img_stems: dict[str, list[Path]] = {}
+    for img in imgs:
+        img_stems.setdefault(img.stem, []).append(img)
+    med_stems: dict[str, list[Path]] = {}
+    for med in media:
+        med_stems.setdefault(med.stem, []).append(med)
+
+    for stem, lst in sorted(img_stems.items()):
+        if len(lst) > 1:
+            names = ", ".join(p.name for p in lst)
+            problems.append(f"Multiple images named \"{stem}\": {names}")
+    for stem, lst in sorted(med_stems.items()):
+        if len(lst) > 1:
+            names = ", ".join(p.name for p in lst)
+            problems.append(f"Multiple media files named \"{stem}\": {names}")
+
+    media_matches: dict[Path, list[Path]] = {med: [] for med in media}
+    image_matches: dict[Path, list[Path]] = {img: [] for img in imgs}
+    for med in media:
+        for img in imgs:
+            if cover_stems_fuzzy_match(med.stem, img.stem):
+                media_matches[med].append(img)
+                image_matches[img].append(med)
+
+    for med in sorted(media, key=lambda p: p.name.lower()):
+        matches = media_matches[med]
+        if not matches:
+            problems.append(f"No matching image for: {med.name}")
+        elif len(matches) > 1:
+            names = ", ".join(p.name for p in matches)
+            problems.append(f"Multiple images match {med.name}: {names}")
+
+    for img in sorted(imgs, key=lambda p: p.name.lower()):
+        matches = image_matches[img]
+        if not matches:
+            problems.append(f"No matching media for: {img.name}")
+        elif len(matches) > 1:
+            names = ", ".join(p.name for p in matches)
+            problems.append(f"Multiple media match {img.name}: {names}")
+
+    if problems:
+        return [], "Could not match cover pairs:\n\n" + "\n".join(problems)
+
+    pairs = [
+        (med, media_matches[med][0])
+        for med in sorted(media, key=lambda p: p.name.lower())
+    ]
+    return pairs, None
+
+
+def cover_combine_preflight(paths: list[Path]) -> Optional[str]:
+    """Return an error message when image+media selection cannot be paired, else None."""
+    imgs = [p for p in paths if is_thumb_image(p.name)]
+    if not imgs:
+        return None
+    media = [p for p in paths if is_thumb_media(p.name)]
+    bad = [p.name for p in paths if p not in imgs and p not in media]
+    if bad:
+        return f"Unsupported file type(s): {', '.join(bad)}"
+    _, err = match_cover_image_media_pairs(imgs, media)
+    return err
+
+
 # --- action runners ---
 
 
@@ -1677,26 +1836,32 @@ def run_split_or_combine_cover(
         return ActionResult(False, f"Unsupported file type(s): {', '.join(bad)}", log)
 
     if imgs:
-        if len(paths) != 2 or len(imgs) != 1 or len(media) != 1:
-            return ActionResult(
-                False,
-                "To combine cover: select exactly one image and one video or audio file.",
-                log,
-            )
-        img, med = imgs[0], media[0]
-        if replace_with_image:
-            ok, err, out = thumb_replace_video_with_image(med, img, log)
-        else:
-            ok, err, out = thumb_embed_cover(med, img, file_ext_lower(img.name), log)
-        if not ok:
-            return ActionResult(False, err, log)
-        _safe_delete(img)
-        msg = (
-            f"Replaced video with still image:\n{out}"
-            if replace_with_image
-            else f"Cover embedded in media:\n{out}"
-        )
-        return ActionResult(True, msg, log)
+        pairs, match_err = match_cover_image_media_pairs(imgs, media)
+        if match_err:
+            return ActionResult(False, match_err, log)
+
+        ok_n = fail = 0
+        for med, img in pairs:
+            if _cancelled():
+                break
+            if replace_with_image:
+                ok, err, out = thumb_replace_video_with_image(med, img, log)
+            else:
+                ok, err, out = thumb_embed_cover(med, img, file_ext_lower(img.name), log)
+            if not ok:
+                fail += 1
+                log.append(f"Failed {med.name}: {err}")
+                continue
+            _safe_delete(img)
+            ok_n += 1
+            log.append(f"OK: {med.name} + {img.name} -> {out}")
+
+        if ok_n == 0:
+            return ActionResult(False, f"{title} failed for all {len(pairs)} pair(s).", log)
+        summary = f"{title} finished. OK: {ok_n}"
+        if fail:
+            summary += f", Failed: {fail}"
+        return ActionResult(True, summary, log)
 
     if not media:
         return ActionResult(False, "To split cover: select video or audio files (no image).", log)
