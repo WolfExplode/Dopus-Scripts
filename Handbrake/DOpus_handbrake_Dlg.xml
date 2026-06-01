@@ -1,6 +1,6 @@
 <resources>
   <resource name="DOpus_handbrake_Dlg" type="dialog">
-    <dialog fontsize="9" height="280" lang="english" title="HandBrake encode" width="420">
+    <dialog fontsize="9" height="300" lang="english" title="HandBrake encode" width="420">
       <control halign="left" height="10" name="preset_label" title="Preset JSON (from Handbrake folder):" type="static" width="396" x="12" y="10"/>
       <control height="64" name="preset_combo" tip="HandBrake preset JSON from the Handbrake folder. Defines encoder, format, and default quality." type="combo" width="396" x="12" y="22"/>
       <control halign="left" height="10" name="maxside_label" title="Max picture side (px):" type="static" width="168" x="12" y="92"/>
@@ -8,7 +8,7 @@
       <control halign="left" height="10" name="quality_label" title="Video quality (optional):" type="static" width="168" x="12" y="112"/>
       <control double="yes" height="14" name="quality_edit" tip="HandBrake -q for larger files (same as Video Quality slider). Leave blank to use the preset. Lower = higher quality (x265 CQ)." type="edit" updown="yes" val_max="51" val_min="0" width="72" x="188" y="110"/>
       <control halign="left" height="10" name="framerate_label" title="Frame rate (optional):" type="static" width="168" x="12" y="132"/>
-      <control double="yes" height="14" name="framerate_edit" tip="HandBrake -r frame rate in fps. Leave blank to use the preset." type="edit" updown="yes" val_max="240" val_min="1" width="72" x="188" y="130"/>
+      <control double="yes" height="14" name="framerate_edit" tip="HandBrake -r frame rate in fps. Leave blank to use the preset. Never encodes above the source fps." type="edit" updown="yes" val_max="240" val_min="1" width="72" x="188" y="130"/>
       <control halign="left" height="10" name="smallsize_label" title="If smaller than (MB):" type="static" width="168" x="12" y="152"/>
       <control double="yes" height="14" name="smallsize_cutoff_edit" tip="Size cutoff in MB. Files smaller than this use -q / -r on this row. Leave cutoff and -q blank to disable." type="edit" updown="yes" val_max="99999" val_min="1" width="48" x="188" y="150"/>
       <control halign="left" height="10" name="smallsize_q_label" title="-q:" type="static" width="20" x="244" y="152"/>
@@ -20,8 +20,9 @@
       <control height="14" name="framerange_start_edit" number="yes" tip="First frame to encode (--start-at frames:N). Leave blank to start at frame 0." type="edit" updown="yes" val_max="999999999" val_min="0" width="48" x="218" y="170"/>
       <control halign="left" height="10" name="framerange_end_label" title="end:" type="static" width="24" x="274" y="172"/>
       <control height="14" name="framerange_end_edit" number="yes" tip="Last frame to encode, inclusive. Uses --stop-at frames:(count). Leave blank to encode to the end." type="edit" updown="yes" val_max="999999999" val_min="0" width="48" x="300" y="170"/>
-      <control close="1" default="yes" height="18" name="ok_btn" title="Encode" type="button" width="80" x="248" y="248"/>
-      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="342" y="248"/>
+      <control height="12" name="replace_check" tip="After a successful encode, send the original input file to the Recycle Bin. Same extension: renames the output to the original name." title="Replace original (Recycle Bin original after encode)" type="check" width="396" x="12" y="192"/>
+      <control close="1" default="yes" height="18" name="ok_btn" title="Encode" type="button" width="80" x="248" y="268"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="342" y="268"/>
     </dialog>
   </resource>
 </resources>

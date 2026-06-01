@@ -333,6 +333,10 @@ def run_gui(
                             hdr_cover, "Split/combine cover", "cover",
                             "Embed, extract, or replace cover.",
                         )
+                        self._action_button(
+                            hdr_cover, "Discard video", "discardvid",
+                            "Extract one frame, replace motion video with still slideshow + copied audio.",
+                        )
 
                     hdr_audio = self._section(
                         "Audio tools",
@@ -340,6 +344,10 @@ def run_gui(
                         "audio",
                     )
                     with dpg.group(parent=hdr_audio):
+                        self._action_button(
+                            hdr_audio, "Discard audio", "discardaud",
+                            "Remove audio streams; video copied in place (lossless).",
+                        )
                         self._action_button(hdr_audio, "Audio → mono", "mono", "Re-encode audio to mono, copy video.")
                         self._action_button(
                             hdr_audio, "Split/combine Audio/Video", "splitav",

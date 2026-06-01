@@ -11,9 +11,64 @@ var PIN_URLS = [
 ];
 var PROFILE_LABELS = ["allyfire1281", "FedTheBeast", "fireally31"];
 
+function dopusSharedLibPath(fso, fileName) {
+    try {
+        if (typeof Script !== "undefined" && Script && Script.file) {
+            return fso.GetAbsolutePathName(
+                fso.BuildPath(fso.GetParentFolderName(Script.file), "..\\Shared\\" + fileName)
+            );
+        }
+    } catch (e0) {}
+    return fso.BuildPath("C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\Shared", fileName);
+}
+
+function loadDOpusDeleteLib(fso) {
+    if (loadDOpusDeleteLib._ready) {
+        return typeof DOpusDeleteLib !== "undefined";
+    }
+    loadDOpusDeleteLib._ready = true;
+    var lib = dopusSharedLibPath(fso, "DOpus_delete.js");
+    if (!fso.FileExists(lib)) {
+        return false;
+    }
+    try {
+        var ts = fso.OpenTextFile(lib, 1, false);
+        eval(ts.ReadAll());
+        ts.Close();
+        return typeof DOpusDeleteLib !== "undefined";
+    } catch (e1) {
+        return false;
+    }
+}
+
+function dopusDeleteFile(shell, fso, filePath) {
+    if (typeof DOpusDeleteLib !== "undefined" && DOpusDeleteLib && DOpusDeleteLib.deleteFile) {
+        return DOpusDeleteLib.deleteFile(shell, fso, filePath);
+    }
+    try {
+        if (fso.FileExists(filePath)) {
+            fso.DeleteFile(filePath, true);
+        }
+        return true;
+    } catch (e2) {
+        return false;
+    }
+}
+
+function OnInit(initData) {
+    try {
+        loadDOpusDeleteLib(new ActiveXObject("Scripting.FileSystemObject"));
+    } catch (e) {}
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function trimStr(s) { return String(s).replace(/^\s+|\s+$/g, ""); }
+function stripBom(s) {
+    s = String(s);
+    if (s.charCodeAt(0) === 0xFEFF) s = s.substring(1);
+    return s;
+}
+function trimStr(s) { return stripBom(String(s)).replace(/^\s+|\s+$/g, ""); }
 
 function showError(shell, text, title) { shell.Popup(text, 0, title, 16); }
 function showInfo(shell, text, title)  { shell.Popup(text, 0, title, 64); }
@@ -56,7 +111,7 @@ function loadSettings(shell, fso) {
             if (eq < 1) continue;
             var k = line.substring(0, eq), v = line.substring(eq + 1);
             if      (k === "profile")  out.profile  = parseInt(v, 10) || 0;
-            else if (k === "boardUrl") out.boardUrl = v;
+            else if (k === "boardUrl") out.boardUrl = trimStr(v);
             else if (k === "cookies")  out.cookies  = (parseInt(v, 10) === 0) ? 0 : 1;
             else if (k === "keepps")   out.keepps   = (parseInt(v, 10) === 0) ? 0 : 1;
         }
@@ -112,6 +167,7 @@ function readBoardCache(fso, path) {
 // Runs gallery-dl -g on the profile URL, captures output, filters board URLs,
 // saves to cache. Returns count saved (0 on failure).
 function refreshBoardCache(shell, fso, profileUrl, useCookies) {
+    loadDOpusDeleteLib(fso);
     if (!fso.FileExists(GALLERY_DL_EXE)) {
         showError(shell, "gallery-dl.exe not found at:\n" + GALLERY_DL_EXE, "gallery-dl Error");
         return 0;
@@ -131,7 +187,7 @@ function refreshBoardCache(shell, fso, profileUrl, useCookies) {
         ps1.WriteLine("    '" + psQuote(profileUrl) + "')");
         ps1.WriteLine("& '" + psQuote(GALLERY_DL_EXE) + "' @gdArgs 2>&1 |");
         ps1.WriteLine("    ForEach-Object { $_.ToString() } |");
-        ps1.WriteLine("    Set-Content -LiteralPath '" + psQuote(tempOut) + "' -Encoding utf8");
+        ps1.WriteLine("    Set-Content -LiteralPath '" + psQuote(tempOut) + "' -Encoding ascii");
         ps1.Close();
     } catch (e) {
         showError(shell, "Failed to write list script: " + e.message, "gallery-dl Error");
@@ -142,6 +198,8 @@ function refreshBoardCache(shell, fso, profileUrl, useCookies) {
 
     var boards = readBoardCache(fso, tempOut);
     if (boards.length === 0) {
+        dopusDeleteFile(shell, fso, tempOut);
+        dopusDeleteFile(shell, fso, tempPs1);
         showError(shell, "No board URLs found for:\n" + profileUrl + "\n\nCheck Firefox cookies, network, and gallery-dl.\nPrevious cache was not overwritten.", "gallery-dl");
         return 0;
     }
@@ -151,7 +209,8 @@ function refreshBoardCache(shell, fso, profileUrl, useCookies) {
     for (var i = 0; i < boards.length; i++) cf.WriteLine(boards[i]);
     cf.Close();
 
-    try { if (fso.FileExists(tempOut)) fso.DeleteFile(tempOut); } catch (e2) { /* ignore */ }
+    dopusDeleteFile(shell, fso, tempOut);
+    dopusDeleteFile(shell, fso, tempPs1);
     return boards.length;
 }
 

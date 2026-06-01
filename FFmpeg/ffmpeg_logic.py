@@ -15,6 +15,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+_REPO_SHARED = Path(__file__).resolve().parent.parent / "Shared"
+if _REPO_SHARED.is_dir() and str(_REPO_SHARED) not in sys.path:
+    sys.path.insert(0, str(_REPO_SHARED))
+from recycle_delete import safe_delete as _safe_delete
+
 OutputSink = Callable[[str, bool], None]
 
 # --- extensions ---
@@ -42,9 +47,11 @@ STILL_REPLACE_BUFSIZE = "2M"
 STILL_REPLACE_KEYFRAME_X264 = "-g 999999 -keyint_min 999999 -sc_threshold 0 -x264-params scenecut=0"
 STILL_REPLACE_KEYFRAME_VP9 = "-g 999999 -keyint_min 999999"
 STILL_REPLACE_MAX_LONG_SIDE = 1920
+DISCARD_VIDEO_FILENAME_TAG = " [audio only]"
+WINDOWS_MAX_FILENAME_LEN = 255
 
 LAST_ACTIONS = (
-    "convert", "cover", "mono", "splitav", "splitch", "mergevid",
+    "convert", "cover", "discardvid", "discardaud", "mono", "splitav", "splitch", "mergevid",
     "rotatecw", "rotateccw", "fliph", "flipv", "trimstart",
 )
 DEFAULT_LAST_ACTION = "convert"
@@ -1025,14 +1032,6 @@ def unique_jpg_path_next_to_media(folder: Path, stem: str) -> Path:
     return out
 
 
-def _safe_delete(path: Path) -> None:
-    try:
-        if path.exists():
-            path.unlink()
-    except OSError:
-        pass
-
-
 def _replace_in_place(original: Path, tmp: Path, bak: Path, log: list[str], label: str) -> bool:
     try:
         if bak.exists():
@@ -1350,6 +1349,87 @@ def thumb_replace_video_with_image(
         return False, "Could not replace media file.", None
 
     return True, "", final
+
+
+def stem_with_discard_video_tag(stem: str) -> str:
+    tag = DISCARD_VIDEO_FILENAME_TAG
+    if stem.endswith(tag):
+        return stem
+    return f"{stem}{tag}"
+
+
+def rename_with_discard_video_tag(media_path: Path, log: list[str], label: str) -> tuple[bool, str, Path]:
+    ext = file_ext_lower(media_path.name)
+    tagged_stem = stem_with_discard_video_tag(media_path.stem)
+    if tagged_stem == media_path.stem:
+        return True, "", media_path
+    new_name = f"{tagged_stem}{ext}"
+    if len(new_name) > WINDOWS_MAX_FILENAME_LEN:
+        log.append(f"{label}: skipped [audio only] tag — filename would be too long")
+        return True, "", media_path
+    new_path = media_path.parent / new_name
+    if new_path.exists():
+        return False, f"Cannot rename — file already exists:\n{new_path.name}", media_path
+    try:
+        media_path.rename(new_path)
+    except OSError as ex:
+        return False, f"{label}: output OK but rename failed: {ex}", media_path
+    log.append(f"{label}: renamed to {new_path.name}")
+    return True, "", new_path
+
+
+def discard_video_from_media(media_path: Path, log: list[str]) -> tuple[bool, str]:
+    """Extract one video frame, replace motion video with still slideshow + copied audio."""
+    name = media_path.name
+    if not is_thumb_video(name):
+        return False, f"Not a video file: {name}"
+    if not probe_first_audio_codec(media_path):
+        return False, f"No audio stream — cannot discard video:\n{name}"
+
+    folder = media_path.parent
+    stem = media_path.stem
+    cover_tmp = folder / f"{stem}.__opus_discard_cover_tmp.jpg"
+    _safe_delete(cover_tmp)
+    log.append(f"Discard video: extract frame from {name}")
+    if not extract_cover_via_video_streams(media_path, cover_tmp, True, log):
+        return False, f"Could not extract a frame from video:\n{name}"
+
+    ok, err, _ = thumb_replace_video_with_image(media_path, cover_tmp, log)
+    _safe_delete(cover_tmp)
+    if not ok:
+        return False, err
+
+    ok, err, out_path = rename_with_discard_video_tag(media_path, log, "Discard video")
+    if not ok:
+        return False, err
+    log.append(f"Discard video OK: {out_path}")
+    return True, ""
+
+
+def discard_audio_from_video(vid_path: Path, log: list[str]) -> tuple[bool, str]:
+    """Remux to video-only in place; audio streams dropped, video copied."""
+    name = vid_path.name
+    if not is_thumb_video(name):
+        return False, f"Not a video file: {name}"
+    if not probe_first_audio_codec(vid_path):
+        return False, f"No audio stream — already video-only: {name}"
+
+    ext = file_ext_lower(name)
+    vid_tmp = vid_path.parent / f"{vid_path.stem}.__opus_discard_a_tmp{ext}"
+    bak = vid_path.parent / f"{vid_path.stem}.__opus_discard_a_orig{ext}"
+    _safe_delete(vid_tmp)
+    _safe_delete(bak)
+    cmd = (
+        f"ffmpeg.exe -y -i {_quote(vid_path)} -map_metadata 0 -map_chapters 0 "
+        f"-map 0:v:0 -c copy -an {_quote(vid_tmp)}"
+    )
+    log.append(f"Discard audio: {cmd}")
+    if _run_cmd(cmd, log) != 0 or not vid_tmp.is_file():
+        return False, "ffmpeg failed."
+    if not _replace_in_place(vid_path, vid_tmp, bak, log, "Discard audio"):
+        return False, "Could not replace video file."
+    log.append(f"Discard audio OK: {vid_path}")
+    return True, ""
 
 
 def try_strip_cover_to_tmp(
@@ -1884,6 +1964,72 @@ def run_split_or_combine_cover(
     return ActionResult(fail == 0 or ok_n > 0 or partial > 0, summary, log)
 
 
+def run_discard_video(paths: list[Path]) -> ActionResult:
+    log = _job_log()
+    title = "Discard video"
+    videos = [p for p in paths if is_thumb_video(p.name)]
+    bad = [p.name for p in paths if p not in videos]
+
+    if bad:
+        return ActionResult(False, f"Unsupported: {', '.join(bad)}", log)
+    if not videos:
+        return ActionResult(False, "Select one or more video files.", log)
+
+    ok = fail = 0
+    for vid in videos:
+        if _cancelled():
+            break
+        success, err = discard_video_from_media(vid, log)
+        if success:
+            ok += 1
+        else:
+            fail += 1
+            log.append(f"Failed {vid.name}: {err}")
+
+    summary = f"{title} finished. OK: {ok}"
+    if fail:
+        summary += f", Failed: {fail}"
+    return ActionResult(ok > 0, summary, log)
+
+
+def run_discard_audio(paths: list[Path]) -> ActionResult:
+    log = _job_log()
+    title = "Discard audio"
+    if not paths:
+        return ActionResult(False, "No files selected.", log)
+
+    videos = [p for p in paths if is_thumb_video(p.name)]
+    skipped = [p for p in paths if p not in videos]
+    for item in skipped:
+        log.append(f"{title}: skipped (not a video file): {item.name}")
+
+    if not videos:
+        return ActionResult(False, "No video files in selection.", log)
+
+    ok = skip = fail = 0
+    for vid in videos:
+        if _cancelled():
+            break
+        success, err = discard_audio_from_video(vid, log)
+        if success:
+            ok += 1
+        elif "already video-only" in err:
+            skip += 1
+            log.append(err)
+        else:
+            fail += 1
+            log.append(f"Failed {vid.name}: {err}")
+
+    summary = f"{title} finished. OK: {ok}"
+    if skipped:
+        summary += f", Skipped (not video): {len(skipped)}"
+    if skip:
+        summary += f", Already video-only: {skip}"
+    if fail:
+        summary += f", Failed: {fail}"
+    return ActionResult(fail == 0 or ok > 0, summary, log)
+
+
 def run_audio_to_mono(paths: list[Path]) -> ActionResult:
     log = _job_log()
     videos = [p for p in paths if is_thumb_video(p.name)]
@@ -2299,6 +2445,10 @@ def _run_action_impl(
         return run_convert(paths, settings.mode, settings.format_name, settings.quality)
     if action == "cover":
         return run_split_or_combine_cover(paths, settings.replace_video_with_image)
+    if action == "discardvid":
+        return run_discard_video(paths)
+    if action == "discardaud":
+        return run_discard_audio(paths)
     if action == "mono":
         return run_audio_to_mono(paths)
     if action == "splitav":

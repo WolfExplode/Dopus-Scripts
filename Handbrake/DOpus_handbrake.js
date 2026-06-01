@@ -7,6 +7,58 @@ var DEFAULT_MAX_PICTURE_SIDE = 1920;
 var SETTINGS_FILE = null;
 /** 0xC000013A STATUS_CONTROL_C_EXIT — user closed console / Ctrl+C / killed process */
 var HANDBRAKE_EXIT_CONTROL_C = -1073741510;
+/** Replace original only when output is smaller by more than this fraction (10%). */
+var REPLACE_MIN_SIZE_REDUCTION = 0.1;
+
+function dopusSharedLibPath(fso, fileName) {
+    try {
+        if (typeof Script !== "undefined" && Script && Script.file) {
+            return fso.GetAbsolutePathName(
+                fso.BuildPath(fso.GetParentFolderName(Script.file), "..\\Shared\\" + fileName)
+            );
+        }
+    } catch (e0) {}
+    return fso.BuildPath("C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\Shared", fileName);
+}
+
+function loadDOpusDeleteLib(fso) {
+    if (loadDOpusDeleteLib._ready) {
+        return typeof DOpusDeleteLib !== "undefined";
+    }
+    loadDOpusDeleteLib._ready = true;
+    var lib = dopusSharedLibPath(fso, "DOpus_delete.js");
+    if (!fso.FileExists(lib)) {
+        return false;
+    }
+    try {
+        var ts = fso.OpenTextFile(lib, 1, false);
+        eval(ts.ReadAll());
+        ts.Close();
+        return typeof DOpusDeleteLib !== "undefined";
+    } catch (e1) {
+        return false;
+    }
+}
+
+function dopusDeleteFile(shell, fso, filePath) {
+    if (typeof DOpusDeleteLib !== "undefined" && DOpusDeleteLib && DOpusDeleteLib.deleteFile) {
+        return DOpusDeleteLib.deleteFile(shell, fso, filePath);
+    }
+    try {
+        if (fso.FileExists(filePath)) {
+            fso.DeleteFile(filePath, true);
+        }
+        return true;
+    } catch (e2) {
+        return false;
+    }
+}
+
+function OnInit(initData) {
+    try {
+        loadDOpusDeleteLib(new ActiveXObject("Scripting.FileSystemObject"));
+    } catch (e) {}
+}
 
 function quoteArg(s) {
     return '"' + String(s).replace(/"/g, '""') + '"';
@@ -31,18 +83,65 @@ function outputPathForInput(fso, inputPath, outExt) {
     return candidate;
 }
 
-/** Remove partial encode output; force=true clears read-only. Logs if delete fails. */
-function deleteIncompleteOutput(fso, outputPath) {
+function fileSizeMb(fso, filePath) {
+    return fso.GetFile(filePath).Size / (1024 * 1024);
+}
+
+/** True when output is smaller than input by more than REPLACE_MIN_SIZE_REDUCTION. */
+function sizeReductionExceedsReplaceThreshold(fso, inputPath, outputPath) {
+    var inputSize = fso.GetFile(inputPath).Size;
+    var outputSize = fso.GetFile(outputPath).Size;
+    if (inputSize <= 0) {
+        return false;
+    }
+    return (inputSize - outputSize) / inputSize > REPLACE_MIN_SIZE_REDUCTION;
+}
+
+/**
+ * After a successful encode: recycle the original input.
+ * Same extension (_hb temp name): move output onto the original path.
+ * Different extension: output already has the final name; only the original is removed.
+ */
+function replaceOriginalWithOutput(shell, fso, inputPath, outputPath) {
+    if (!fso.FileExists(outputPath)) {
+        DOpus.Output("HandBrake: replace skipped — no output file: " + outputPath);
+        return false;
+    }
+    if (pathsEqualIgnoreCase(inputPath, outputPath)) {
+        return true;
+    }
+    var inputExt = String(fso.GetExtensionName(inputPath)).toLowerCase();
+    var outputExt = String(fso.GetExtensionName(outputPath)).toLowerCase();
+    var sameExt = inputExt === outputExt;
+    if (fso.FileExists(inputPath)) {
+        if (!dopusDeleteFile(shell, fso, inputPath)) {
+            DOpus.Output("HandBrake: could not recycle original: " + inputPath);
+            return false;
+        }
+        DOpus.Output("HandBrake: sent original to Recycle Bin: " + inputPath);
+    }
+    if (sameExt) {
+        try {
+            fso.MoveFile(outputPath, inputPath);
+            DOpus.Output("HandBrake: renamed output to replace original: " + inputPath);
+        } catch (e) {
+            DOpus.Output("HandBrake: could not rename output to original name: " + outputPath);
+            return false;
+        }
+    }
+    return true;
+}
+
+/** Remove partial encode output. Logs if delete fails. */
+function deleteIncompleteOutput(shell, fso, outputPath) {
     if (!fso.FileExists(outputPath)) return;
-    try {
-        fso.DeleteFile(outputPath, true);
-        DOpus.Output("HandBrake: removed incomplete output: " + outputPath);
-    } catch (e) {
+    if (dopusDeleteFile(shell, fso, outputPath)) {
+        DOpus.Output("HandBrake: sent incomplete output to Recycle Bin: " + outputPath);
+    } else {
         DOpus.Output(
             "HandBrake: could not remove incomplete output (" +
                 outputPath +
-                "): " +
-                e.message
+                ")"
         );
     }
 }
@@ -105,7 +204,8 @@ function loadHandbrakeSettings(shell, fso) {
         smallFileQuality: "",
         smallFileFramerate: "",
         frameRangeStart: "",
-        frameRangeEnd: ""
+        frameRangeEnd: "",
+        replaceOriginal: 0
     };
     try {
         var path = getSettingsPath(shell);
@@ -130,6 +230,7 @@ function loadHandbrakeSettings(shell, fso) {
                     else if (key === "smallFileFramerate") out.smallFileFramerate = val;
                     else if (key === "frameRangeStart") out.frameRangeStart = val;
                     else if (key === "frameRangeEnd") out.frameRangeEnd = val;
+                    else if (key === "replaceOriginal") out.replaceOriginal = parseInt(val, 10) || 0;
                 }
             }
         }
@@ -156,6 +257,7 @@ function saveHandbrakeSettings(shell, fso, settings) {
         );
         stream.WriteLine("frameRangeStart=" + (settings.frameRangeStart == null ? "" : settings.frameRangeStart));
         stream.WriteLine("frameRangeEnd=" + (settings.frameRangeEnd == null ? "" : settings.frameRangeEnd));
+        stream.WriteLine("replaceOriginal=" + (settings.replaceOriginal ? 1 : 0));
         stream.Close();
     } catch (e) { /* ignore */ }
 }
@@ -300,6 +402,120 @@ function parseVideoFramerateOverride(shell, raw) {
     return n;
 }
 
+function parseFrameRateToFloat(s) {
+    s = trimStr(String(s)).replace(/\r|\n/g, "");
+    if (!s) return NaN;
+    var slash = s.indexOf("/");
+    if (slash > 0) {
+        var num = parseFloat(s.substring(0, slash));
+        var den = parseFloat(s.substring(slash + 1));
+        if (den && !isNaN(num)) return num / den;
+    }
+    var v = parseFloat(s);
+    return isNaN(v) ? NaN : v;
+}
+
+function resolveFfprobe(shell, fso) {
+    var tmp =
+        shell.ExpandEnvironmentStrings("%TEMP%") +
+        "\\DOpus_hb_ffprobe.txt";
+    try {
+        dopusDeleteFile(shell, fso, tmp);
+    } catch (e0) {}
+    shell.Run('cmd /c where ffprobe.exe 1> "' + tmp + '" 2>nul', 0, true);
+    if (fso.FileExists(tmp)) {
+        try {
+            var ts = fso.OpenTextFile(tmp, 1);
+            var first = trimStr(ts.ReadLine());
+            ts.Close();
+            dopusDeleteFile(shell, fso, tmp);
+            if (first && fso.FileExists(first)) return first;
+        } catch (e1) {
+            dopusDeleteFile(shell, fso, tmp);
+        }
+    }
+    var candidates = [
+        shell.ExpandEnvironmentStrings("%ProgramFiles%\\ffmpeg\\bin\\ffprobe.exe"),
+        shell.ExpandEnvironmentStrings("%ProgramFiles(x86)%\\ffmpeg\\bin\\ffprobe.exe")
+    ];
+    var i;
+    for (i = 0; i < candidates.length; i++) {
+        if (fso.FileExists(candidates[i])) return candidates[i];
+    }
+    return "ffprobe.exe";
+}
+
+function probeSourceVideoFrameRate(shell, fso, mediaPath) {
+    var ffprobe = resolveFfprobe(shell, fso);
+    if (
+        (ffprobe.indexOf("\\") >= 0 || ffprobe.indexOf("/") >= 0 || ffprobe.indexOf(":") >= 0) &&
+        !fso.FileExists(ffprobe)
+    ) {
+        return NaN;
+    }
+    var tmp =
+        shell.ExpandEnvironmentStrings("%TEMP%") +
+        "\\DOpus_hb_fps.txt";
+    try {
+        dopusDeleteFile(shell, fso, tmp);
+    } catch (eD0) {}
+    var ffprobeToken =
+        ffprobe.indexOf("\\") >= 0 || ffprobe.indexOf("/") >= 0 || ffprobe.indexOf(":") >= 0
+            ? quoteArg(ffprobe)
+            : ffprobe;
+    var fields = ["avg_frame_rate", "r_frame_rate"];
+    var i;
+    for (i = 0; i < fields.length; i++) {
+        var cmd =
+            "cmd /c " +
+            ffprobeToken +
+            " -v error -select_streams v:0 -show_entries stream=" +
+            fields[i] +
+            " -of default=noprint_wrappers=1:nokey=1 " +
+            quoteArg(mediaPath) +
+            ' 1> "' +
+            tmp +
+            '" 2>&1';
+        try {
+            shell.Run(cmd, 0, true);
+        } catch (ex) {
+            continue;
+        }
+        var raw = "";
+        if (fso.FileExists(tmp)) {
+            try {
+                var ts = fso.OpenTextFile(tmp, 1);
+                raw = ts.ReadAll();
+                ts.Close();
+            } catch (eR) {}
+            try {
+                dopusDeleteFile(shell, fso, tmp);
+            } catch (eD1) {}
+        }
+        var lines = String(raw).split(/\r?\n/);
+        var j;
+        for (j = 0; j < lines.length; j++) {
+            var v = parseFrameRateToFloat(lines[j]);
+            if (isFinite(v) && v > 0) return v;
+        }
+    }
+    return NaN;
+}
+
+/** Never encode above source fps; lower requested rates still apply. */
+function framerateForEncode(requestedFps, sourceFps) {
+    if (requestedFps == null) {
+        return null;
+    }
+    if (!isFinite(sourceFps) || sourceFps <= 0) {
+        return requestedFps;
+    }
+    if (requestedFps > sourceFps) {
+        return sourceFps;
+    }
+    return requestedFps;
+}
+
 /** Per input: small-file rule overrides, else global quality / framerate (may be null). */
 function handbrakeOverridesForInput(fso, inputPath, videoQuality, videoFramerate, smallFileRule) {
     if (!smallFileRule) {
@@ -396,6 +612,7 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     dlg.control("smallsize_framerate_edit").value = saved.smallFileFramerate || "";
     dlg.control("framerange_start_edit").value = saved.frameRangeStart || "";
     dlg.control("framerange_end_edit").value = saved.frameRangeEnd || "";
+    dlg.control("replace_check").value = saved.replaceOriginal === 1;
     dlg.Show();
 
     var dialogResult = 0;
@@ -442,6 +659,7 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
     if (frameRange === false) {
         return null;
     }
+    var replaceOriginal = dlg.control("replace_check").value ? 1 : 0;
     saveHandbrakeSettings(shell, fso, {
         presetFile: fso.GetFileName(presetPath),
         maxSide: String(maxPictureSide),
@@ -451,7 +669,8 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
         smallFileQuality: trimStr(smallQualityRaw),
         smallFileFramerate: trimStr(smallFramerateRaw),
         frameRangeStart: trimStr(frameStartRaw),
-        frameRangeEnd: trimStr(frameEndRaw)
+        frameRangeEnd: trimStr(frameEndRaw),
+        replaceOriginal: replaceOriginal
     });
     return {
         presetPath: presetPath,
@@ -459,7 +678,8 @@ function pickHandbrakeEncodeOptions(clickData, shell, fso) {
         videoQuality: videoQuality,
         videoFramerate: videoFramerate,
         smallFileRule: smallFileRule,
-        frameRange: frameRange
+        frameRange: frameRange,
+        replaceOriginal: replaceOriginal === 1
     };
 }
 
@@ -524,6 +744,7 @@ function OnClick(clickData) {
         return;
     }
     var fso = new ActiveXObject("Scripting.FileSystemObject");
+    loadDOpusDeleteLib(fso);
 
     if (tab.selstats.selfiles == 0) {
         var gui = resolveHandBrakeGui(shell, fso);
@@ -554,6 +775,7 @@ function OnClick(clickData) {
     var videoFramerate = options.videoFramerate;
     var smallFileRule = options.smallFileRule;
     var frameRange = options.frameRange;
+    var replaceOriginal = options.replaceOriginal;
     if (!fso.FileExists(presetPath)) {
         popup(shell, "Preset JSON not found at:\n" + presetPath, "HandBrake", 16);
         return;
@@ -602,6 +824,9 @@ function OnClick(clickData) {
             logMsg += " length " + frameRange.stopDuration;
         }
     }
+    if (replaceOriginal) {
+        logMsg += ", replace original";
+    }
     logMsg += ")";
     DOpus.Output(logMsg);
 
@@ -637,6 +862,27 @@ function OnClick(clickData) {
             videoFramerate,
             smallFileRule
         );
+        var encodeFramerate = overrides.framerate;
+        if (encodeFramerate != null) {
+            var sourceFps = probeSourceVideoFrameRate(shell, fso, inputPath);
+            var cappedFramerate = framerateForEncode(encodeFramerate, sourceFps);
+            if (
+                isFinite(sourceFps) &&
+                sourceFps > 0 &&
+                cappedFramerate != null &&
+                cappedFramerate < encodeFramerate
+            ) {
+                DOpus.Output(
+                    "HandBrake: keeping source " +
+                        sourceFps +
+                        " fps (requested " +
+                        encodeFramerate +
+                        " is higher): " +
+                        fso.GetFileName(inputPath)
+                );
+            }
+            encodeFramerate = cappedFramerate;
+        }
         var cmd =
             quoteArg(cli) +
             " --preset-import-file " +
@@ -649,7 +895,7 @@ function OnClick(clickData) {
             maxPictureSide +
             " --loose-anamorphic" +
             (overrides.quality != null ? " -q " + overrides.quality : "") +
-            (overrides.framerate != null ? " -r " + overrides.framerate : "") +
+            (encodeFramerate != null ? " -r " + encodeFramerate : "") +
             frameRangeCliArgs(frameRange) +
             " -i " +
             quoteArg(inputPath) +
@@ -665,10 +911,11 @@ function OnClick(clickData) {
                     "). Stopped after:\n" +
                     inputPath
             );
-            deleteIncompleteOutput(fso, outputPath);
+            deleteIncompleteOutput(shell, fso, outputPath);
             return;
         }
         if (rc !== 0) {
+            deleteIncompleteOutput(shell, fso, outputPath);
             popup(
                 shell,
                 "HandBrakeCLI exited with code " + rc + ".\n\nStopped after:\n" + inputPath,
@@ -676,6 +923,34 @@ function OnClick(clickData) {
                 16
             );
             return;
+        }
+        if (replaceOriginal) {
+            if (!sizeReductionExceedsReplaceThreshold(fso, inputPath, outputPath)) {
+                var inMb = fileSizeMb(fso, inputPath);
+                var outMb = fileSizeMb(fso, outputPath);
+                var reductionPct = inMb > 0 ? ((inMb - outMb) / inMb) * 100 : 0;
+                DOpus.Output(
+                    "HandBrake: replace skipped — " +
+                        reductionPct.toFixed(1) +
+                        "% smaller (need >10%). Keeping original and output beside it: " +
+                        fso.GetFileName(inputPath) +
+                        " (" +
+                        inMb.toFixed(1) +
+                        " MB -> " +
+                        outMb.toFixed(1) +
+                        " MB, " +
+                        fso.GetFileName(outputPath) +
+                        ")"
+                );
+            } else if (!replaceOriginalWithOutput(shell, fso, inputPath, outputPath)) {
+                popup(
+                    shell,
+                    "Encode finished but could not replace the original file.\n\n" + inputPath,
+                    "HandBrake",
+                    16
+                );
+                return;
+            }
         }
     }
 

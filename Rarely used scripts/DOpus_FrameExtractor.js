@@ -6,6 +6,56 @@ var DEFAULT_START_OFFSET_SEC = 3; // first sampled frame ≈ this many seconds i
 var DEFAULT_INTERVAL_SEC = 2; // seconds between samples
 var DEFAULT_FRAME_COUNT = 48; // how many output frames (then stop)
 
+function dopusSharedLibPath(fso, fileName) {
+    try {
+        if (typeof Script !== "undefined" && Script && Script.file) {
+            return fso.GetAbsolutePathName(
+                fso.BuildPath(fso.GetParentFolderName(Script.file), "..\\Shared\\" + fileName)
+            );
+        }
+    } catch (e0) {}
+    return fso.BuildPath("C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\Shared", fileName);
+}
+
+function loadDOpusDeleteLib(fso) {
+    if (loadDOpusDeleteLib._ready) {
+        return typeof DOpusDeleteLib !== "undefined";
+    }
+    loadDOpusDeleteLib._ready = true;
+    var lib = dopusSharedLibPath(fso, "DOpus_delete.js");
+    if (!fso.FileExists(lib)) {
+        return false;
+    }
+    try {
+        var ts = fso.OpenTextFile(lib, 1, false);
+        eval(ts.ReadAll());
+        ts.Close();
+        return typeof DOpusDeleteLib !== "undefined";
+    } catch (e1) {
+        return false;
+    }
+}
+
+function dopusDeleteFile(shell, fso, filePath) {
+    if (typeof DOpusDeleteLib !== "undefined" && DOpusDeleteLib && DOpusDeleteLib.deleteFile) {
+        return DOpusDeleteLib.deleteFile(shell, fso, filePath);
+    }
+    try {
+        if (fso.FileExists(filePath)) {
+            fso.DeleteFile(filePath, true);
+        }
+        return true;
+    } catch (e2) {
+        return false;
+    }
+}
+
+function OnInit(initData) {
+    try {
+        loadDOpusDeleteLib(new ActiveXObject("Scripting.FileSystemObject"));
+    } catch (e) {}
+}
+
 function quoteArg(s) {
     return '"' + String(s).replace(/"/g, '""') + '"';
 }
@@ -32,7 +82,7 @@ function outputPathForTimelapse(fso, inputPath) {
 function resolveTool(shell, fso, exeName) {
     var tmp = shell.ExpandEnvironmentStrings("%TEMP%") + "\\DOpus_where_" + exeName.replace(/[^a-z0-9]/gi, "_") + ".txt";
     try {
-        if (fso.FileExists(tmp)) fso.DeleteFile(tmp);
+        dopusDeleteFile(shell, fso, tmp);
     } catch (e0) {}
     var cmd =
         'cmd /c where ' +
@@ -46,12 +96,10 @@ function resolveTool(shell, fso, exeName) {
             var ts = fso.OpenTextFile(tmp, 1);
             var first = ts.ReadLine().replace(/^\s+|\s+$/g, "");
             ts.Close();
-            fso.DeleteFile(tmp);
+            dopusDeleteFile(shell, fso, tmp);
             if (first && fso.FileExists(first)) return first;
         } catch (e1) {
-            try {
-                fso.DeleteFile(tmp);
-            } catch (e2) {}
+            dopusDeleteFile(shell, fso, tmp);
         }
     }
     var candidates = [
@@ -126,7 +174,7 @@ function extractFpsLineFromProbeOutput(text) {
 function probeVideoField(shell, fso, ffprobeExe, mediaPath, streamField, tmpBase) {
     var tmp = shell.ExpandEnvironmentStrings("%TEMP%") + "\\" + tmpBase + ".txt";
     try {
-        if (fso.FileExists(tmp)) fso.DeleteFile(tmp);
+        dopusDeleteFile(shell, fso, tmp);
     } catch (e0) {}
     var cmd =
         "cmd /c " +
@@ -141,15 +189,11 @@ function probeVideoField(shell, fso, ffprobeExe, mediaPath, streamField, tmpBase
     try {
         shell.Run(cmd, 0, true);
     } catch (ex) {
-        try {
-            if (fso.FileExists(tmp)) fso.DeleteFile(tmp);
-        } catch (e1) {}
+        dopusDeleteFile(shell, fso, tmp);
         return "";
     }
     var raw = readTempFileAll(fso, tmp);
-    try {
-        if (fso.FileExists(tmp)) fso.DeleteFile(tmp);
-    } catch (eD) {}
+    dopusDeleteFile(shell, fso, tmp);
     return extractFpsLineFromProbeOutput(raw);
 }
 
@@ -317,6 +361,7 @@ function OnClick(clickData) {
         return;
     }
     var fso = new ActiveXObject("Scripting.FileSystemObject");
+    loadDOpusDeleteLib(fso);
 
     if (tab.selstats.selfiles === 0) {
         popup(shell, "Select one or more video files.", "Frame extract", 48);
@@ -444,6 +489,7 @@ function OnClick(clickData) {
 
         var rc = shell.Run(cmd, 1, true);
         if (rc !== 0) {
+            dopusDeleteFile(shell, fso, outputPath);
             popup(
                 shell,
                 "ffmpeg exited with code " + rc + ".\n\nStopped at:\n" + inputPath,
