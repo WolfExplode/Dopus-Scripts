@@ -20,6 +20,9 @@ COPY_TRANSFER_LIST_NAME = "Copy and Transfer.txt"
 # Trailing `` (n)`` / `` (n) (m)`` duplicate markers (Explorer-style); 1–3 digits so `` (2024)`` is kept.
 _TITLE_STRIP_COPY_SUFFIX = re.compile(r"(?:\s+\(\d{1,3}\))+\Z")
 
+# gallery-dl / editor artifacts: ``-cut-merged-<digits>`` at end of stem.
+_TITLE_STRIP_CUT_MERGED_SUFFIX = re.compile(r"-cut-merged-\d+\Z")
+
 # Optional space before ``[...]`` at end of stem (bracket-tag normalization).
 _TRAILING_BRACKET_TAG_END = re.compile(r"(?:\s?)\[([^\]]*)\]\Z")
 
@@ -595,6 +598,7 @@ def transform_title_filename(filename: str, strip_chars: str) -> Optional[str]:
             new_stem = new_stem.replace(ch, "")
     new_stem = new_stem.rstrip().rstrip(".")
     new_stem = _TITLE_STRIP_COPY_SUFFIX.sub("", new_stem)
+    new_stem = _TITLE_STRIP_CUT_MERGED_SUFFIX.sub("", new_stem)
     new_stem = new_stem.rstrip().rstrip(".")
     if not new_stem:
         return None
