@@ -58,6 +58,22 @@ def _browse_initial_dir(hint: str) -> str:
     return str(parent) if parent.is_dir() else ""
 
 
+def _pick_native_folder(title: str, initial: str = "") -> str:
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    kwargs: dict = {"title": title, "parent": root}
+    init = _browse_initial_dir(initial)
+    if init:
+        kwargs["initialdir"] = init
+    path = filedialog.askdirectory(**kwargs)
+    root.destroy()
+    return path if path else ""
+
+
 def _pick_native_files(title: str, initial: str = "") -> list[str]:
     import tkinter as tk
     from tkinter import filedialog
@@ -232,8 +248,9 @@ def run_gui(
 
                     hdr_files = self._section(
                         "Selected files",
-                        "One path per line. Launch from Directory Opus to fill from your selection.\n"
-                        "Drag files from Explorer onto this box to append paths.",
+                        "One path per line (file or folder). A folder runs on all media/images inside it.\n"
+                        "Launch from Directory Opus to fill from your selection.\n"
+                        "Drag files or folders from Explorer onto this box to append paths.",
                         "files",
                     )
                     with dpg.group(parent=hdr_files):
@@ -248,8 +265,10 @@ def run_gui(
                         self._hover_tip(files_input, "Media files to process.")
                         with dpg.group(horizontal=True):
                             add_btn = dpg.add_button(label="Add files…", callback=self._browse_add_files)
+                            add_dir_btn = dpg.add_button(label="Add folder…", callback=self._browse_add_folder)
                             clear_btn = dpg.add_button(label="Clear", callback=self._clear_files)
                         self._hover_tip(add_btn, "Append files via file picker.")
+                        self._hover_tip(add_dir_btn, "Append a folder (all media/images inside are processed).")
                         self._hover_tip(clear_btn, "Clear all paths.")
 
                     hdr_convert = self._section(
@@ -478,7 +497,14 @@ def run_gui(
                 return
             paths = self._file_paths()
             if not paths:
-                self._set_output("No files listed.\n\nAdd files or launch from Directory Opus with a selection.")
+                raw = paths_from_text_lines(str(dpg.get_value(self.TAG_FILES)))
+                if raw:
+                    self._set_output(
+                        "No processable files.\n\n"
+                        "Folders must contain media or image files; check paths or add files directly."
+                    )
+                else:
+                    self._set_output("No files listed.\n\nAdd files or launch from Directory Opus with a selection.")
                 return
             settings = self._collect_settings()
             settings.last_action = action
@@ -541,12 +567,24 @@ def run_gui(
                 self._set_output("File picker is only supported on Windows.")
                 return
             hint = ""
-            for p in self._file_paths():
+            for p in paths_from_text_lines(str(dpg.get_value(self.TAG_FILES))):
                 hint = os.fspath(p)
                 break
             paths = _pick_native_files("Select media files", hint)
             if paths:
                 self._merge_files(paths)
+
+        def _browse_add_folder(self) -> None:
+            if sys.platform != "win32":
+                self._set_output("Folder picker is only supported on Windows.")
+                return
+            hint = ""
+            for p in paths_from_text_lines(str(dpg.get_value(self.TAG_FILES))):
+                hint = os.fspath(p)
+                break
+            folder = _pick_native_folder("Select folder", hint)
+            if folder:
+                self._merge_files([folder])
 
         def _merge_files(self, new_paths: list[str]) -> None:
             existing = [ln.strip() for ln in str(dpg.get_value(self.TAG_FILES)).splitlines() if ln.strip()]

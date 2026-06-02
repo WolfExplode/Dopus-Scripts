@@ -146,6 +146,41 @@ def is_thumb_media(name: str) -> bool:
     return is_thumb_video(name) or is_thumb_audio(name)
 
 
+THUMB_PROCESS_EXT = THUMB_IMAGE_EXT | THUMB_VIDEO_EXT | THUMB_AUDIO_EXT
+
+
+def files_in_directory(dir_path: Path) -> list[Path]:
+    """Non-recursive: media and cover images in the folder."""
+    out: list[Path] = []
+    for child in sorted(dir_path.iterdir(), key=lambda p: p.name.casefold()):
+        if child.is_file() and file_ext_lower(child.name) in THUMB_PROCESS_EXT:
+            out.append(child.resolve())
+    return out
+
+
+def paths_from_text_lines(text: str) -> list[Path]:
+    """Files and directories from text (directories are not expanded)."""
+    paths: list[Path] = []
+    for ln in text.splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        p = Path(s)
+        if p.is_file() or p.is_dir():
+            paths.append(p.resolve())
+    return dedupe_paths(paths)
+
+
+def expand_paths(paths: list[Path]) -> list[Path]:
+    out: list[Path] = []
+    for p in paths:
+        if p.is_file():
+            out.append(p.resolve())
+        elif p.is_dir():
+            out.extend(files_in_directory(p))
+    return dedupe_paths(out)
+
+
 def dedupe_path_lines(lines: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -159,15 +194,8 @@ def dedupe_path_lines(lines: list[str]) -> list[str]:
 
 
 def parse_file_paths(text: str) -> list[Path]:
-    paths: list[Path] = []
-    for ln in text.splitlines():
-        s = ln.strip()
-        if not s:
-            continue
-        p = Path(s)
-        if p.is_file():
-            paths.append(p.resolve())
-    return dedupe_paths(paths)
+    """Resolve listed paths; expand each directory to processable files inside."""
+    return expand_paths(paths_from_text_lines(text))
 
 
 def dedupe_paths(paths: list[Path]) -> list[Path]:
@@ -191,7 +219,7 @@ def paths_from_only_list(list_path: Optional[str], only_files: Optional[list[str
             pass
     if only_files:
         lines.extend(only_files)
-    return parse_file_paths("\n".join(lines))
+    return paths_from_text_lines("\n".join(lines))
 
 
 def build_initial_files_text(

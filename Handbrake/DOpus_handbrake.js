@@ -694,6 +694,59 @@ function outputExtFromHandbrakeFileFormat(fileFormat) {
     return ".mkv";
 }
 
+function listFilesInFolder(fso, folderPath) {
+    var out = [];
+    try {
+        if (!fso.FolderExists(folderPath)) return out;
+        var folder = fso.GetFolder(folderPath);
+        var files = new Enumerator(folder.Files);
+        for (; !files.atEnd(); files.moveNext()) {
+            out.push(String(files.item().Path));
+        }
+        var subs = new Enumerator(folder.SubFolders);
+        for (; !subs.atEnd(); subs.moveNext()) {
+            var subFiles = listFilesInFolder(fso, subs.item().Path);
+            var i;
+            for (i = 0; i < subFiles.length; i++) {
+                out.push(subFiles[i]);
+            }
+        }
+    } catch (e) {}
+    return out;
+}
+
+function expandSelectedItemsToInputPaths(tab, fso) {
+    var out = [];
+    var seen = {};
+
+    function addFile(p) {
+        var k = p.toLowerCase();
+        if (!seen[k]) { seen[k] = 1; out.push(p); }
+    }
+
+    function addFolder(p) {
+        var files = listFilesInFolder(fso, p);
+        var i;
+        for (i = 0; i < files.length; i++) addFile(files[i]);
+    }
+
+    var en, p;
+
+    en = new Enumerator(tab.selected_files);
+    for (; !en.atEnd(); en.moveNext()) {
+        p = String(en.item().realpath);
+        if (p && fso.FileExists(p)) addFile(p);
+    }
+
+    en = new Enumerator(tab.selected_dirs);
+    for (; !en.atEnd(); en.moveNext()) {
+        p = String(en.item().realpath);
+        if (p && fso.FolderExists(p)) addFolder(p);
+    }
+
+    return out;
+}
+
 /**
  * Read UTF-8 preset JSON: pick default preset (Default true) or first in PresetList.
  * Returns { presetName, outputExt }.
@@ -746,7 +799,7 @@ function OnClick(clickData) {
     var fso = new ActiveXObject("Scripting.FileSystemObject");
     loadDOpusDeleteLib(fso);
 
-    if (tab.selstats.selfiles == 0) {
+    if (tab.selstats.selfiles == 0 && tab.selstats.selfolders == 0) {
         var gui = resolveHandBrakeGui(shell, fso);
         if (!gui) {
             popup(shell, "HandBrake.exe not found under Program Files\\HandBrake.", "HandBrake", 16);
@@ -830,12 +883,7 @@ function OnClick(clickData) {
     logMsg += ")";
     DOpus.Output(logMsg);
 
-    var paths = [];
-    var selectedFiles = tab.selected_files;
-    var en = new Enumerator(selectedFiles);
-    for (; !en.atEnd(); en.moveNext()) {
-        paths.push(en.item().realpath + "");
-    }
+    var paths = expandSelectedItemsToInputPaths(tab, fso);
 
     if (paths.length === 0) {
         var guiFallback = resolveHandBrakeGui(shell, fso);

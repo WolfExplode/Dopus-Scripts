@@ -1,6 +1,6 @@
 // FFmpeg Tool — launches FFmpegTool.py (Python / Dear PyGui) from this repo.
 //
-// Click: open GUI. Selected files fill the file list.
+// Click: open GUI. Selected files and folders fill the file list (folders → all media inside).
 // Ctrl+click: run the last GUI action on the selection (no dialog).
 // Settings: %APPDATA%\FFmpegTool\settings.json (migrates legacy DOpus_ffmpeg_settings.ini).
 //
@@ -19,7 +19,7 @@ function pushItemPath(paths, item, fso) {
     var pathObj = item.realpath;
     pathObj.Resolve();
     var p = trimStr(pathObj + "");
-    if (p && fso.FileExists(p)) {
+    if (p && (fso.FileExists(p) || fso.FolderExists(p))) {
         paths.push(p);
     }
 }
@@ -47,10 +47,10 @@ function collectSelectedFilePaths(tab, fso) {
         }
         return paths;
     }
-    if (tab.selstats.selfiles === 0) {
+    if (tab.selstats.selitems === 0) {
         return paths;
     }
-    var en = new Enumerator(tab.selected_files);
+    var en = new Enumerator(tab.selected);
     for (; !en.atEnd(); en.moveNext()) {
         pushItemPath(paths, en.item(), fso);
     }
@@ -199,7 +199,7 @@ function OnClick(clickData) {
     execGui = appendOnlyFiles(execGui, selected);
     if (onlyListPath) {
         DOpus.Output(
-            "FFmpeg Tool: " + selected.length + " selected file(s) in file list."
+            "FFmpeg Tool: " + selected.length + " selected path(s) in file list."
         );
     }
     DOpus.Output("FFmpeg Tool (GUI): " + execGui);
