@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
+import math
 import os
 import subprocess
 import sys
@@ -44,6 +46,28 @@ MAX_DIMENSION_LABELS: dict[str, str] = {
 
 MAX_DIMENSION_KEYS = tuple(MAX_DIMENSION_PRESETS.keys())
 
+ICO_SIZE_PRESETS: dict[str, list[int]] = {
+    "16": [16],
+    "32": [32],
+    "48": [48],
+    "64": [64],
+    "128": [128],
+    "256": [256],
+    "512": [512],
+}
+
+ICO_SIZE_LABELS: dict[str, str] = {
+    "16": "16",
+    "32": "32",
+    "48": "48",
+    "64": "64",
+    "128": "128",
+    "256": "256",
+    "512": "512",
+}
+
+ICO_SIZE_KEYS = tuple(ICO_SIZE_PRESETS.keys())
+
 # All extensions ImageMagick can typically read
 IMAGE_EXTS = {
     ".png", ".jpg", ".jpeg", ".jpe", ".jfif",
@@ -64,6 +88,7 @@ OUTPUT_FORMATS: dict[str, dict] = {
     "tiff": {"label": "TIFF", "ext": ".tiff", "encode": "none"},
     "avif": {"label": "AVIF", "ext": ".avif", "encode": "quality"},
     "jxl":  {"label": "JXL",  "ext": ".jxl",  "encode": "jxl"},
+    "ico":  {"label": "ICO",  "ext": ".ico",  "encode": "ico"},
 }
 
 OUTPUT_FORMAT_KEYS = tuple(OUTPUT_FORMATS.keys())
@@ -75,6 +100,7 @@ CONFIG_PATH = CONFIG_DIR / "settings.json"
 GUI_SECTION_DEFAULTS: dict[str, bool] = {
     "files": True,
     "encode": True,
+    "resize": True,
 }
 
 OutputSink = Callable[[str, bool], None]
@@ -89,7 +115,10 @@ class Settings:
     replace_source: bool = False
     magick_bin_dir: str = DEFAULT_MAGICK_BIN_DIR
     max_dimension: str = "none"
+    ico_sizes: str = "256"
+    resize_width: str = ""
     files_text: str = ""
+    workers: int = field(default_factory=lambda: os.cpu_count() or 4)
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
 
@@ -256,6 +285,13 @@ def config_load_settings() -> Settings:
     max_dim = str(data.get("max_dimension") or "none")
     if max_dim not in MAX_DIMENSION_PRESETS:
         max_dim = "none"
+    ico_sizes = str(data.get("ico_sizes") or "256")
+    if ico_sizes not in ICO_SIZE_PRESETS:
+        ico_sizes = "256"
+    resize_width = str(data.get("resize_width") or "")
+    cpu_default = os.cpu_count() or 4
+    saved_workers = int(data.get("workers") or 0)
+    workers = saved_workers if saved_workers >= 1 else cpu_default
     return Settings(
         output_format=output_format,
         quality=str(data.get("quality") or "90") or "90",
@@ -264,7 +300,10 @@ def config_load_settings() -> Settings:
         replace_source=bool(data.get("replace_source")),
         magick_bin_dir=str(data.get("magick_bin_dir") or DEFAULT_MAGICK_BIN_DIR) or DEFAULT_MAGICK_BIN_DIR,
         max_dimension=max_dim,
+        ico_sizes=ico_sizes,
+        resize_width=resize_width,
         files_text=str(data.get("files_text") or ""),
+        workers=workers,
         gui_sections=gui_sections,
     )
 
@@ -278,6 +317,9 @@ def config_save_settings(settings: Settings) -> None:
     data["replace_source"] = settings.replace_source
     data["magick_bin_dir"] = settings.magick_bin_dir
     data["max_dimension"] = settings.max_dimension
+    data["ico_sizes"] = settings.ico_sizes
+    data["resize_width"] = settings.resize_width
+    data["workers"] = settings.workers
     data["files_text"] = settings.files_text
     data["gui_sections"] = settings.gui_sections
     try:
@@ -336,7 +378,40 @@ def validate_settings(settings: Settings) -> Optional[str]:
         _, err = parse_jxl_effort(settings.jxl_effort)
         if err:
             return err
+    if fmt["encode"] == "ico":
+        if settings.ico_sizes not in ICO_SIZE_PRESETS:
+            return f"Unknown ICO size preset: {settings.ico_sizes}"
     return None
+
+
+def validate_resize_settings(settings: Settings) -> Optional[str]:
+    rw = settings.resize_width.strip()
+    if not rw:
+        return "Resize width is required for resizing."
+    try:
+        w = int(rw)
+        if w < 1:
+            return "Resize width must be at least 1."
+    except ValueError:
+        return "Resize width must be a positive integer."
+    return None
+
+
+def effective_workers(settings: Settings) -> int:
+    return max(1, settings.workers)
+
+
+def _jxl_distance_to_quality(distance: float) -> int:
+    # ImageMagick's JXL coder ignores -define jxl:distance and only reads -quality.
+    # Invert its internal quality→distance formula so the user-facing distance value
+    # maps to the correct -quality argument.
+    if distance <= 0.1:
+        return 100
+    if distance <= 6.4:
+        q = 100.0 - (distance - 0.1) / 0.09
+        return max(30, min(100, round(q)))
+    q = 30.0 - 5.0 * math.log((distance - 6.4) * 6.25) / math.log(2.5)
+    return max(0, min(29, round(q)))
 
 
 def build_magick_encode_args(settings: Settings) -> str:
@@ -345,9 +420,14 @@ def build_magick_encode_args(settings: Settings) -> str:
     if fmt["encode"] == "quality":
         parts.append(f"-quality {settings.quality}")
     elif fmt["encode"] == "jxl":
-        parts.append(f"-define jxl:distance={settings.jxl_distance}")
+        dist, _ = parse_jxl_distance(settings.jxl_distance)
+        quality = _jxl_distance_to_quality(float(dist or "1"))
+        parts.append(f"-quality {quality}")
         effort, _ = parse_jxl_effort(settings.jxl_effort)
         parts.append(f"-define jxl:effort={effort or '7'}")
+    elif fmt["encode"] == "ico":
+        sizes = ico_sizes_list(settings.ico_sizes)
+        parts.append(f"-define icon:auto-resize={','.join(str(s) for s in sizes)}")
     return " ".join(parts)
 
 
@@ -369,6 +449,21 @@ def max_dimension_key_from_label(label: str) -> str:
         if text == label:
             return key
     return "none"
+
+
+def ico_sizes_list(key: str) -> list[int]:
+    return ICO_SIZE_PRESETS.get(key, ICO_SIZE_PRESETS["256"])
+
+
+def ico_sizes_label(key: str) -> str:
+    return ICO_SIZE_LABELS.get(key, ICO_SIZE_LABELS["256"])
+
+
+def ico_sizes_key_from_label(label: str) -> str:
+    for key, text in ICO_SIZE_LABELS.items():
+        if text == label:
+            return key
+    return "256"
 
 
 def resolve_magick_exe(settings: Settings) -> Optional[Path]:
@@ -422,8 +517,12 @@ def _run_magick(
     encode_args: str,
     output_path: Path,
     emit: OutputSink,
+    thread_limit: int = 0,
 ) -> int:
-    parts = [f'"{exe}"', f'"{input_path}"']
+    parts = [f'"{exe}"']
+    if thread_limit > 0:
+        parts.append(f"-limit thread {thread_limit}")
+    parts.append(f'"{input_path}"')
     if resize_arg:
         parts.append(resize_arg)
     if encode_args:
@@ -466,15 +565,17 @@ def run_convert(
     on_output: Optional[OutputSink] = None,
 ) -> ConvertResult:
     log: list[str] = []
+    log_lock = threading.Lock()
 
     def emit(text: str, replace_last: bool = False) -> None:
         if on_output:
             on_output(text, replace_last)
         else:
-            if replace_last and log:
-                log[-1] = text
-            else:
-                log.append(text)
+            with log_lock:
+                if replace_last and log:
+                    log[-1] = text
+                else:
+                    log.append(text)
 
     err = validate_settings(settings)
     if err:
@@ -504,40 +605,183 @@ def run_convert(
     box = max_dimension_box(settings.max_dimension)
     resize_arg = f'-filter Lanczos -resize "{box[0]}x{box[1]}>"' if box else ""
 
-    emit(f"convert: {len(inputs)} file(s) → {fmt['label']} ({encode_args or 'default'})")
+    workers_count = effective_workers(settings)
+    cpu_count = os.cpu_count() or 4
+    # When running multiple workers, cap threads per process so they share cores evenly.
+    thread_limit = max(1, cpu_count // workers_count) if workers_count > 1 else 0
+    total = len(inputs)
+
+    emit(f"convert: {total} file(s) → {fmt['label']} ({encode_args or 'default'}) — {workers_count} worker(s)")
 
     ok = 0
     fail = 0
+    cancel_event = threading.Event()
 
-    for i, input_path in enumerate(inputs):
+    def convert_one(i: int, input_path: Path) -> tuple[int, Path, Path, int]:
+        if cancel_event.is_set():
+            return i, input_path, output_path_for_input(input_path, settings), MAGICK_EXIT_CONTROL_C
         output_path = output_path_for_input(input_path, settings)
-        emit(f"convert [{i + 1}/{len(inputs)}]: {input_path.name} → {output_path.name}")
+        emit(f"convert [{i + 1}/{total}]: {input_path.name} → {output_path.name}")
+        # Suppress replace_last in parallel mode to avoid interleaved display glitches.
+        worker_emit: OutputSink = (lambda t, r: emit(t, False)) if workers_count > 1 else emit
+        rc = _run_magick(magick, input_path, resize_arg, encode_args, output_path, worker_emit, thread_limit)
+        return i, input_path, output_path, rc
 
-        rc = _run_magick(magick, input_path, resize_arg, encode_args, output_path, emit)
+    error_result: Optional[ConvertResult] = None
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers_count) as pool:
+        fs = [pool.submit(convert_one, i, path) for i, path in enumerate(inputs)]
+        for future in concurrent.futures.as_completed(fs):
+            _, input_path, output_path, rc = future.result()
 
-        if rc == MAGICK_EXIT_CONTROL_C:
-            msg = f"Conversion cancelled.\n\nStopped after:\n{input_path}"
-            emit(f"convert: cancelled (exit {rc})")
-            return ConvertResult(False, msg, log, ok, fail)
+            if cancel_event.is_set() and rc == MAGICK_EXIT_CONTROL_C:
+                continue
 
-        if rc != 0:
-            fail += 1
-            msg = f"magick exited with code {rc}.\n\nStopped after:\n{input_path}"
-            emit(f"convert: failed (exit {rc}): {input_path}")
-            return ConvertResult(False, msg, log, ok, fail)
+            if rc == MAGICK_EXIT_CONTROL_C:
+                cancel_event.set()
+                for f in fs:
+                    f.cancel()
+                msg = f"Conversion cancelled.\n\nStopped after:\n{input_path}"
+                emit(f"convert: cancelled (exit {rc})")
+                error_result = ConvertResult(False, msg, log, ok, fail)
+                break
 
-        ok += 1
-        emit(f"convert: OK → {output_path}")
+            if rc != 0:
+                cancel_event.set()
+                fail += 1
+                for f in fs:
+                    f.cancel()
+                msg = f"magick exited with code {rc}.\n\nStopped after:\n{input_path}"
+                emit(f"convert: failed (exit {rc}): {input_path}")
+                error_result = ConvertResult(False, msg, log, ok, fail)
+                break
 
-        if settings.replace_source and output_path.is_file() and input_path.is_file():
-            recycle_delete(input_path)
-            if input_path.is_file():
-                emit(f"convert: could not recycle source: {input_path}")
-            else:
-                emit(f"convert: recycled source: {input_path}")
+            ok += 1
+            emit(f"convert: OK → {output_path}")
+
+            if settings.replace_source and output_path.is_file() and input_path.is_file():
+                recycle_delete(input_path)
+                if input_path.is_file():
+                    emit(f"convert: could not recycle source: {input_path}")
+                else:
+                    emit(f"convert: recycled source: {input_path}")
+
+    if error_result is not None:
+        return error_result
 
     summary = f"Converted {ok} file(s) to {fmt['label']}."
     emit(f"convert: done. {summary}")
+    return ConvertResult(True, summary, log, ok, fail)
+
+
+def run_resize(
+    paths_text: str,
+    settings: Settings,
+    *,
+    tab_folder: Optional[str] = None,
+    on_output: Optional[OutputSink] = None,
+) -> ConvertResult:
+    log: list[str] = []
+    log_lock = threading.Lock()
+
+    def emit(text: str, replace_last: bool = False) -> None:
+        if on_output:
+            on_output(text, replace_last)
+        else:
+            with log_lock:
+                if replace_last and log:
+                    log[-1] = text
+                else:
+                    log.append(text)
+
+    err = validate_resize_settings(settings)
+    if err:
+        return ConvertResult(False, err, log)
+
+    magick = resolve_magick_exe(settings)
+    if not magick:
+        msg = (
+            f"magick.exe not found at:\n{settings.magick_bin_dir}\\magick.exe\n\n"
+            "Download portable ImageMagick 7 and update the folder in settings."
+        )
+        return ConvertResult(False, msg, log)
+
+    inputs = collect_image_inputs(paths_text, "", tab_folder)
+    if not inputs:
+        return ConvertResult(
+            False,
+            "No image files to resize.\n\n"
+            "Select image files or folders, or run from a folder that contains images.",
+            log,
+        )
+
+    rw = settings.resize_width.strip()
+    width = int(rw)
+    resize_arg = f"-resize {width}x"
+
+    workers_count = effective_workers(settings)
+    cpu_count = os.cpu_count() or 4
+    thread_limit = max(1, cpu_count // workers_count) if workers_count > 1 else 0
+    total = len(inputs)
+
+    emit(f"resize: {total} file(s) → width {width}px — {workers_count} worker(s)")
+
+    ok = 0
+    fail = 0
+    cancel_event = threading.Event()
+
+    def resize_one(i: int, input_path: Path) -> tuple[int, Path, Path, int]:
+        if cancel_event.is_set():
+            output_path = input_path.parent / (input_path.stem + "_resized" + input_path.suffix)
+            return i, input_path, output_path, MAGICK_EXIT_CONTROL_C
+        output_path = input_path.parent / (input_path.stem + "_resized" + input_path.suffix)
+        emit(f"resize [{i + 1}/{total}]: {input_path.name} → {output_path.name}")
+        worker_emit: OutputSink = (lambda t, r: emit(t, False)) if workers_count > 1 else emit
+        rc = _run_magick(magick, input_path, resize_arg, "", output_path, worker_emit, thread_limit)
+        return i, input_path, output_path, rc
+
+    error_result: Optional[ConvertResult] = None
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers_count) as pool:
+        fs = [pool.submit(resize_one, i, path) for i, path in enumerate(inputs)]
+        for future in concurrent.futures.as_completed(fs):
+            _, input_path, output_path, rc = future.result()
+
+            if cancel_event.is_set() and rc == MAGICK_EXIT_CONTROL_C:
+                continue
+
+            if rc == MAGICK_EXIT_CONTROL_C:
+                cancel_event.set()
+                for f in fs:
+                    f.cancel()
+                msg = f"Resize cancelled.\n\nStopped after:\n{input_path}"
+                emit(f"resize: cancelled (exit {rc})")
+                error_result = ConvertResult(False, msg, log, ok, fail)
+                break
+
+            if rc != 0:
+                cancel_event.set()
+                fail += 1
+                for f in fs:
+                    f.cancel()
+                msg = f"magick exited with code {rc}.\n\nStopped after:\n{input_path}"
+                emit(f"resize: failed (exit {rc}): {input_path}")
+                error_result = ConvertResult(False, msg, log, ok, fail)
+                break
+
+            ok += 1
+            emit(f"resize: OK → {output_path}")
+
+            if settings.replace_source and output_path.is_file() and input_path.is_file():
+                recycle_delete(input_path)
+                if input_path.is_file():
+                    emit(f"resize: could not recycle source: {input_path}")
+                else:
+                    emit(f"resize: recycled source: {input_path}")
+
+    if error_result is not None:
+        return error_result
+
+    summary = f"Resized {ok} file(s) to width {width}px."
+    emit(f"resize: done. {summary}")
     return ConvertResult(True, summary, log, ok, fail)
 
 

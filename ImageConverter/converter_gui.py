@@ -141,11 +141,16 @@ def run_gui(
         TAG_JXL_GROUP = "jxl_group"
         TAG_JXL_DISTANCE = "jxl_distance_input"
         TAG_JXL_EFFORT = "jxl_effort_input"
+        TAG_ICO_GROUP = "ico_group"
+        TAG_ICO_SIZES = "ico_sizes_combo"
+        TAG_RESIZE_WIDTH = "resize_width_input"
         TAG_REPLACE_SOURCE = "replace_source_check"
         TAG_MAX_DIMENSION = "max_dimension_combo"
         TAG_MAGICK_DIR = "magick_dir_input"
+        TAG_WORKERS = "workers_input"
         TAG_OUTPUT = "output_text"
         MAX_DIMENSION_ITEMS = [MAX_DIMENSION_LABELS[k] for k in MAX_DIMENSION_KEYS]
+        ICO_SIZE_ITEMS = [ICO_SIZE_LABELS[k] for k in ICO_SIZE_KEYS]
 
         def __init__(self) -> None:
             self._tab_folder = (initial_tab_folder or "").strip()
@@ -294,7 +299,7 @@ def run_gui(
                         self._hover_tip(add_dir_btn, "Append a folder (all images inside, recursively).")
                         self._hover_tip(clear_btn, "Clear all paths.")
 
-                    hdr_encode = self._section("Convert settings", "", "encode")
+                    hdr_encode = self._section("Convert", "", "encode")
                     with dpg.group(parent=hdr_encode):
                         fmt_label = dpg.add_text("Output format", color=(150, 158, 175))
                         fmt_combo = dpg.add_combo(
@@ -366,6 +371,21 @@ def run_gui(
                             self._hover_tip(eff_label, "Higher = smaller files, slower encode. 7 is recommended.")
                             self._hover_tip(eff, "Higher = smaller files, slower encode. 7 is recommended.")
 
+                        with dpg.group(tag=self.TAG_ICO_GROUP):
+                            ico_label = dpg.add_text("Icon sizes", color=(150, 158, 175))
+                            ico_combo = dpg.add_combo(
+                                tag=self.TAG_ICO_SIZES,
+                                items=self.ICO_SIZE_ITEMS,
+                                default_value=ico_sizes_label(self.settings.ico_sizes),
+                                width=-1,
+                            )
+                            tip_ico = (
+                                "Target square size for the .ico output.\n"
+                                "ImageMagick will resize the source to this dimension."
+                            )
+                            self._hover_tip(ico_label, tip_ico)
+                            self._hover_tip(ico_combo, tip_ico)
+
                         replace_src = dpg.add_checkbox(
                             tag=self.TAG_REPLACE_SOURCE,
                             label="Replace source file",
@@ -389,6 +409,26 @@ def run_gui(
                         )
                         self._hover_tip(max_dim_label, tip_max_dim)
                         self._hover_tip(max_dim, tip_max_dim)
+                        workers_label = dpg.add_text("Parallel jobs", color=(150, 158, 175))
+                        workers_input = dpg.add_input_int(
+                            tag=self.TAG_WORKERS,
+                            default_value=max(1, self.settings.workers),
+                            min_value=1,
+                            max_value=32,
+                            min_clamped=True,
+                            max_clamped=True,
+                            step=1,
+                            width=80,
+                        )
+                        tip_workers = (
+                            f"Number of images to convert simultaneously.\n"
+                            f"More workers = faster batch processing.\n"
+                            f"Your system has {os.cpu_count() or 4} logical CPU(s).\n"
+                            f"Each worker is limited to cpu_count ÷ workers threads."
+                        )
+                        self._hover_tip(workers_label, tip_workers)
+                        self._hover_tip(workers_input, tip_workers)
+
                         dpg.add_text("ImageMagick folder", color=(150, 158, 175))
                         dpg.add_input_text(
                             tag=self.TAG_MAGICK_DIR,
@@ -400,10 +440,35 @@ def run_gui(
                             "Folder containing magick.exe (portable ImageMagick 7).",
                         )
 
-                    dpg.add_spacer(height=6)
-                    btn = dpg.add_button(label="Convert", callback=self._on_convert, width=-1)
-                    dpg.bind_item_theme(btn, self._theme_apply)
-                    self._hover_tip(btn, "Convert all listed images to the selected format.")
+                        dpg.add_spacer(height=6)
+                        btn = dpg.add_button(label="Convert", callback=self._on_convert, width=-1)
+                        dpg.bind_item_theme(btn, self._theme_apply)
+                        self._hover_tip(btn, "Convert all listed images to the selected format.")
+
+                    hdr_resize = self._section(
+                        "Resize",
+                        "Resize images to a specific width. "
+                        "Height is calculated automatically to maintain aspect ratio.",
+                        "resize",
+                    )
+                    with dpg.group(parent=hdr_resize):
+                        rw_label = dpg.add_text("Width", color=(150, 158, 175))
+                        rw = dpg.add_input_int(
+                            tag=self.TAG_RESIZE_WIDTH,
+                            default_value=_bounded_int(self.settings.resize_width, 0, 0, 16384),
+                            min_value=1,
+                            max_value=16384,
+                            min_clamped=True,
+                            max_clamped=True,
+                            step=1,
+                            width=80,
+                        )
+                        self._hover_tip(rw_label, "Target width in pixels.")
+                        self._hover_tip(rw, "Target width in pixels.")
+                        dpg.add_spacer(height=6)
+                        resize_btn = dpg.add_button(label="Resize", callback=self._on_resize, width=-1)
+                        dpg.bind_item_theme(resize_btn, self._theme_apply)
+                        self._hover_tip(resize_btn, "Resize all listed images to the specified width.")
 
                 with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
                     dpg.bind_item_theme("panel_output", "theme_output_panel")
@@ -437,6 +502,7 @@ def run_gui(
             encode = OUTPUT_FORMATS[fmt_key]["encode"]
             dpg.configure_item(self.TAG_QUALITY_GROUP, show=(encode == "quality"))
             dpg.configure_item(self.TAG_JXL_GROUP, show=(encode == "jxl"))
+            dpg.configure_item(self.TAG_ICO_GROUP, show=(encode == "ico"))
 
         def _collect_settings(self) -> Settings:
             sections: dict[str, bool] = {}
@@ -451,7 +517,10 @@ def run_gui(
                 replace_source=bool(dpg.get_value(self.TAG_REPLACE_SOURCE)),
                 magick_bin_dir=str(dpg.get_value(self.TAG_MAGICK_DIR)).strip() or DEFAULT_MAGICK_BIN_DIR,
                 max_dimension=max_dimension_key_from_label(str(dpg.get_value(self.TAG_MAX_DIMENSION))),
+                ico_sizes=ico_sizes_key_from_label(str(dpg.get_value(self.TAG_ICO_SIZES))),
+                resize_width=str(dpg.get_value(self.TAG_RESIZE_WIDTH)),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
+                workers=max(1, int(dpg.get_value(self.TAG_WORKERS))),
                 gui_sections=sections,
             )
 
@@ -515,6 +584,48 @@ def run_gui(
 
                 self._job_result_box.append(
                     run_convert(
+                        paths_text,
+                        settings,
+                        tab_folder=self._tab_folder or None,
+                        on_output=on_output,
+                    )
+                )
+
+            self._job_thread = threading.Thread(target=worker, daemon=True)
+            self._job_thread.start()
+
+        def _on_resize(self) -> None:
+            if self._job_thread and self._job_thread.is_alive():
+                self._set_output("A resize is already running — wait for it to finish.")
+                return
+
+            settings = self._collect_settings()
+            err = validate_resize_settings(settings)
+            if err:
+                _show_error("Image Converter", err)
+                return
+
+            paths_text = settings.files_text.strip()
+            if not paths_text and not self._tab_folder:
+                self._set_output(
+                    "No paths listed.\n\n"
+                    "Add image files or folders, or launch from Directory Opus."
+                )
+                return
+
+            self.settings = settings
+            config_save_settings(settings)
+            self._log_queue = queue.Queue()
+            self._set_output("Resizing…\n")
+            self._job_result_box = []
+            self._job_reported = False
+
+            def worker() -> None:
+                def on_output(text: str, replace_last: bool) -> None:
+                    self._log_queue.put((text, replace_last))
+
+                self._job_result_box.append(
+                    run_resize(
                         paths_text,
                         settings,
                         tab_folder=self._tab_folder or None,
