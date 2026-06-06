@@ -141,8 +141,11 @@ def run_gui(
         TAG_EFFORT = "effort_input"
         TAG_PROGRESSIVE = "progressive_check"
         TAG_REPLACE_SOURCE = "replace_source_check"
+        TAG_MAX_DIMENSION = "max_dimension_combo"
         TAG_BIN_DIR = "bin_dir_input"
+        TAG_MAGICK_DIR = "magick_dir_input"
         TAG_OUTPUT = "output_text"
+        MAX_DIMENSION_ITEMS = [MAX_DIMENSION_LABELS[k] for k in MAX_DIMENSION_KEYS]
 
         def __init__(self) -> None:
             self._tab_folder = (initial_tab_folder or "").strip()
@@ -269,8 +272,8 @@ def run_gui(
                         "Input",
                         "Selected images, images in selected folders, or all images in the "
                         "current tab folder if nothing is selected.\n"
-                        "PNG/JPEG/GIF/etc. go straight to cjxl; TIFF/WebP/BMP and similar formats "
-                        "are converted to PNG first (Pillow).\n"
+                        "PNG/JPEG/GIF/etc. go straight to cjxl when no limit applies; "
+                        "TIFF/WebP/BMP and similar formats are converted via ImageMagick first.\n"
                         "Launch from Directory Opus to fill from your selection. "
                         "Drag files or folders from Explorer onto the path box.",
                         "files",
@@ -368,6 +371,20 @@ def run_gui(
                             replace_src,
                             "After a successful encode, send the original image to the Recycle Bin.",
                         )
+                        tip_max_dim = (
+                            "Downscale images that exceed the chosen box before encoding.\n"
+                            "Smaller images are left unchanged (no upscaling).\n"
+                            "Uses ImageMagick Lanczos resize."
+                        )
+                        max_dim_label = dpg.add_text("Max dimensions", color=(150, 158, 175))
+                        max_dim = dpg.add_combo(
+                            tag=self.TAG_MAX_DIMENSION,
+                            items=self.MAX_DIMENSION_ITEMS,
+                            default_value=max_dimension_label(self.settings.max_dimension),
+                            width=-1,
+                        )
+                        self._hover_tip(max_dim_label, tip_max_dim)
+                        self._hover_tip(max_dim, tip_max_dim)
                         dpg.add_text("cjxl bin folder", color=(150, 158, 175))
                         dpg.add_input_text(
                             tag=self.TAG_BIN_DIR,
@@ -377,6 +394,16 @@ def run_gui(
                         self._hover_tip(
                             self.TAG_BIN_DIR,
                             "Folder containing cjxl.exe (jxl-x64-windows-static).",
+                        )
+                        dpg.add_text("ImageMagick folder", color=(150, 158, 175))
+                        dpg.add_input_text(
+                            tag=self.TAG_MAGICK_DIR,
+                            default_value=self.settings.magick_bin_dir,
+                            width=-1,
+                        )
+                        self._hover_tip(
+                            self.TAG_MAGICK_DIR,
+                            "Folder containing magick.exe (portable ImageMagick 7).",
                         )
 
                     dpg.add_spacer(height=6)
@@ -428,6 +455,8 @@ def run_gui(
                 progressive=bool(dpg.get_value(self.TAG_PROGRESSIVE)),
                 replace_source=bool(dpg.get_value(self.TAG_REPLACE_SOURCE)),
                 cjxl_bin_dir=str(dpg.get_value(self.TAG_BIN_DIR)).strip() or DEFAULT_CJXL_BIN_DIR,
+                magick_bin_dir=str(dpg.get_value(self.TAG_MAGICK_DIR)).strip() or DEFAULT_MAGICK_BIN_DIR,
+                max_dimension=max_dimension_key_from_label(str(dpg.get_value(self.TAG_MAX_DIMENSION))),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
                 gui_sections=sections,
             )

@@ -18,7 +18,32 @@ if _REPO_SHARED.is_dir() and str(_REPO_SHARED) not in sys.path:
 from recycle_delete import recycle_delete
 
 DEFAULT_CJXL_BIN_DIR = r"C:\Users\WXP\Desktop\Tools\jxl-x64-windows-static\bin"
+DEFAULT_MAGICK_BIN_DIR = (
+    r"C:\Users\WXP\Desktop\Tools\ImageMagick-7.1.2-25-portable-Q16-HDRI-x64"
+)
 CJXL_EXIT_CONTROL_C = -1073741510
+
+MAX_DIMENSION_PRESETS: dict[str, tuple[int, int] | None] = {
+    "none": None,
+    "2048": (2048, 2048),
+    "4096": (4096, 4096),
+    "1k": (1920, 1080),
+    "2k": (2560, 1440),
+    "4k": (3840, 2160),
+    "8k": (7680, 4320),
+}
+
+MAX_DIMENSION_LABELS: dict[str, str] = {
+    "none": "No limit",
+    "2048": "2048",
+    "4096": "4096",
+    "1k": "1K (1920×1080)",
+    "2k": "2K (2560×1440)",
+    "4k": "4K (3840×2160)",
+    "8k": "8K (7680×4320)",
+}
+
+MAX_DIMENSION_KEYS = tuple(MAX_DIMENSION_PRESETS.keys())
 
 CJXL_NATIVE_EXTS = {
     ".png", ".jpg", ".jpeg", ".jpe", ".gif",
@@ -51,6 +76,8 @@ class Settings:
     progressive: bool = False
     replace_source: bool = False
     cjxl_bin_dir: str = DEFAULT_CJXL_BIN_DIR
+    magick_bin_dir: str = DEFAULT_MAGICK_BIN_DIR
+    max_dimension: str = "none"
     files_text: str = ""
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
@@ -255,6 +282,9 @@ def config_load_settings() -> Settings:
     encode_mode = int(data.get("encode_mode", 0) or 0)
     if encode_mode not in (0, 1):
         encode_mode = 0
+    max_dim = str(data.get("max_dimension") or "none")
+    if max_dim not in MAX_DIMENSION_PRESETS:
+        max_dim = "none"
     return Settings(
         encode_mode=encode_mode,
         quality=str(data.get("quality") or "90") or "90",
@@ -263,6 +293,8 @@ def config_load_settings() -> Settings:
         progressive=bool(data.get("progressive")),
         replace_source=bool(data.get("replace_source")),
         cjxl_bin_dir=str(data.get("cjxl_bin_dir") or DEFAULT_CJXL_BIN_DIR) or DEFAULT_CJXL_BIN_DIR,
+        magick_bin_dir=str(data.get("magick_bin_dir") or DEFAULT_MAGICK_BIN_DIR) or DEFAULT_MAGICK_BIN_DIR,
+        max_dimension=max_dim,
         files_text=str(data.get("files_text") or ""),
         gui_sections=gui_sections,
     )
@@ -277,6 +309,8 @@ def config_save_settings(settings: Settings) -> None:
     data["progressive"] = settings.progressive
     data["replace_source"] = settings.replace_source
     data["cjxl_bin_dir"] = settings.cjxl_bin_dir
+    data["magick_bin_dir"] = settings.magick_bin_dir
+    data["max_dimension"] = settings.max_dimension
     data["files_text"] = settings.files_text
     data["gui_sections"] = settings.gui_sections
     try:
@@ -356,38 +390,127 @@ def temp_png_path(input_path: Path, seq: int) -> Path:
     return Path(tempfile.gettempdir()) / f"DOpus_cjxl_{safe}_{seq}.png"
 
 
-def preconvert_to_png(input_path: Path, output_png: Path) -> bool:
+def max_dimension_box(key: str) -> tuple[int, int] | None:
+    return MAX_DIMENSION_PRESETS.get(key, MAX_DIMENSION_PRESETS["none"])
+
+
+def max_dimension_label(key: str) -> str:
+    return MAX_DIMENSION_LABELS.get(key, MAX_DIMENSION_LABELS["none"])
+
+
+def max_dimension_key_from_label(label: str) -> str:
+    for key, text in MAX_DIMENSION_LABELS.items():
+        if text == label:
+            return key
+    return "none"
+
+
+def image_exceeds_box(width: int, height: int, box: tuple[int, int]) -> bool:
+    return width > box[0] or height > box[1]
+
+
+def resolve_magick_exe(settings: Settings) -> Optional[Path]:
+    bin_dir = Path(os.path.expandvars(settings.magick_bin_dir.strip()))
+    exe = bin_dir / "magick.exe"
+    return exe if exe.is_file() else None
+
+
+def magick_identify_size(magick: Path, input_path: Path) -> Optional[tuple[int, int]]:
+    cmd = f'"{magick}" identify -ping -format "%w %h" "{input_path}"'
     try:
-        from PIL import Image
-    except ImportError:
-        return False
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            cwd=os.fspath(magick.parent),
+            capture_output=True,
+            text=True,
+            creationflags=_win_subprocess_flags(),
+        )
+        if proc.returncode != 0:
+            return None
+        parts = proc.stdout.strip().split()
+        if len(parts) != 2:
+            return None
+        return int(parts[0]), int(parts[1])
+    except (OSError, ValueError):
+        return None
+
+
+def _run_magick(magick: Path, args: str, input_path: Path, output_png: Path) -> bool:
+    cmd = f'"{magick}" "{input_path}" {args} "{output_png}"'
     try:
-        with Image.open(input_path) as img:
-            if img.mode in ("RGBA", "LA", "P"):
-                img = img.convert("RGBA")
-            else:
-                img = img.convert("RGB")
-            img.save(output_png, "PNG")
-        return output_png.is_file()
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            cwd=os.fspath(magick.parent),
+            capture_output=True,
+            creationflags=_win_subprocess_flags(),
+        )
+        return proc.returncode == 0 and output_png.is_file()
     except OSError:
         return False
 
 
-def resolve_cjxl_input_path(input_path: Path, seq: int) -> tuple[Optional[Path], Optional[Path]]:
+def magick_prepare_png(
+    magick: Path,
+    input_path: Path,
+    output_png: Path,
+    box: tuple[int, int] | None,
+) -> bool:
+    resize = f'-filter Lanczos -resize "{box[0]}x{box[1]}>"' if box else ""
+    return _run_magick(magick, resize, input_path, output_png)
+
+
+def needs_magick_prepare(
+    settings: Settings,
+    input_path: Path,
+    magick: Optional[Path],
+) -> tuple[bool, tuple[int, int] | None]:
     kind = image_input_kind(input_path)
-    if kind == "native":
-        return input_path, None
-    if kind in ("preconvert", "unknown"):
-        temp_png = temp_png_path(input_path, seq)
-        try:
-            if temp_png.is_file():
-                temp_png.unlink()
-        except OSError:
-            pass
-        if not preconvert_to_png(input_path, temp_png):
-            return None, None
-        return temp_png, temp_png
-    return None, None
+    if kind in ("skip", "unknown"):
+        return False, None
+    box = max_dimension_box(settings.max_dimension)
+    needs_preconvert = kind == "preconvert"
+    if not box:
+        return needs_preconvert, None
+    if not magick:
+        return True, box
+    size = magick_identify_size(magick, input_path)
+    if size is None:
+        return True, box
+    if image_exceeds_box(size[0], size[1], box):
+        return True, box
+    return needs_preconvert, None
+
+
+def resolve_cjxl_input_path(
+    settings: Settings,
+    input_path: Path,
+    seq: int,
+    magick: Optional[Path],
+) -> tuple[Optional[Path], Optional[Path], str]:
+    kind = image_input_kind(input_path)
+    if kind == "skip":
+        return None, None, ""
+    use_magick, resize_box = needs_magick_prepare(settings, input_path, magick)
+    if not use_magick and kind == "native":
+        return input_path, None, ""
+    if not magick:
+        return None, None, ""
+    temp_png = temp_png_path(input_path, seq)
+    try:
+        if temp_png.is_file():
+            temp_png.unlink()
+    except OSError:
+        pass
+    if not magick_prepare_png(magick, input_path, temp_png, resize_box):
+        return None, None, ""
+    if resize_box:
+        label = max_dimension_label(settings.max_dimension)
+        return temp_png, temp_png, f"resized to {label}"
+    if kind == "preconvert":
+        return temp_png, temp_png, "converted to PNG"
+    return temp_png, temp_png, "converted to PNG"
 
 
 def resolve_cjxl_exe(settings: Settings) -> Optional[Path]:
@@ -507,6 +630,28 @@ def run_convert(
             log,
         )
 
+    magick = resolve_magick_exe(settings)
+    needs_magick = False
+    for p in inputs:
+        if image_input_kind(p) == "preconvert":
+            needs_magick = True
+            break
+    if not needs_magick and max_dimension_box(settings.max_dimension):
+        if not magick:
+            needs_magick = True
+        else:
+            for p in inputs:
+                use_magick, _ = needs_magick_prepare(settings, p, magick)
+                if use_magick:
+                    needs_magick = True
+                    break
+    if needs_magick and not magick:
+        msg = (
+            f"magick.exe not found at:\n{settings.magick_bin_dir}\\magick.exe\n\n"
+            "ImageMagick is required for format conversion and max-dimension limits."
+        )
+        return ConvertResult(False, msg, log)
+
     encode_args = build_cjxl_encode_args(settings)
     mode_label = (
         f"distance {settings.distance}"
@@ -524,15 +669,17 @@ def run_convert(
         temp_png: Optional[Path] = None
 
         temp_seq += 1
-        cjxl_input, temp_png = resolve_cjxl_input_path(input_path, temp_seq)
+        cjxl_input, temp_png, prep_note = resolve_cjxl_input_path(
+            settings, input_path, temp_seq, magick
+        )
         if not cjxl_input:
             fail += 1
-            msg = f"Could not pre-convert to PNG.\n\nStopped after:\n{input_path}"
-            emit(f"cjxl: pre-convert failed: {input_path}")
+            msg = f"ImageMagick prepare failed.\n\nStopped after:\n{input_path}"
+            emit(f"cjxl: ImageMagick failed: {input_path}")
             return ConvertResult(False, msg, log, ok, fail)
 
-        if temp_png:
-            emit(f"cjxl: pre-converted to PNG: {input_path}")
+        if prep_note:
+            emit(f"cjxl: {prep_note}: {input_path}")
 
         cmd = f'"{exe}" {encode_args} "{cjxl_input}" "{output_path}"'
         emit(f"cjxl [{i + 1}/{len(inputs)}]: {cmd}")
