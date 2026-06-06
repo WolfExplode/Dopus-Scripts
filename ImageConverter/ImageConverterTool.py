@@ -1,15 +1,8 @@
-"""
-JPEG XL (cjxl) — entry point (GUI and CLI).
-
-Bulk image → .jxl via libjxl cjxl. See cjxl_logic.py and cjxl_gui.py.
-"""
+"""Image Converter — entry point (GUI and CLI)."""
 
 from __future__ import annotations
 
 import sys
-
-from cjxl_gui import run_gui
-from cjxl_logic import run_cli
 
 
 def _configure_stdio_utf8() -> None:
@@ -26,5 +19,7 @@ def _configure_stdio_utf8() -> None:
 if __name__ == "__main__":
     _configure_stdio_utf8()
     if len(sys.argv) > 1:
+        from converter_logic import run_cli
         raise SystemExit(run_cli(sys.argv[1:]))
+    from converter_gui import run_gui
     run_gui()

@@ -1,13 +1,13 @@
-// Image → JPEG XL (cjxl) — launches CjxlTool.py (Python / Dear PyGui) from this repo.
+// Image Converter — launches ImageConverterTool.py (Python / Dear PyGui) from this repo.
 //
 // Click: open GUI. Selected files and folders fill the input list.
 // No selection: current tab folder is passed as the default input.
 // Ctrl+click: convert immediately with last saved settings (no dialog).
 //
-// Settings: %APPDATA%\CjxlTool\settings.json (migrates legacy DOpus_cjxl_settings.ini).
-//
-/** Optional full path to CjxlTool.py if auto-detect fails. */
-var CJXL_PY = "";
+// Settings: %APPDATA%\ImageConverter\settings.json
+
+/** Optional full path to ImageConverterTool.py if auto-detect fails. */
+var CONVERTER_PY = "";
 
 function trimStr(s) {
     return String(s).replace(/^\s+|\s+$/g, "");
@@ -96,7 +96,7 @@ function writeOnlyListFile(shell, fso, paths) {
     if (!paths || paths.length === 0) {
         return "";
     }
-    var name = "CjxlTool_only_" + Math.floor(Math.random() * 1000000000) + ".txt";
+    var name = "ImageConverter_only_" + Math.floor(Math.random() * 1000000000) + ".txt";
     var file = fso.BuildPath(shell.ExpandEnvironmentStrings("%TEMP%"), name);
     var stream = new ActiveXObject("ADODB.Stream");
     stream.Type = 2;
@@ -136,15 +136,15 @@ function appendOnlyFiles(exec, paths, maxArgs) {
     return exec;
 }
 
-function resolveCjxlPy(shell, fso) {
-    if (CJXL_PY && fso.FileExists(CJXL_PY)) {
-        return CJXL_PY;
+function resolveConverterPy(shell, fso) {
+    if (CONVERTER_PY && fso.FileExists(CONVERTER_PY)) {
+        return CONVERTER_PY;
     }
     try {
         if (typeof Script !== "undefined" && Script && Script.file) {
             var sibling = fso.BuildPath(
                 fso.GetParentFolderName(Script.file),
-                "..\\Cjxl\\CjxlTool.py"
+                "ImageConverterTool.py"
             );
             sibling = fso.GetAbsolutePathName(sibling);
             if (fso.FileExists(sibling)) {
@@ -153,7 +153,7 @@ function resolveCjxlPy(shell, fso) {
         }
     } catch (e) {}
     var fallback =
-        "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\Cjxl\\CjxlTool.py";
+        "C:\\Users\\WXP\\Documents\\GitHub\\Dopus-Scripts\\ImageConverter\\ImageConverterTool.py";
     if (fso.FileExists(fallback)) {
         return fallback;
     }
@@ -164,15 +164,15 @@ function OnClick(clickData) {
     var tab = clickData.func.sourcetab;
     var shell = new ActiveXObject("WScript.Shell");
     var fso = new ActiveXObject("Scripting.FileSystemObject");
-    var cjxlPy = resolveCjxlPy(shell, fso);
+    var converterPy = resolveConverterPy(shell, fso);
 
-    if (!cjxlPy) {
+    if (!converterPy) {
         shell.Popup(
-            "CjxlTool.py not found.\n\n" +
-                "Copy it under Cjxl\\ next to this repo, set CJXL_PY in DOpus_cjxl.js, " +
+            "ImageConverterTool.py not found.\n\n" +
+                "Copy it under ImageConverter\\ next to this repo, set CONVERTER_PY in DOpus_image_converter.js, " +
                 "or install both under Script AddIns.",
             0,
-            "JPEG XL (cjxl)",
+            "Image Converter",
             16
         );
         return;
@@ -195,7 +195,7 @@ function OnClick(clickData) {
     var hasSelection = selected.length > 0;
 
     if (isCtrl) {
-        var execRepeat = quoteArg("python") + " " + quoteArg(cjxlPy) + " --repeat";
+        var execRepeat = quoteArg("python") + " " + quoteArg(converterPy) + " --repeat";
         if (tabFolder && !hasSelection) {
             execRepeat += " --tab-folder " + quoteArg(tabFolder);
         }
@@ -203,16 +203,16 @@ function OnClick(clickData) {
         if (!onlyListPath) {
             execRepeat = appendOnlyFiles(execRepeat, selected);
         }
-        DOpus.Output("cjxl (repeat last): " + execRepeat);
+        DOpus.Output("convert (repeat last): " + execRepeat);
         var rc = shell.Run(execRepeat, 1, true);
-        DOpus.Output("cjxl (repeat last) exit code: " + rc);
+        DOpus.Output("convert (repeat last) exit code: " + rc);
         try {
             clickData.func.command.RunCommand("Go REFRESH");
         } catch (eRf) {}
         return;
     }
 
-    var execGui = quoteArg("pythonw") + " " + quoteArg(cjxlPy) + " --gui";
+    var execGui = quoteArg("pythonw") + " " + quoteArg(converterPy) + " --gui";
     if (tabFolder && !hasSelection) {
         execGui += " --tab-folder " + quoteArg(tabFolder);
     }
@@ -220,9 +220,9 @@ function OnClick(clickData) {
     execGui = appendOnlyFiles(execGui, selected);
     if (onlyListPath) {
         DOpus.Output(
-            "cjxl: " + selected.length + " selected path(s) in input list."
+            "convert: " + selected.length + " selected path(s) in input list."
         );
     }
-    DOpus.Output("cjxl (GUI): " + execGui);
+    DOpus.Output("convert (GUI): " + execGui);
     shell.Run(execGui, 0, false);
 }

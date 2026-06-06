@@ -1,4 +1,4 @@
-"""Dear PyGui front-end for JPEG XL (cjxl) tool."""
+"""Dear PyGui front-end for Image Converter."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from cjxl_logic import *
+from converter_logic import *
 
 OUTPUT_WRAP_WIDTH = 100
 
@@ -127,22 +127,22 @@ def run_gui(
     import dearpygui.dearpygui as dpg
 
     class App:
-        ENCODE_MODE_ITEMS = ("Quality (1–100)", "Distance (0–3)")
+        FORMAT_ITEMS = OUTPUT_FORMAT_LABELS
         QUALITY_MIN = 1
         QUALITY_MAX = 100
-        DISTANCE_MIN = 0
-        DISTANCE_MAX = 3
+        JXL_DISTANCE_MIN = 0.0
+        JXL_DISTANCE_MAX = 25.0
+        JXL_EFFORT_MIN = 0
+        JXL_EFFORT_MAX = 9
         TAG_FILES = "files_input"
-        TAG_ENCODE_MODE = "encode_mode_radio"
+        TAG_FORMAT = "output_format_combo"
         TAG_QUALITY_GROUP = "quality_group"
         TAG_QUALITY = "quality_input"
-        TAG_DISTANCE_GROUP = "distance_group"
-        TAG_DISTANCE = "distance_input"
-        TAG_EFFORT = "effort_input"
-        TAG_PROGRESSIVE = "progressive_check"
+        TAG_JXL_GROUP = "jxl_group"
+        TAG_JXL_DISTANCE = "jxl_distance_input"
+        TAG_JXL_EFFORT = "jxl_effort_input"
         TAG_REPLACE_SOURCE = "replace_source_check"
         TAG_MAX_DIMENSION = "max_dimension_combo"
-        TAG_BIN_DIR = "bin_dir_input"
         TAG_MAGICK_DIR = "magick_dir_input"
         TAG_OUTPUT = "output_text"
         MAX_DIMENSION_ITEMS = [MAX_DIMENSION_LABELS[k] for k in MAX_DIMENSION_KEYS]
@@ -168,12 +168,12 @@ def run_gui(
             self._init_os_drag_drop()
             self._build_themes()
 
-            with dpg.window(tag="primary_window", label="JPEG XL (cjxl)", no_title_bar=True):
+            with dpg.window(tag="primary_window", label="Image Converter", no_title_bar=True):
                 self._build_layout(files_default)
 
             self._build_fonts()
             dpg.create_viewport(
-                title="Image → JPEG XL (cjxl)",
+                title="Image Converter",
                 width=920,
                 height=640,
                 min_width=680,
@@ -260,8 +260,8 @@ def run_gui(
             return hdr
 
         def _build_layout(self, files_default: str) -> None:
-            dpg.add_text("Image → JPEG XL", tag="title_main", color=(120, 200, 220))
-            dpg.add_text("Bulk encode via libjxl cjxl", color=(130, 138, 155))
+            dpg.add_text("Image Converter", tag="title_main", color=(120, 200, 220))
+            dpg.add_text("Batch convert images via ImageMagick", color=(130, 138, 155))
             dpg.add_spacer(height=6)
 
             with dpg.group(horizontal=True):
@@ -272,10 +272,8 @@ def run_gui(
                         "Input",
                         "Selected images, images in selected folders, or all images in the "
                         "current tab folder if nothing is selected.\n"
-                        "PNG/JPEG/GIF/etc. go straight to cjxl when no limit applies; "
-                        "TIFF/WebP/BMP and similar formats are converted via ImageMagick first.\n"
-                        "Launch from Directory Opus to fill from your selection. "
-                        "Drag files or folders from Explorer onto the path box.",
+                        "Drag files or folders from Explorer onto the path box.\n"
+                        "Files already in the target format are skipped automatically.",
                         "files",
                     )
                     with dpg.group(parent=hdr_files):
@@ -296,21 +294,21 @@ def run_gui(
                         self._hover_tip(add_dir_btn, "Append a folder (all images inside, recursively).")
                         self._hover_tip(clear_btn, "Clear all paths.")
 
-                    hdr_encode = self._section("Encode settings", "", "encode")
+                    hdr_encode = self._section("Convert settings", "", "encode")
                     with dpg.group(parent=hdr_encode):
-                        dpg.add_radio_button(
-                            tag=self.TAG_ENCODE_MODE,
-                            items=list(self.ENCODE_MODE_ITEMS),
-                            default_value=self.ENCODE_MODE_ITEMS[self.settings.encode_mode],
-                            horizontal=True,
-                            callback=self._on_encode_mode_change,
+                        fmt_label = dpg.add_text("Output format", color=(150, 158, 175))
+                        fmt_combo = dpg.add_combo(
+                            tag=self.TAG_FORMAT,
+                            items=self.FORMAT_ITEMS,
+                            default_value=OUTPUT_FORMATS[self.settings.output_format]["label"],
+                            width=-1,
+                            callback=self._on_format_change,
                         )
-                        tip_quality = (
-                            "Maps to an internal target bitrate/quality level, similar to JPEG.\n"
-                            "1–100. Typical photos: 85–95. 100 = lossless."
-                        )
+                        self._hover_tip(fmt_label, "Target format for all converted files.")
+                        self._hover_tip(fmt_combo, "Target format for all converted files.")
+
                         with dpg.group(tag=self.TAG_QUALITY_GROUP):
-                            qual_label = dpg.add_text("Quality", color=(150, 158, 175))
+                            qual_label = dpg.add_text("Quality (1–100)", color=(150, 158, 175))
                             qual = dpg.add_input_int(
                                 tag=self.TAG_QUALITY,
                                 default_value=_bounded_int(
@@ -323,45 +321,51 @@ def run_gui(
                                 step=1,
                                 width=80,
                             )
-                            self._hover_tip(qual_label, tip_quality)
-                            self._hover_tip(qual, tip_quality)
-                        tip_distance = (
-                            "Distance 0 — mathematically lossless (visually identical, bit-exact reconstruction)\n"
-                            "Distance 1 — visually lossless for most content (default for \"good enough\")\n"
-                            "Distance 2-3 — slight artifacts visible on close inspection, significant size savings\n"
-                            "Higher distances — progressively more aggressive compression, more visible artifacts"
-                        )
-                        with dpg.group(tag=self.TAG_DISTANCE_GROUP):
-                            dist_label = dpg.add_text("Distance", color=(150, 158, 175))
+                            self._hover_tip(qual_label, "JPEG/WebP/AVIF quality. 1 = worst, 100 = best.")
+                            self._hover_tip(qual, "JPEG/WebP/AVIF quality. 1 = worst, 100 = best.")
+
+                        with dpg.group(tag=self.TAG_JXL_GROUP):
+                            dist_label = dpg.add_text("Distance (0–25)", color=(150, 158, 175))
                             dist = dpg.add_input_float(
-                                tag=self.TAG_DISTANCE,
+                                tag=self.TAG_JXL_DISTANCE,
                                 default_value=_bounded_float(
-                                    self.settings.distance, 1.0, self.DISTANCE_MIN, self.DISTANCE_MAX
+                                    self.settings.jxl_distance, 1.0,
+                                    self.JXL_DISTANCE_MIN, self.JXL_DISTANCE_MAX,
                                 ),
-                                min_value=float(self.DISTANCE_MIN),
-                                max_value=float(self.DISTANCE_MAX),
+                                min_value=float(self.JXL_DISTANCE_MIN),
+                                max_value=float(self.JXL_DISTANCE_MAX),
                                 min_clamped=True,
                                 max_clamped=True,
                                 step=0.1,
                                 format="%.1f",
                                 width=80,
                             )
-                            self._hover_tip(dist_label, tip_distance)
-                            self._hover_tip(dist, tip_distance)
-                        dpg.add_text("Effort (1–10, blank = default)", color=(150, 158, 175))
-                        effort = dpg.add_input_text(
-                            tag=self.TAG_EFFORT,
-                            default_value=self.settings.effort,
-                            width=80,
-                            hint="7",
-                        )
-                        self._hover_tip(effort, "Higher = smaller files, slower encode. Blank uses cjxl default (7).")
-                        prog = dpg.add_checkbox(
-                            tag=self.TAG_PROGRESSIVE,
-                            label="Progressive decode",
-                            default_value=self.settings.progressive,
-                        )
-                        self._hover_tip(prog, "Decode a rough preview before the full image is ready.")
+                            tip_dist = (
+                                "0 = lossless (preserves ICC color profiles)\n"
+                                "1 = visually lossless (recommended)\n"
+                                "2–5 = good quality, smaller files\n"
+                                "25 = maximum compression\n\n"
+                                "Note: lossy (distance > 0) may strip embedded ICC profiles."
+                            )
+                            self._hover_tip(dist_label, tip_dist)
+                            self._hover_tip(dist, tip_dist)
+                            eff_label = dpg.add_text("Effort (0–9)", color=(150, 158, 175))
+                            eff = dpg.add_input_int(
+                                tag=self.TAG_JXL_EFFORT,
+                                default_value=_bounded_int(
+                                    self.settings.jxl_effort, 7,
+                                    self.JXL_EFFORT_MIN, self.JXL_EFFORT_MAX,
+                                ),
+                                min_value=self.JXL_EFFORT_MIN,
+                                max_value=self.JXL_EFFORT_MAX,
+                                min_clamped=True,
+                                max_clamped=True,
+                                step=1,
+                                width=80,
+                            )
+                            self._hover_tip(eff_label, "Higher = smaller files, slower encode. 7 is recommended.")
+                            self._hover_tip(eff, "Higher = smaller files, slower encode. 7 is recommended.")
+
                         replace_src = dpg.add_checkbox(
                             tag=self.TAG_REPLACE_SOURCE,
                             label="Replace source file",
@@ -369,12 +373,12 @@ def run_gui(
                         )
                         self._hover_tip(
                             replace_src,
-                            "After a successful encode, send the original image to the Recycle Bin.",
+                            "After a successful conversion, send the original to the Recycle Bin.",
                         )
                         tip_max_dim = (
-                            "Downscale images that exceed the chosen box before encoding.\n"
+                            "Downscale images that exceed the chosen box before converting.\n"
                             "Smaller images are left unchanged (no upscaling).\n"
-                            "Uses ImageMagick Lanczos resize."
+                            "Uses Lanczos resampling."
                         )
                         max_dim_label = dpg.add_text("Max dimensions", color=(150, 158, 175))
                         max_dim = dpg.add_combo(
@@ -385,16 +389,6 @@ def run_gui(
                         )
                         self._hover_tip(max_dim_label, tip_max_dim)
                         self._hover_tip(max_dim, tip_max_dim)
-                        dpg.add_text("cjxl bin folder", color=(150, 158, 175))
-                        dpg.add_input_text(
-                            tag=self.TAG_BIN_DIR,
-                            default_value=self.settings.cjxl_bin_dir,
-                            width=-1,
-                        )
-                        self._hover_tip(
-                            self.TAG_BIN_DIR,
-                            "Folder containing cjxl.exe (jxl-x64-windows-static).",
-                        )
                         dpg.add_text("ImageMagick folder", color=(150, 158, 175))
                         dpg.add_input_text(
                             tag=self.TAG_MAGICK_DIR,
@@ -409,7 +403,7 @@ def run_gui(
                     dpg.add_spacer(height=6)
                     btn = dpg.add_button(label="Convert", callback=self._on_convert, width=-1)
                     dpg.bind_item_theme(btn, self._theme_apply)
-                    self._hover_tip(btn, "Encode all listed images to JPEG XL.")
+                    self._hover_tip(btn, "Convert all listed images to the selected format.")
 
                 with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
                     dpg.bind_item_theme("panel_output", "theme_output_panel")
@@ -423,24 +417,26 @@ def run_gui(
                         height=-1,
                         tab_input=False,
                         default_value=(
-                            "Set encode options on the left, then Convert.\n\n"
-                            "Progress and cjxl output appear here."
+                            "Choose an output format and input files, then Convert.\n\n"
+                            "Progress and ImageMagick output appear here."
                         ),
                     )
 
-        def _encode_mode_index(self) -> int:
-            mode = dpg.get_value(self.TAG_ENCODE_MODE)
-            if mode in (1, "1", self.ENCODE_MODE_ITEMS[1]):
-                return 1
-            return 0
+        def _current_format_key(self) -> str:
+            label = dpg.get_value(self.TAG_FORMAT)
+            for k, v in OUTPUT_FORMATS.items():
+                if v["label"] == label:
+                    return k
+            return "jpeg"
 
-        def _on_encode_mode_change(self) -> None:
+        def _on_format_change(self) -> None:
             self._sync_encode_fields()
 
         def _sync_encode_fields(self) -> None:
-            quality_active = self._encode_mode_index() == 0
-            dpg.configure_item(self.TAG_QUALITY_GROUP, show=quality_active)
-            dpg.configure_item(self.TAG_DISTANCE_GROUP, show=not quality_active)
+            fmt_key = self._current_format_key()
+            encode = OUTPUT_FORMATS[fmt_key]["encode"]
+            dpg.configure_item(self.TAG_QUALITY_GROUP, show=(encode == "quality"))
+            dpg.configure_item(self.TAG_JXL_GROUP, show=(encode == "jxl"))
 
         def _collect_settings(self) -> Settings:
             sections: dict[str, bool] = {}
@@ -448,13 +444,11 @@ def run_gui(
                 if dpg.does_item_exist(tag):
                     sections[key] = bool(dpg.get_value(tag))
             return Settings(
-                encode_mode=self._encode_mode_index(),
+                output_format=self._current_format_key(),
                 quality=str(dpg.get_value(self.TAG_QUALITY)),
-                distance=str(dpg.get_value(self.TAG_DISTANCE)),
-                effort=str(dpg.get_value(self.TAG_EFFORT)).strip(),
-                progressive=bool(dpg.get_value(self.TAG_PROGRESSIVE)),
+                jxl_distance=str(dpg.get_value(self.TAG_JXL_DISTANCE)),
+                jxl_effort=str(dpg.get_value(self.TAG_JXL_EFFORT)),
                 replace_source=bool(dpg.get_value(self.TAG_REPLACE_SOURCE)),
-                cjxl_bin_dir=str(dpg.get_value(self.TAG_BIN_DIR)).strip() or DEFAULT_CJXL_BIN_DIR,
                 magick_bin_dir=str(dpg.get_value(self.TAG_MAGICK_DIR)).strip() or DEFAULT_MAGICK_BIN_DIR,
                 max_dimension=max_dimension_key_from_label(str(dpg.get_value(self.TAG_MAX_DIMENSION))),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
@@ -497,7 +491,7 @@ def run_gui(
             settings = self._collect_settings()
             err = validate_settings(settings)
             if err:
-                _show_error("cjxl", err)
+                _show_error("Image Converter", err)
                 return
 
             paths_text = settings.files_text.strip()
@@ -542,7 +536,7 @@ def run_gui(
                 self._append_stream_line("", False)
                 self._append_stream_line(result.summary, False)
                 if not result.ok:
-                    _show_error("cjxl", result.summary)
+                    _show_error("Image Converter", result.summary)
             self._job_thread = None
 
         def _browse_hint(self) -> str:
