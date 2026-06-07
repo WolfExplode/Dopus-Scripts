@@ -8,6 +8,7 @@ import math
 import os
 import subprocess
 import sys
+import tempfile
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,8 +22,15 @@ from recycle_delete import recycle_delete
 DEFAULT_MAGICK_BIN_DIR = (
     r"C:\Users\WXP\Desktop\Tools\ImageMagick-7.1.2-25-portable-Q16-HDRI-x64"
 )
+DEFAULT_CJXL_BIN_DIR = r"C:\Users\WXP\Desktop\Tools\jxl-x64-windows-static\bin"
 
 MAGICK_EXIT_CONTROL_C = -1073741510
+
+# Extensions cjxl can read directly without pre-conversion
+CJXL_NATIVE_EXTS = {
+    ".png", ".jpg", ".jpeg", ".jpe", ".gif",
+    ".ppm", ".pgm", ".pbm", ".pnm", ".pfm", ".pam", ".pgx", ".exr",
+}
 
 MAX_DIMENSION_PRESETS: dict[str, tuple[int, int] | None] = {
     "none": None,
@@ -114,11 +122,11 @@ class Settings:
     jxl_effort: str = "7"
     replace_source: bool = False
     magick_bin_dir: str = DEFAULT_MAGICK_BIN_DIR
+    cjxl_bin_dir: str = DEFAULT_CJXL_BIN_DIR
     max_dimension: str = "none"
     ico_sizes: str = "256"
     resize_width: str = ""
     files_text: str = ""
-    workers: int = field(default_factory=lambda: os.cpu_count() or 4)
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
 
@@ -289,9 +297,6 @@ def config_load_settings() -> Settings:
     if ico_sizes not in ICO_SIZE_PRESETS:
         ico_sizes = "256"
     resize_width = str(data.get("resize_width") or "")
-    cpu_default = os.cpu_count() or 4
-    saved_workers = int(data.get("workers") or 0)
-    workers = saved_workers if saved_workers >= 1 else cpu_default
     return Settings(
         output_format=output_format,
         quality=str(data.get("quality") or "90") or "90",
@@ -299,11 +304,11 @@ def config_load_settings() -> Settings:
         jxl_effort=str(data.get("jxl_effort") or "7") or "7",
         replace_source=bool(data.get("replace_source")),
         magick_bin_dir=str(data.get("magick_bin_dir") or DEFAULT_MAGICK_BIN_DIR) or DEFAULT_MAGICK_BIN_DIR,
+        cjxl_bin_dir=str(data.get("cjxl_bin_dir") or DEFAULT_CJXL_BIN_DIR) or DEFAULT_CJXL_BIN_DIR,
         max_dimension=max_dim,
         ico_sizes=ico_sizes,
         resize_width=resize_width,
         files_text=str(data.get("files_text") or ""),
-        workers=workers,
         gui_sections=gui_sections,
     )
 
@@ -316,10 +321,10 @@ def config_save_settings(settings: Settings) -> None:
     data["jxl_effort"] = settings.jxl_effort
     data["replace_source"] = settings.replace_source
     data["magick_bin_dir"] = settings.magick_bin_dir
+    data["cjxl_bin_dir"] = settings.cjxl_bin_dir
     data["max_dimension"] = settings.max_dimension
     data["ico_sizes"] = settings.ico_sizes
     data["resize_width"] = settings.resize_width
-    data["workers"] = settings.workers
     data["files_text"] = settings.files_text
     data["gui_sections"] = settings.gui_sections
     try:
@@ -397,9 +402,6 @@ def validate_resize_settings(settings: Settings) -> Optional[str]:
     return None
 
 
-def effective_workers(settings: Settings) -> int:
-    return max(1, settings.workers)
-
 
 def _jxl_distance_to_quality(distance: float) -> int:
     # ImageMagick's JXL coder ignores -define jxl:distance and only reads -quality.
@@ -470,6 +472,97 @@ def resolve_magick_exe(settings: Settings) -> Optional[Path]:
     bin_dir = Path(os.path.expandvars(settings.magick_bin_dir.strip()))
     exe = bin_dir / "magick.exe"
     return exe if exe.is_file() else None
+
+
+def resolve_cjxl_exe(settings: Settings) -> Optional[Path]:
+    bin_dir = Path(os.path.expandvars(settings.cjxl_bin_dir.strip()))
+    exe = bin_dir / "cjxl.exe"
+    return exe if exe.is_file() else None
+
+
+def build_cjxl_args(settings: Settings, thread_limit: int = 1) -> str:
+    dist, _ = parse_jxl_distance(settings.jxl_distance)
+    effort, _ = parse_jxl_effort(settings.jxl_effort)
+    num_threads = thread_limit if thread_limit > 0 else os.cpu_count() or 1
+    dist_val = round(float(dist or "1"), 2)
+    return f"--distance={dist_val} --effort={effort or '7'} --num_threads={num_threads}"
+
+
+def _run_cjxl(
+    exe: Path,
+    cjxl_args: str,
+    input_path: Path,
+    output_path: Path,
+    emit: OutputSink,
+) -> int:
+    cmd = f'"{exe}" {cjxl_args} "{input_path}" "{output_path}"'
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            cwd=os.fspath(exe.parent),
+            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            creationflags=_win_subprocess_flags(),
+        )
+        reader = threading.Thread(
+            target=_stream_process_output, args=(proc, emit), daemon=True
+        )
+        reader.start()
+        try:
+            rc = proc.wait()
+        finally:
+            if proc.stderr is not None:
+                try:
+                    proc.stderr.close()
+                except OSError:
+                    pass
+            reader.join(timeout=2.0)
+        return int(rc)
+    except OSError as ex:
+        emit(f"Error: {ex}", False)
+        return -1
+
+
+def _convert_to_jxl(
+    cjxl_exe: Path,
+    magick_exe: Optional[Path],
+    input_path: Path,
+    output_path: Path,
+    cjxl_args: str,
+    resize_arg: str,
+    thread_limit: int,
+    emit: OutputSink,
+    seq: int,
+) -> int:
+    ext = file_ext_lower(input_path)
+    needs_preconvert = ext not in CJXL_NATIVE_EXTS or bool(resize_arg)
+    temp_png: Optional[Path] = None
+    if needs_preconvert:
+        if not magick_exe:
+            emit(f"Error: ImageMagick required to pre-convert {input_path.name} but not found.", False)
+            return -1
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in input_path.stem) or "img"
+        temp_png = Path(tempfile.gettempdir()) / f"imgconv_{safe}_{seq}.png"
+        try:
+            temp_png.unlink(missing_ok=True)
+        except OSError:
+            pass
+        rc = _run_magick(magick_exe, input_path, resize_arg, "", temp_png, emit, thread_limit)
+        if rc != 0:
+            return rc
+        cjxl_input = temp_png
+    else:
+        cjxl_input = input_path
+
+    try:
+        return _run_cjxl(cjxl_exe, cjxl_args, cjxl_input, output_path, emit)
+    finally:
+        if temp_png is not None:
+            try:
+                temp_png.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def _win_subprocess_flags() -> int:
@@ -581,8 +674,11 @@ def run_convert(
     if err:
         return ConvertResult(False, err, log)
 
+    cjxl = resolve_cjxl_exe(settings) if settings.output_format == "jxl" else None
+    use_cjxl = cjxl is not None
     magick = resolve_magick_exe(settings)
-    if not magick:
+
+    if not use_cjxl and not magick:
         msg = (
             f"magick.exe not found at:\n{settings.magick_bin_dir}\\magick.exe\n\n"
             "Download portable ImageMagick 7 and update the folder in settings."
@@ -605,13 +701,14 @@ def run_convert(
     box = max_dimension_box(settings.max_dimension)
     resize_arg = f'-filter Lanczos -resize "{box[0]}x{box[1]}>"' if box else ""
 
-    workers_count = effective_workers(settings)
     cpu_count = os.cpu_count() or 4
-    # When running multiple workers, cap threads per process so they share cores evenly.
-    thread_limit = max(1, cpu_count // workers_count) if workers_count > 1 else 0
     total = len(inputs)
+    workers_count = min(total, cpu_count)
+    thread_limit = max(1, cpu_count // workers_count)
+    cjxl_args = build_cjxl_args(settings, thread_limit) if use_cjxl else ""
 
-    emit(f"convert: {total} file(s) → {fmt['label']} ({encode_args or 'default'}) — {workers_count} worker(s)")
+    encoder_label = f"cjxl {cjxl_args}" if use_cjxl else (encode_args or "default")
+    emit(f"convert: {total} file(s) → {fmt['label']} ({encoder_label}) — {workers_count} worker(s), {thread_limit} thread(s)/worker")
 
     ok = 0
     fail = 0
@@ -622,9 +719,11 @@ def run_convert(
             return i, input_path, output_path_for_input(input_path, settings), MAGICK_EXIT_CONTROL_C
         output_path = output_path_for_input(input_path, settings)
         emit(f"convert [{i + 1}/{total}]: {input_path.name} → {output_path.name}")
-        # Suppress replace_last in parallel mode to avoid interleaved display glitches.
         worker_emit: OutputSink = (lambda t, r: emit(t, False)) if workers_count > 1 else emit
-        rc = _run_magick(magick, input_path, resize_arg, encode_args, output_path, worker_emit, thread_limit)
+        if use_cjxl:
+            rc = _convert_to_jxl(cjxl, magick, input_path, output_path, cjxl_args, resize_arg, thread_limit, worker_emit, i)
+        else:
+            rc = _run_magick(magick, input_path, resize_arg, encode_args, output_path, worker_emit, thread_limit)
         return i, input_path, output_path, rc
 
     error_result: Optional[ConvertResult] = None
@@ -718,12 +817,12 @@ def run_resize(
     width = int(rw)
     resize_arg = f"-resize {width}x"
 
-    workers_count = effective_workers(settings)
     cpu_count = os.cpu_count() or 4
-    thread_limit = max(1, cpu_count // workers_count) if workers_count > 1 else 0
     total = len(inputs)
+    workers_count = min(total, cpu_count)
+    thread_limit = max(1, cpu_count // workers_count)
 
-    emit(f"resize: {total} file(s) → width {width}px — {workers_count} worker(s)")
+    emit(f"resize: {total} file(s) → width {width}px — {workers_count} worker(s), {thread_limit} thread(s)/worker")
 
     ok = 0
     fail = 0

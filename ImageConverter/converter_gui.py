@@ -147,7 +147,7 @@ def run_gui(
         TAG_REPLACE_SOURCE = "replace_source_check"
         TAG_MAX_DIMENSION = "max_dimension_combo"
         TAG_MAGICK_DIR = "magick_dir_input"
-        TAG_WORKERS = "workers_input"
+        TAG_CJXL_DIR = "cjxl_dir_input"
         TAG_OUTPUT = "output_text"
         MAX_DIMENSION_ITEMS = [MAX_DIMENSION_LABELS[k] for k in MAX_DIMENSION_KEYS]
         ICO_SIZE_ITEMS = [ICO_SIZE_LABELS[k] for k in ICO_SIZE_KEYS]
@@ -368,8 +368,26 @@ def run_gui(
                                 step=1,
                                 width=80,
                             )
-                            self._hover_tip(eff_label, "Higher = smaller files, slower encode. 7 is recommended.")
-                            self._hover_tip(eff, "Higher = smaller files, slower encode. 7 is recommended.")
+                            tip_eff = (
+                                "Higher effort = smaller files, slower encode.\n"
+                                "7 = high quality (slow for large batches)\n"
+                                "3–4 = faster, still good quality\n"
+                                "1 = fastest"
+                            )
+                            self._hover_tip(eff_label, tip_eff)
+                            self._hover_tip(eff, tip_eff)
+                            dpg.add_text("cjxl folder", color=(150, 158, 175))
+                            dpg.add_input_text(
+                                tag=self.TAG_CJXL_DIR,
+                                default_value=self.settings.cjxl_bin_dir,
+                                width=-1,
+                            )
+                            self._hover_tip(
+                                self.TAG_CJXL_DIR,
+                                "Folder containing cjxl.exe (libjxl). When found, cjxl is used\n"
+                                "directly instead of ImageMagick for JXL output — supports\n"
+                                "native --distance control and faster encoding.",
+                            )
 
                         with dpg.group(tag=self.TAG_ICO_GROUP):
                             ico_label = dpg.add_text("Icon sizes", color=(150, 158, 175))
@@ -409,26 +427,6 @@ def run_gui(
                         )
                         self._hover_tip(max_dim_label, tip_max_dim)
                         self._hover_tip(max_dim, tip_max_dim)
-                        workers_label = dpg.add_text("Parallel jobs", color=(150, 158, 175))
-                        workers_input = dpg.add_input_int(
-                            tag=self.TAG_WORKERS,
-                            default_value=max(1, self.settings.workers),
-                            min_value=1,
-                            max_value=32,
-                            min_clamped=True,
-                            max_clamped=True,
-                            step=1,
-                            width=80,
-                        )
-                        tip_workers = (
-                            f"Number of images to convert simultaneously.\n"
-                            f"More workers = faster batch processing.\n"
-                            f"Your system has {os.cpu_count() or 4} logical CPU(s).\n"
-                            f"Each worker is limited to cpu_count ÷ workers threads."
-                        )
-                        self._hover_tip(workers_label, tip_workers)
-                        self._hover_tip(workers_input, tip_workers)
-
                         dpg.add_text("ImageMagick folder", color=(150, 158, 175))
                         dpg.add_input_text(
                             tag=self.TAG_MAGICK_DIR,
@@ -516,11 +514,11 @@ def run_gui(
                 jxl_effort=str(dpg.get_value(self.TAG_JXL_EFFORT)),
                 replace_source=bool(dpg.get_value(self.TAG_REPLACE_SOURCE)),
                 magick_bin_dir=str(dpg.get_value(self.TAG_MAGICK_DIR)).strip() or DEFAULT_MAGICK_BIN_DIR,
+                cjxl_bin_dir=str(dpg.get_value(self.TAG_CJXL_DIR)).strip() or DEFAULT_CJXL_BIN_DIR,
                 max_dimension=max_dimension_key_from_label(str(dpg.get_value(self.TAG_MAX_DIMENSION))),
                 ico_sizes=ico_sizes_key_from_label(str(dpg.get_value(self.TAG_ICO_SIZES))),
                 resize_width=str(dpg.get_value(self.TAG_RESIZE_WIDTH)),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
-                workers=max(1, int(dpg.get_value(self.TAG_WORKERS))),
                 gui_sections=sections,
             )
 
