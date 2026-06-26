@@ -1294,10 +1294,14 @@ def ffmpeg_replace_video_with_image_exec(
 ) -> str:
     v_enc = still_image_video_encode_args(out_ext)
     scale = f"scale={width}:{height}"
+    # -strict -1: allow copying audio whose sample rate is "non-standard" for the
+    # container (e.g. 8/11.025/12 kHz MP3 in MP4 — MPEG-2.5 rates the MP4 spec omits).
+    # Without it ffmpeg refuses the mux ("Could not write header") and writes nothing.
     return (
         f"ffmpeg.exe -y -framerate {STILL_REPLACE_FPS} -loop 1 -i {_quote(img_path)} "
         f"-i {_quote(media_path)} -map_metadata 1 -map_chapters 1 -map 0:v:0 -map 1:a "
-        f"-vf {scale} -r {STILL_REPLACE_FPS} -c:v {v_enc} -c:a copy -shortest {_quote(tmp_path)}"
+        f"-vf {scale} -r {STILL_REPLACE_FPS} -c:v {v_enc} -c:a copy -strict -1 -shortest "
+        f"{_quote(tmp_path)}"
     )
 
 
