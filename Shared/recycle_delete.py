@@ -32,13 +32,19 @@ def is_ephemeral_delete(path: Path) -> bool:
     return True
 
 
-def recycle_delete(path: Path) -> None:
+def recycle_delete(path: Path) -> bool:
+    """Send to Recycle Bin. Returns True on success.
+
+    On Windows, never falls back to a permanent delete: if the shell operation
+    fails the file is left in place and False is returned, so a file the caller
+    wanted recycled is never silently destroyed.
+    """
     if sys.platform != "win32":
         try:
             path.unlink()
+            return True
         except OSError:
-            pass
-        return
+            return False
 
     import ctypes
     from ctypes import wintypes
@@ -62,7 +68,7 @@ def recycle_delete(path: Path) -> None:
 
     try:
         if not path.exists():
-            return
+            return True
         try:
             os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
         except OSError:
@@ -72,23 +78,27 @@ def recycle_delete(path: Path) -> None:
         op.pFrom = str(path) + "\0\0"
         op.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT
         if ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op)) != 0:
-            raise OSError("SHFileOperationW failed")
+            return False
         if op.fAnyOperationsAborted:
-            raise OSError("SHFileOperationW aborted")
+            return False
+        return True
     except OSError:
-        try:
-            path.unlink()
-        except OSError:
-            pass
+        # Do not fall back to a permanent unlink() — leave the file in place.
+        return False
 
 
-def safe_delete(path: Path) -> None:
+def safe_delete(path: Path) -> bool:
+    """Recycle (or permanently remove working temps). Returns True on success.
+
+    Errors are reported via the return value, not silently swallowed, and a
+    file meant for the Recycle Bin is never permanently deleted on failure.
+    """
     try:
         if not path.exists():
-            return
+            return True
         if is_ephemeral_delete(path):
             path.unlink()
-        else:
-            recycle_delete(path)
+            return True
+        return recycle_delete(path)
     except OSError:
-        pass
+        return False
