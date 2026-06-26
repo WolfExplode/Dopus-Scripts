@@ -10,6 +10,8 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
+from difflib import SequenceMatcher
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -214,7 +216,7 @@ def paths_from_only_list(list_path: Optional[str], only_files: Optional[list[str
     lines: list[str] = []
     if list_path:
         try:
-            lines.extend(Path(list_path).read_text(encoding="utf-8").splitlines())
+            lines.extend(Path(list_path).read_text(encoding="utf-8-sig").splitlines())
         except OSError:
             pass
     if only_files:
@@ -1258,6 +1260,14 @@ def build_cover_embed_cmd(
     return ffmpeg_attached_pic_copy_embed(media_path, img_path, tmp_path)
 
 
+def _still_video_ext_for_audio(audio_ext: str) -> str:
+    if audio_ext in (".ogg", ".oga", ".opus", ".weba"):
+        return ".webm"
+    if audio_ext in (".mp3", ".mp2", ".mpa", ".m4a", ".m4b", ".m4p", ".aac", ".adts"):
+        return ".mp4"
+    return ".mkv"
+
+
 def still_image_video_encode_args(ext: str) -> str:
     cap = f"-maxrate {STILL_REPLACE_MAXRATE} -bufsize {STILL_REPLACE_BUFSIZE}"
     if ext == ".webm":
@@ -1342,8 +1352,12 @@ def thumb_replace_video_with_image(
     folder = media_path.parent
     stem = media_path.stem
     ext = file_ext_lower(name)
-    out_ext = ext
-    remux = False
+    if is_thumb_audio(name):
+        out_ext = _still_video_ext_for_audio(ext)
+        remux = True
+    else:
+        out_ext = ext
+        remux = False
     dims = probe_image_dimensions(img_path)
     if not dims:
         return False, "Could not read image width/height (ffprobe).", None
@@ -1801,11 +1815,15 @@ def quality_applicable(is_video: bool, fmt: FormatPreset) -> bool:
 
 
 def cover_stems_fuzzy_match(media_stem: str, image_stem: str) -> bool:
-    """True when one stem is fully contained in the other (e.g. song + song_cover)."""
-    a, b = media_stem.casefold(), image_stem.casefold()
-    if a == b:
+    """True when stems are likely a media+cover pair."""
+    a = unicodedata.normalize("NFC", media_stem).casefold()
+    b = unicodedata.normalize("NFC", image_stem).casefold()
+    if a == b or a in b or b in a:
         return True
-    return a in b or b in a
+    shorter = min(len(a), len(b))
+    if shorter < 8:
+        return False
+    return SequenceMatcher(None, a, b).ratio() >= 0.85
 
 
 def match_cover_image_media_pairs(

@@ -76,6 +76,22 @@ function writeYtDlpUpdateBlock(ps1) {
     }
 }
 
+// PowerShell: resolve actual yt-dlp .exe, bypassing pyenv .bat shim so %(...) in -o template
+// is not mangled by cmd.exe batch % expansion inside `call pyenv exec %~n0 %*`
+function writeYtdlpFinder(ps1) {
+    var lines = [
+        "$_yt = 'yt-dlp'",
+        "try {",
+        "    if ((Get-Command yt-dlp -ErrorAction SilentlyContinue).Source -like '*.bat') {",
+        "        $_ytp = ((pyenv which yt-dlp 2>$null) -join '').Trim()",
+        "        if ($_ytp -and (Test-Path $_ytp)) { $_yt = $_ytp }",
+        "    }",
+        "} catch { }",
+        ""
+    ];
+    for (var i = 0; i < lines.length; i++) { ps1.WriteLine(lines[i]); }
+}
+
 // PowerShell: move console to bottom-right of primary monitor work area (Win32 + Forms)
 function writeConsoleWindowBottomRight(ps1) {
     var lines = [
@@ -330,19 +346,25 @@ function OnClick(clickData) {
         var ps1 = fso.CreateTextFile(tempPs1, true, true);
         ps1.WriteLine("Set-Location '" + escapePsSingleQuoted(oneLine(destPath)) + "'");
         writeConsoleWindowBottomRight(ps1);
+        writeYtdlpFinder(ps1);
         if (doUpdate) {
             writeYtDlpUpdateBlock(ps1);
         }
-        // Use PowerShell stop-parsing operator so URLs with special chars never break parsing.
-        ps1.WriteLine("yt-dlp " + ytArgsFirst + " --% " + oneLine(finalUrl));
+        // Write URL to a temp file and use --batch-file so URLs with ? & etc. never hit a cmd.exe
+        // argument (the pyenv .bat shim uses `call` internally, which interprets /? as a help flag).
+        var tempUrl = shell.ExpandEnvironmentStrings("%TEMP%") + "\\yt-dlp-url.txt";
+        ps1.WriteLine("$_urlf = '" + escapePsSingleQuoted(tempUrl) + "'");
+        ps1.WriteLine("[System.IO.File]::WriteAllText($_urlf, '" + escapePsSingleQuoted(oneLine(finalUrl)) + "', [System.Text.Encoding]::UTF8)");
+        ps1.WriteLine("& $_yt " + ytArgsFirst + " --batch-file $_urlf");
         if (useCookies) {
             ps1.WriteLine("$code = $LASTEXITCODE");
             ps1.WriteLine("if ($code -ne 0) {");
             ps1.WriteLine("    Write-Host ''");
             ps1.WriteLine("    Write-Host \"yt-dlp failed (exit $code); retrying without browser cookies...\" -ForegroundColor Yellow");
-            ps1.WriteLine("    yt-dlp " + ytArgsBody + " --% " + oneLine(finalUrl));
+            ps1.WriteLine("    & $_yt " + ytArgsBody + " --batch-file $_urlf");
             ps1.WriteLine("}");
         }
+        ps1.WriteLine("Remove-Item $_urlf -Force -ErrorAction SilentlyContinue");
         ps1.Close();
     } catch (e) {
         var errMsg = "Failed to write temp script.";
