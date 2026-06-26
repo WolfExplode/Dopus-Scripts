@@ -339,8 +339,11 @@ function OnClick(clickData) {
 
     var ytArgsFirst = ytArgsBody + (useCookies ? cookiesFromBrowser : "");
 
+    // Unique suffix so concurrent invocations never clobber each other's temp files.
+    var runId = String((new Date()).getTime()) + "_" + String(Math.floor(Math.random() * 1000000));
+
     // Write a temp PowerShell script to avoid cmd.exe expanding % characters
-    var tempPs1 = shell.ExpandEnvironmentStrings("%TEMP%") + "\\yt-dlp-run.ps1";
+    var tempPs1 = shell.ExpandEnvironmentStrings("%TEMP%") + "\\yt-dlp-run-" + runId + ".ps1";
     try {
         // unicode=true: UTF-16LE + BOM so non-ANSI paths / pasted text do not break WriteLine
         var ps1 = fso.CreateTextFile(tempPs1, true, true);
@@ -352,7 +355,7 @@ function OnClick(clickData) {
         }
         // Write URL to a temp file and use --batch-file so URLs with ? & etc. never hit a cmd.exe
         // argument (the pyenv .bat shim uses `call` internally, which interprets /? as a help flag).
-        var tempUrl = shell.ExpandEnvironmentStrings("%TEMP%") + "\\yt-dlp-url.txt";
+        var tempUrl = shell.ExpandEnvironmentStrings("%TEMP%") + "\\yt-dlp-url-" + runId + ".txt";
         ps1.WriteLine("$_urlf = '" + escapePsSingleQuoted(tempUrl) + "'");
         ps1.WriteLine("[System.IO.File]::WriteAllText($_urlf, '" + escapePsSingleQuoted(oneLine(finalUrl)) + "', [System.Text.Encoding]::UTF8)");
         ps1.WriteLine("& $_yt " + ytArgsFirst + " --batch-file $_urlf");
@@ -365,6 +368,10 @@ function OnClick(clickData) {
             ps1.WriteLine("}");
         }
         ps1.WriteLine("Remove-Item $_urlf -Force -ErrorAction SilentlyContinue");
+        if (!keepPsOpen) {
+            // Delete this run's own script so uniquely-named temps don't accumulate.
+            ps1.WriteLine("Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue");
+        }
         ps1.Close();
     } catch (e) {
         var errMsg = "Failed to write temp script.";

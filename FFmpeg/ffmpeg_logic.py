@@ -340,6 +340,9 @@ def _quote(path: Path | str) -> str:
 _shutting_down = False
 _cleanup_done = False
 _active_procs: list[subprocess.Popen] = []
+# Guards _active_procs: worker threads append/remove while the shutdown path
+# snapshots/clears it concurrently (parallel jobs).
+_active_procs_lock = threading.Lock()
 _registered_temps: list[Path] = []
 _job_outputs: dict[Path, bool] = {}
 _output_sink: OutputSink | None = None
@@ -431,14 +434,16 @@ def _kill_process_tree(proc: subprocess.Popen) -> None:
 
 
 def _stop_all_processes() -> None:
-    for proc in list(_active_procs):
+    with _active_procs_lock:
+        procs = list(_active_procs)
+        _active_procs.clear()
+    for proc in procs:
         _kill_process_tree(proc)
-    for proc in list(_active_procs):
+    for proc in procs:
         try:
             proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
             pass
-    _active_procs.clear()
 
 
 def _original_path_from_bak(bak: Path) -> Optional[Path]:
@@ -598,14 +603,16 @@ def _run_cmd(
             "creationflags": _win_subprocess_flags(),
         }
         proc = subprocess.Popen(cmd, **popen_kwargs)
-        _active_procs.append(proc)
+        with _active_procs_lock:
+            _active_procs.append(proc)
         reader = threading.Thread(target=_stream_process_stderr, args=(proc,), daemon=True)
         reader.start()
         try:
             rc = proc.wait()
         finally:
-            if proc in _active_procs:
-                _active_procs.remove(proc)
+            with _active_procs_lock:
+                if proc in _active_procs:
+                    _active_procs.remove(proc)
             if proc.stderr is not None:
                 try:
                     proc.stderr.close()

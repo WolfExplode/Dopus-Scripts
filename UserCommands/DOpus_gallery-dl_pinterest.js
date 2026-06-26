@@ -316,7 +316,9 @@ function OnClick(clickData) {
 
     // Write and run download script.
     // Pass -d PINTEREST_OUTPUT_ROOT only; gallery-dl appends pinterest\username\board\ itself.
-    var tempPs1 = shell.ExpandEnvironmentStrings("%TEMP%") + "\\gallery-dl-pinterest-run.ps1";
+    // Unique suffix so concurrent invocations never clobber each other's temp script.
+    var runId = String((new Date()).getTime()) + "_" + String(Math.floor(Math.random() * 1000000));
+    var tempPs1 = shell.ExpandEnvironmentStrings("%TEMP%") + "\\gallery-dl-pinterest-run-" + runId + ".ps1";
     try {
         var ps1 = fso.CreateTextFile(tempPs1, true, false);
         ps1.WriteLine("$gdArgs = @('-d', '" + psQuote(PINTEREST_OUTPUT_ROOT) + "'");
@@ -325,6 +327,10 @@ function OnClick(clickData) {
         }
         ps1.WriteLine("    '" + psQuote(url) + "')");
         ps1.WriteLine("& '" + psQuote(GALLERY_DL_EXE) + "' @gdArgs");
+        if (!keepPsOpen) {
+            // Delete this run's own script so uniquely-named temps don't accumulate.
+            ps1.WriteLine("Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue");
+        }
         ps1.Close();
     } catch (e) {
         showError(shell, "Failed to write temp script: " + e.message, "gallery-dl Error");

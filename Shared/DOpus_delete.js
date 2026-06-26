@@ -37,6 +37,10 @@ DOpusDeleteLib = {
         }
     },
 
+    // Send to Recycle Bin. Never falls back to a permanent delete: if the
+    // shell op fails the file is left in place and false is returned, so a
+    // file the caller wanted recycled is never silently destroyed.
+    // Mirrors recycle_delete.py.
     recycleDeleteFile: function (shell, fso, filePath) {
         if (!fso.FileExists(filePath)) {
             return true;
@@ -49,11 +53,11 @@ DOpusDeleteLib = {
             "', 'OnlyErrorDialogs', 'SendToRecycleBin')\"";
         try {
             shell.Run(cmd, 0, true);
-        } catch (e) {}
-        if (!fso.FileExists(filePath)) {
-            return true;
+        } catch (e) {
+            return false;
         }
-        return this.permanentDeleteFile(fso, filePath);
+        // Success only if the file is actually gone; do not permanent-delete.
+        return !fso.FileExists(filePath);
     },
 
     deleteFile: function (shell, fso, filePath) {

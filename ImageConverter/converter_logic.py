@@ -6,6 +6,7 @@ import concurrent.futures
 import json
 import math
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -495,11 +496,15 @@ def _run_cjxl(
     output_path: Path,
     emit: OutputSink,
 ) -> int:
-    cmd = f'"{exe}" {cjxl_args} "{input_path}" "{output_path}"'
+    # argv list (shell=False): exe and paths are separate elements, so file
+    # names containing %, &, ^ etc. cannot break parsing or inject commands.
+    cmd = [os.fspath(exe)] + shlex.split(cjxl_args) + [
+        os.fspath(input_path),
+        os.fspath(output_path),
+    ]
     try:
         proc = subprocess.Popen(
             cmd,
-            shell=True,
             cwd=os.fspath(exe.parent),
             stderr=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
@@ -612,20 +617,20 @@ def _run_magick(
     emit: OutputSink,
     thread_limit: int = 0,
 ) -> int:
-    parts = [f'"{exe}"']
+    # argv list (shell=False): exe and paths are separate elements, so file
+    # names containing %, &, ^ etc. cannot break parsing or inject commands.
+    cmd: list[str] = [os.fspath(exe)]
     if thread_limit > 0:
-        parts.append(f"-limit thread {thread_limit}")
-    parts.append(f'"{input_path}"')
+        cmd += ["-limit", "thread", str(thread_limit)]
+    cmd.append(os.fspath(input_path))
     if resize_arg:
-        parts.append(resize_arg)
+        cmd += shlex.split(resize_arg)
     if encode_args:
-        parts.append(encode_args)
-    parts.append(f'"{output_path}"')
-    cmd = " ".join(parts)
+        cmd += shlex.split(encode_args)
+    cmd.append(os.fspath(output_path))
     try:
         proc = subprocess.Popen(
             cmd,
-            shell=True,
             cwd=os.fspath(exe.parent),
             stderr=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
