@@ -136,6 +136,7 @@ def run_gui(
             self._job_reported = False
             self._log_queue: queue.Queue[tuple[str, bool]] = queue.Queue()
             self._output_lines: list[str] = []
+            self._auto_scroll_output: bool = False
             self.settings = config_load_settings()
             files_default = build_initial_files_text(
                 self.settings.files_text, initial_only_list, initial_only_files
@@ -481,6 +482,8 @@ def run_gui(
                 self._output_lines[-1] = text
             else:
                 self._output_lines.append(text)
+            if len(self._output_lines) > 200:
+                self._output_lines = self._output_lines[-200:]
             self._sync_output_display()
 
         def _drain_log_queue(self) -> None:
@@ -535,6 +538,7 @@ def run_gui(
             self._set_output("Running…\n")
             self._job_result_box = []
             self._job_reported = False
+            self._auto_scroll_output = True
 
             def worker() -> None:
                 def on_output(text: str, replace_last: bool) -> None:
@@ -561,6 +565,7 @@ def run_gui(
                 self._append_stream_line("", False)
                 self._append_stream_line(result.summary, False)
             self._job_thread = None
+            self._auto_scroll_output = False
 
         def _browse_add_files(self) -> None:
             if sys.platform != "win32":
@@ -683,6 +688,11 @@ def run_gui(
                     self._poll_job()
                     dpg.render_dearpygui_frame()
                     dpg.run_callbacks(dpg.get_callback_queue())
+                    if self._auto_scroll_output:
+                        try:
+                            dpg.set_y_scroll(self.TAG_OUTPUT, 1_000_000)
+                        except Exception:
+                            pass
             finally:
                 self._shutdown()
             dpg.destroy_context()
