@@ -126,6 +126,7 @@ def run_gui(
         TAG_QUALITY = "quality_input"
         TAG_TRIM = "trim_frames_input"
         TAG_REPLACE = "replace_video_check"
+        TAG_MERGE_CONTAINER = "merge_container_combo"
         TAG_OUTPUT = "output_text"
 
         def __init__(self) -> None:
@@ -385,6 +386,18 @@ def run_gui(
                         "merge",
                     )
                     with dpg.group(parent=hdr_merge):
+                        dpg.add_text("Output container", color=(150, 158, 175))
+                        container_combo = dpg.add_combo(
+                            tag=self.TAG_MERGE_CONTAINER,
+                            items=["auto", ".mp4", ".mkv"],
+                            default_value=self.settings.merge_container,
+                            width=-1,
+                        )
+                        self._hover_tip(
+                            container_combo,
+                            "auto = match first file's extension.\n"
+                            ".mp4 / .mkv force that output container regardless of input.",
+                        )
                         self._action_button(
                             hdr_merge, "Merge with chapters", "mergevid",
                             "Lossless when streams match. If not, asks whether to fix outliers or re-encode all.",
@@ -459,6 +472,7 @@ def run_gui(
                 quality=str(dpg.get_value(self.TAG_QUALITY)).strip() or "23",
                 last_action=self.settings.last_action,
                 replace_video_with_image=bool(dpg.get_value(self.TAG_REPLACE)),
+                merge_container=str(dpg.get_value(self.TAG_MERGE_CONTAINER)) or "auto",
                 trim_frames=str(dpg.get_value(self.TAG_TRIM)).strip() or "1",
                 files_text=str(dpg.get_value(self.TAG_FILES)),
                 gui_sections=sections,

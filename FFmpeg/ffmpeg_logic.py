@@ -58,6 +58,8 @@ LAST_ACTIONS = (
 )
 DEFAULT_LAST_ACTION = "convert"
 
+MERGE_CONTAINERS: tuple[str, ...] = ("auto", ".mp4", ".mkv")
+
 GUI_SECTION_DEFAULTS: dict[str, bool] = {
     "files": True,
     "convert": True,
@@ -122,6 +124,7 @@ class Settings:
     trim_frames: str = "1"
     files_text: str = ""
     merge_fix_outliers: bool = True
+    merge_container: str = "auto"
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
 
@@ -290,6 +293,9 @@ def config_load_settings() -> Settings:
     action = str(data.get("last_action") or DEFAULT_LAST_ACTION)
     if action not in LAST_ACTIONS:
         action = DEFAULT_LAST_ACTION
+    merge_container = str(data.get("merge_container") or "auto")
+    if merge_container not in MERGE_CONTAINERS:
+        merge_container = "auto"
     return Settings(
         mode=int(data.get("mode", 0) or 0),
         format_name=str(data.get("format_name") or ""),
@@ -299,6 +305,7 @@ def config_load_settings() -> Settings:
         trim_frames=str(data.get("trim_frames") or "1") or "1",
         files_text=str(data.get("files_text") or ""),
         merge_fix_outliers=bool(data.get("merge_fix_outliers", True)),
+        merge_container=merge_container,
         gui_sections=gui_sections,
     )
 
@@ -316,6 +323,7 @@ def config_save_settings(
     data["trim_frames"] = settings.trim_frames
     data["files_text"] = settings.files_text
     data["merge_fix_outliers"] = settings.merge_fix_outliers
+    data["merge_container"] = settings.merge_container
     data["gui_sections"] = settings.gui_sections
     if last_action:
         if last_action in LAST_ACTIONS:
@@ -2255,7 +2263,9 @@ def run_split_av_copy(paths: list[Path]) -> ActionResult:
     return ActionResult(fail == 0 or ok > 0 or partial > 0, summary, log)
 
 
-def run_merge_videos(paths: list[Path], crf_str: str, *, fix_outliers: bool = True) -> ActionResult:
+def run_merge_videos(
+    paths: list[Path], crf_str: str, *, fix_outliers: bool = True, container: str = "auto"
+) -> ActionResult:
     log = _job_log()
     title = "Merge videos"
     if len(paths) < 2:
@@ -2276,7 +2286,7 @@ def run_merge_videos(paths: list[Path], crf_str: str, *, fix_outliers: bool = Tr
     durations = [info.duration for info in infos]
     has_audio = [bool(info.audio_codec) for info in infos]
 
-    ext = file_ext_lower(paths[0].name)
+    ext = container if container in (".mp4", ".mkv") else file_ext_lower(paths[0].name)
     out_path = paths[0].parent / f"output{ext}"
     meta_path = Path(os.environ.get("TEMP", ".")) / f"DOpus_ffmpeg_merge_{time.time_ns()}.ffmeta"
     register_temp_path(meta_path)
@@ -2513,7 +2523,12 @@ def _run_action_impl(
     if action == "splitch":
         return run_extract_audio_channels(paths)
     if action == "mergevid":
-        return run_merge_videos(paths, settings.quality, fix_outliers=settings.merge_fix_outliers)
+        return run_merge_videos(
+            paths,
+            settings.quality,
+            fix_outliers=settings.merge_fix_outliers,
+            container=settings.merge_container,
+        )
     if action == "rotatecw":
         return run_video_transform(paths, "transpose=1", "Rotate 90° CW")
     if action == "rotateccw":
