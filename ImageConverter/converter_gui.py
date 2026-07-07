@@ -14,7 +14,6 @@ from converter_logic import *
 
 OUTPUT_WRAP_WIDTH = 100
 
-
 def _wrap_output_line(line: str) -> str:
     if not line:
         return line
