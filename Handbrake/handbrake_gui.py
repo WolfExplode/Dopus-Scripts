@@ -256,26 +256,94 @@ def run_gui(
                         with dpg.group(horizontal=True):
                             with dpg.group():
                                 dpg.add_text("Max picture side (px)", color=(150, 158, 175))
-                                dpg.add_input_text(tag=self.TAG_MAXSIDE, default_value=self.settings.max_side, width=100)
+                                max_side = dpg.add_input_text(
+                                    tag=self.TAG_MAXSIDE, default_value=self.settings.max_side, width=100
+                                )
+                                self._hover_tip(
+                                    max_side,
+                                    "Maximum width or height of the encoded video, in pixels. "
+                                    "The longer side is scaled down to this size; blank uses 1920.",
+                                )
                             with dpg.group():
                                 dpg.add_text("Video quality (-q)", color=(150, 158, 175))
-                                dpg.add_input_text(tag=self.TAG_QUALITY, default_value=self.settings.video_quality, width=100)
+                                quality = dpg.add_input_text(
+                                    tag=self.TAG_QUALITY, default_value=self.settings.video_quality, width=100
+                                )
+                                self._hover_tip(
+                                    quality,
+                                    "Optional HandBrake quality value passed as -q. Lower values generally "
+                                    "mean higher quality and larger files. Blank keeps the preset value.",
+                                )
 
                         dpg.add_text("Frame rate (-r, optional)", color=(150, 158, 175))
-                        dpg.add_input_text(tag=self.TAG_FRAMERATE, default_value=self.settings.video_framerate, width=100)
+                        framerate = dpg.add_input_text(
+                            tag=self.TAG_FRAMERATE, default_value=self.settings.video_framerate, width=100
+                        )
+                        self._hover_tip(
+                            framerate,
+                            "Optional frame rate passed as -r. Blank keeps the frame rate from the preset/source.",
+                        )
 
                         dpg.add_spacer(height=4)
                         dpg.add_text("If smaller than (MB): -q / -r overrides", color=(150, 158, 175))
                         with dpg.group(horizontal=True):
-                            dpg.add_input_text(tag=self.TAG_SMALL_CUTOFF, default_value=self.settings.small_file_cutoff_mb, width=90, hint="MB")
-                            dpg.add_input_text(tag=self.TAG_SMALL_QUALITY, default_value=self.settings.small_file_quality, width=70, hint="-q")
-                            dpg.add_input_text(tag=self.TAG_SMALL_FRAMERATE, default_value=self.settings.small_file_framerate, width=70, hint="-r")
+                            small_cutoff = dpg.add_input_text(
+                                tag=self.TAG_SMALL_CUTOFF,
+                                default_value=self.settings.small_file_cutoff_mb,
+                                width=90,
+                                hint="MB",
+                            )
+                            self._hover_tip(
+                                small_cutoff,
+                                "Size threshold in MB. For each input smaller than this value, use the "
+                                "small-file -q and -r overrides in the next fields.",
+                            )
+                            small_quality = dpg.add_input_text(
+                                tag=self.TAG_SMALL_QUALITY,
+                                default_value=self.settings.small_file_quality,
+                                width=70,
+                                hint="-q",
+                            )
+                            self._hover_tip(
+                                small_quality,
+                                "The -q quality value used for files below the MB cutoff. "
+                                "This replaces the normal Video quality value.",
+                            )
+                            small_framerate = dpg.add_input_text(
+                                tag=self.TAG_SMALL_FRAMERATE,
+                                default_value=self.settings.small_file_framerate,
+                                width=70,
+                                hint="-r",
+                            )
+                            self._hover_tip(
+                                small_framerate,
+                                "Optional -r frame rate used for files below the MB cutoff. "
+                                "Blank falls back to the normal Frame rate value.",
+                            )
 
                         dpg.add_spacer(height=4)
                         dpg.add_text("Frame range (optional)", color=(150, 158, 175))
                         with dpg.group(horizontal=True):
-                            dpg.add_input_text(tag=self.TAG_FRAME_START, default_value=self.settings.frame_range_start, width=90, hint="start")
-                            dpg.add_input_text(tag=self.TAG_FRAME_END, default_value=self.settings.frame_range_end, width=90, hint="end")
+                            frame_start = dpg.add_input_text(
+                                tag=self.TAG_FRAME_START,
+                                default_value=self.settings.frame_range_start,
+                                width=90,
+                                hint="start",
+                            )
+                            self._hover_tip(
+                                frame_start,
+                                "Optional first frame to encode (zero-based). Blank starts at the beginning.",
+                            )
+                            frame_end = dpg.add_input_text(
+                                tag=self.TAG_FRAME_END,
+                                default_value=self.settings.frame_range_end,
+                                width=90,
+                                hint="end",
+                            )
+                            self._hover_tip(
+                                frame_end,
+                                "Optional last frame to encode (inclusive). Blank continues to the end.",
+                            )
 
                         dpg.add_spacer(height=4)
                         dpg.add_text("Output container", color=(150, 158, 175))
