@@ -24,7 +24,9 @@ from handbrake_logic import (
     run_encode,
     ValidationError,
     _delete_only_list_file,
+    CONFIG_DIR,
 )
+from dpg_splitter import PanelSplitter
 
 OUTPUT_WRAP_WIDTH = 100
 
@@ -136,6 +138,7 @@ def run_gui(
             self._log_queue: queue.Queue[tuple[str, bool]] = queue.Queue()
             self._output_lines: list[str] = []
             self._auto_scroll_output = False
+            self._splitter = PanelSplitter("panel_actions", left_width=380, min_left=320, min_right=240, config_dir=CONFIG_DIR)
 
             self.settings = config_load_settings()
             self._preset_rows = list_preset_json_files()
@@ -201,6 +204,8 @@ def run_gui(
                     dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (40, 68, 82))
                     dpg.add_theme_color(dpg.mvThemeCol_Border, (72, 168, 190))
 
+            self._splitter.build_theme()
+
             dpg.bind_theme("app_theme")
 
         def _build_fonts(self) -> None:
@@ -221,7 +226,7 @@ def run_gui(
             dpg.add_spacer(height=6)
 
             with dpg.group(horizontal=True):
-                with dpg.child_window(width=380, height=-1, border=True, tag="panel_actions"):
+                with dpg.child_window(width=self._splitter.left_width, height=-1, border=True, tag="panel_actions"):
                     dpg.bind_item_theme("panel_actions", "theme_actions_panel")
                     with dpg.child_window(width=-1, height=140, border=True, tag="panel_files"):
                         dpg.add_text("Selected files", color=(150, 158, 175))
@@ -291,6 +296,8 @@ def run_gui(
                         dpg.add_spacer(height=8)
                         encode_btn = dpg.add_button(label="Encode", callback=self._run_encode, width=-1, height=28)
                         dpg.bind_item_theme(encode_btn, "theme_encode_btn")
+
+                self._splitter.add_handle()
 
                 with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
                     dpg.bind_item_theme("panel_output", "theme_output_panel")
@@ -510,6 +517,7 @@ def run_gui(
                 while dpg.is_dearpygui_running():
                     self._drain_log_queue()
                     self._poll_job()
+                    self._splitter.update()
                     dpg.render_dearpygui_frame()
                     dpg.run_callbacks(dpg.get_callback_queue())
                     if self._auto_scroll_output:

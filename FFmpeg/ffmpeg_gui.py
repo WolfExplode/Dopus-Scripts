@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from ffmpeg_logic import *
+from dpg_splitter import PanelSplitter
 
 OUTPUT_WRAP_WIDTH = 100
 
@@ -138,6 +139,7 @@ def run_gui(
             self._log_queue: queue.Queue[tuple[str, bool]] = queue.Queue()
             self._output_lines: list[str] = []
             self._auto_scroll_output: bool = False
+            self._splitter = PanelSplitter("panel_actions", left_width=400, min_left=340, min_right=240, config_dir=CONFIG_DIR)
             self.settings = config_load_settings()
             files_default = build_initial_files_text(
                 self.settings.files_text, initial_only_list, initial_only_files
@@ -206,6 +208,8 @@ def run_gui(
                     dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (40, 68, 82))
                     dpg.add_theme_color(dpg.mvThemeCol_Border, (72, 168, 190))
 
+            self._splitter.build_theme()
+
             dpg.bind_theme("app_theme")
 
         def _build_fonts(self) -> None:
@@ -245,7 +249,7 @@ def run_gui(
             dpg.add_spacer(height=6)
 
             with dpg.group(horizontal=True):
-                with dpg.child_window(width=400, height=-1, border=True, tag="panel_actions"):
+                with dpg.child_window(width=self._splitter.left_width, height=-1, border=True, tag="panel_actions"):
                     dpg.bind_item_theme("panel_actions", "theme_actions_panel")
 
                     hdr_files = self._section(
@@ -314,7 +318,12 @@ def run_gui(
                                 ("90° CW", "rotatecw"), ("90° CCW", "rotateccw"),
                                 ("Flip H", "fliph"), ("Flip V", "flipv"),
                             ):
-                                btn = dpg.add_button(label=label, callback=lambda s, a=act: self._run(a), width=88)
+                                btn = dpg.add_button(
+                                    label=label,
+                                    callback=lambda s, a, u: self._run(u),
+                                    user_data=act,
+                                    width=88,
+                                )
                                 dpg.bind_item_theme(btn, self._theme_apply)
 
                     hdr_trim = self._section(
@@ -414,6 +423,8 @@ def run_gui(
                             "Copy chapter list for YouTube video description.\n"
                             "Paste into the description field when uploading.",
                         )
+
+                self._splitter.add_handle()
 
                 with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
                     dpg.bind_item_theme("panel_output", "theme_output_panel")
@@ -700,6 +711,7 @@ def run_gui(
                 while dpg.is_dearpygui_running():
                     self._drain_log_queue()
                     self._poll_job()
+                    self._splitter.update()
                     dpg.render_dearpygui_frame()
                     dpg.run_callbacks(dpg.get_callback_queue())
                     if self._auto_scroll_output:
