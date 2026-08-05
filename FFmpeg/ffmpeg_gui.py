@@ -128,6 +128,7 @@ def run_gui(
         TAG_TRIM = "trim_frames_input"
         TAG_REPLACE = "replace_video_check"
         TAG_MERGE_CONTAINER = "merge_container_combo"
+        TAG_MONO_CHANNEL = "mono_channel_combo"
         TAG_OUTPUT = "output_text"
 
         def __init__(self) -> None:
@@ -378,6 +379,20 @@ def run_gui(
                             hdr_audio, "Discard audio", "discardaud",
                             "Remove audio streams; video copied in place (lossless).",
                         )
+                        with dpg.group(horizontal=True, parent=hdr_audio):
+                            dpg.add_text("Channel", color=(150, 158, 175))
+                            mono_ch_combo = dpg.add_combo(
+                                tag=self.TAG_MONO_CHANNEL,
+                                items=list(MONO_CHANNELS),
+                                default_value=self.settings.mono_channel,
+                                width=100,
+                            )
+                        self._hover_tip(
+                            mono_ch_combo,
+                            "auto = downmix all channels to mono.\n"
+                            "1-8 = keep only that source channel (1=L, 2=R, ...); "
+                            "falls back to downmix if the file has fewer channels.",
+                        )
                         self._action_button(hdr_audio, "Audio → mono", "mono", "Re-encode audio to mono, copy video.")
                         self._action_button(
                             hdr_audio, "Split/combine Audio/Video", "splitav",
@@ -484,6 +499,7 @@ def run_gui(
                 last_action=self.settings.last_action,
                 replace_video_with_image=bool(dpg.get_value(self.TAG_REPLACE)),
                 merge_container=str(dpg.get_value(self.TAG_MERGE_CONTAINER)) or "auto",
+                mono_channel=str(dpg.get_value(self.TAG_MONO_CHANNEL)) or "auto",
                 trim_frames=str(dpg.get_value(self.TAG_TRIM)).strip() or "1",
                 files_text=str(dpg.get_value(self.TAG_FILES)),
                 gui_sections=sections,

@@ -135,7 +135,7 @@ function getSettingsPath(shell) {
 }
 
 function loadSettings(shell, fso) {
-    var out = { mode: 0, cookies: 0, metadata: 0, dateprefix: 1, fileprefix: "", overwrite: 0, update: 0, keepps: 0, mp4container: 0 };
+    var out = { mode: 0, cookies: 0, metadata: 0, dateprefix: 1, fileprefix: "", overwrite: 0, update: 0, keepps: 0, mp4container: 0, impersonate: 0, nocookies: 0 };
     try {
         var path = getSettingsPath(shell);
         if (fso.FileExists(path)) {
@@ -167,6 +167,8 @@ function loadSettings(shell, fso) {
                         var mp4v = parseInt(val, 10);
                         out.mp4container = (mp4v === 0) ? 0 : 1;
                     }
+                    else if (key === "impersonate") out.impersonate = parseInt(val, 10) || 0;
+                    else if (key === "nocookies") out.nocookies = parseInt(val, 10) || 0;
                 }
             }
         }
@@ -174,7 +176,7 @@ function loadSettings(shell, fso) {
     return out;
 }
 
-function saveSettings(shell, fso, mode, cookies, metadata, dateprefix, fileprefix, overwrite, update, keepps, mp4container) {
+function saveSettings(shell, fso, mode, cookies, metadata, dateprefix, fileprefix, overwrite, update, keepps, mp4container, impersonate, nocookies) {
     try {
         var path = getSettingsPath(shell);
         var stream = fso.OpenTextFile(path, 2, true);
@@ -187,6 +189,8 @@ function saveSettings(shell, fso, mode, cookies, metadata, dateprefix, fileprefi
         stream.WriteLine("update=" + update);
         stream.WriteLine("keepps=" + keepps);
         stream.WriteLine("mp4container=" + mp4container);
+        stream.WriteLine("impersonate=" + impersonate);
+        stream.WriteLine("nocookies=" + nocookies);
         stream.Close();
     } catch (e) { /* ignore */ }
 }
@@ -225,6 +229,8 @@ function OnClick(clickData) {
     var doUpdate;
     var keepPsOpen;
     var mp4Container;
+    var useImpersonate;
+    var noCookies;
 
     if (skipUi) {
         var savedQuick = loadSettings(shell, fso);
@@ -238,6 +244,8 @@ function OnClick(clickData) {
         doUpdate = (savedQuick.update === 1);
         keepPsOpen = (savedQuick.keepps === 1);
         mp4Container = (savedQuick.mp4container === 1);
+        useImpersonate = (savedQuick.impersonate === 1);
+        noCookies = (savedQuick.nocookies === 1);
 
         if (!finalUrl) {
             shell.Popup("No URL in clipboard. Ctrl+click uses saved settings and the clipboard URL.", 0, "yt-dlp", 48);
@@ -267,6 +275,8 @@ function OnClick(clickData) {
         dlg.control("update_check").value = (saved.update === 1);
         dlg.control("keepps_check").value = (saved.keepps === 1);
         dlg.control("mp4_check").value = (saved.mp4container === 1);
+        dlg.control("impersonate_check").value = (saved.impersonate === 1);
+        dlg.control("nocookies_check").value = (saved.nocookies === 1);
 
         dlg.Show();
 
@@ -294,13 +304,15 @@ function OnClick(clickData) {
         doUpdate = dlg.control("update_check").value;
         keepPsOpen = dlg.control("keepps_check").value;
         mp4Container = dlg.control("mp4_check").value;
+        useImpersonate = dlg.control("impersonate_check").value;
+        noCookies = dlg.control("nocookies_check").value;
 
         if (!finalUrl) {
             shell.Popup("No URL provided.", 0, "yt-dlp", 48);
             return;
         }
 
-        saveSettings(shell, fso, isAudio ? 0 : 1, useCookies ? 1 : 0, includeMetadata ? 1 : 0, datePrefix ? 1 : 0, trimStr(filePrefixRaw), allowOverwrite ? 1 : 0, doUpdate ? 1 : 0, keepPsOpen ? 1 : 0, mp4Container ? 1 : 0);
+        saveSettings(shell, fso, isAudio ? 0 : 1, useCookies ? 1 : 0, includeMetadata ? 1 : 0, datePrefix ? 1 : 0, trimStr(filePrefixRaw), allowOverwrite ? 1 : 0, doUpdate ? 1 : 0, keepPsOpen ? 1 : 0, mp4Container ? 1 : 0, useImpersonate ? 1 : 0, noCookies ? 1 : 0);
     }
 
     var filePrefixEsc = escapeYtdlpOutputPrefix(filePrefixRaw);
@@ -309,6 +321,10 @@ function OnClick(clickData) {
     var overwriteArg = allowOverwrite ? " --force-overwrites" : " --no-overwrites";
     // Lets yt-dlp download EJS solver scripts (needed for YouTube + Deno / JS challenges; see yt-dlp wiki EJS)
     var ejsArg = " --remote-components ejs:github";
+    // Spoofs Chrome's TLS/HTTP fingerprint (requires curl_cffi); helps dodge bot-detection blocks
+    var impersonateArg = useImpersonate ? " --impersonate chrome" : "";
+    // Explicitly disables cookie use, overriding any cookies configured in yt-dlp's own config file
+    var noCookiesArg = noCookies ? " --no-cookies" : "";
     var metaAudio = " --extract-audio --audio-format best --add-metadata --embed-thumbnail --embed-subs --parse-metadata \":(?P<chapters>)\"";
     var metaVideo = " --add-metadata --embed-thumbnail --write-auto-subs --embed-subs";
     var videoMp4Args = (mp4Container && !isAudio) ? " --merge-output-format mp4 --remux-video mp4" : "";
@@ -328,16 +344,20 @@ function OnClick(clickData) {
                + ' -f bestaudio'
                + overwriteArg
                + ejsArg
+               + impersonateArg
+               + noCookiesArg
                + (includeMetadata ? metaAudio : "");
     } else {
         ytArgsBody = "-o " + outTemplate
                + overwriteArg
                + ejsArg
+               + impersonateArg
+               + noCookiesArg
                + videoMp4Args
                + (includeMetadata ? metaVideo : "");
     }
 
-    var ytArgsFirst = ytArgsBody + (useCookies ? cookiesFromBrowser : "");
+    var ytArgsFirst = ytArgsBody + ((useCookies && !noCookies) ? cookiesFromBrowser : "");
 
     // Unique suffix so concurrent invocations never clobber each other's temp files.
     var runId = String((new Date()).getTime()) + "_" + String(Math.floor(Math.random() * 1000000));
@@ -347,7 +367,13 @@ function OnClick(clickData) {
     try {
         // unicode=true: UTF-16LE + BOM so non-ANSI paths / pasted text do not break WriteLine
         var ps1 = fso.CreateTextFile(tempPs1, true, true);
-        ps1.WriteLine("Set-Location '" + escapePsSingleQuoted(oneLine(destPath)) + "'");
+        ps1.WriteLine("$_dest = '" + escapePsSingleQuoted(oneLine(destPath)) + "'");
+        ps1.WriteLine("if (-not (Test-Path -LiteralPath $_dest)) {");
+        ps1.WriteLine("    Write-Host \"ERROR: Destination folder does not exist: $_dest\" -ForegroundColor Red");
+        ps1.WriteLine("    Read-Host 'Press Enter to close'");
+        ps1.WriteLine("    exit 1");
+        ps1.WriteLine("}");
+        ps1.WriteLine("Set-Location -LiteralPath $_dest");
         writeConsoleWindowBottomRight(ps1);
         writeYtdlpFinder(ps1);
         if (doUpdate) {
@@ -359,7 +385,7 @@ function OnClick(clickData) {
         ps1.WriteLine("$_urlf = '" + escapePsSingleQuoted(tempUrl) + "'");
         ps1.WriteLine("[System.IO.File]::WriteAllText($_urlf, '" + escapePsSingleQuoted(oneLine(finalUrl)) + "', [System.Text.Encoding]::UTF8)");
         ps1.WriteLine("& $_yt " + ytArgsFirst + " --batch-file $_urlf");
-        if (useCookies) {
+        if (useCookies && !noCookies) {
             ps1.WriteLine("$code = $LASTEXITCODE");
             ps1.WriteLine("if ($code -ne 0) {");
             ps1.WriteLine("    Write-Host ''");
@@ -384,7 +410,7 @@ function OnClick(clickData) {
 
     DOpus.Output("yt-dlp | URL: " + finalUrl);
     DOpus.Output("yt-dlp | Dest: " + destPath);
-    DOpus.Output("yt-dlp | Mode: " + (isAudio ? "Audio" : "Video") + (isAudio ? "" : (" | MP4 container: " + mp4Container)) + " | Metadata: " + includeMetadata + " | Date prefix: " + datePrefix + " | File prefix: " + (trimStr(filePrefixRaw) ? trimStr(filePrefixRaw) : "(none)") + " | Cookies: " + useCookies + " | Overwrite: " + allowOverwrite + " | Update check: " + doUpdate + " | Keep PS: " + keepPsOpen + " | UI: " + (skipUi ? "skipped (Ctrl)" : "dialog"));
+    DOpus.Output("yt-dlp | Mode: " + (isAudio ? "Audio" : "Video") + (isAudio ? "" : (" | MP4 container: " + mp4Container)) + " | Metadata: " + includeMetadata + " | Date prefix: " + datePrefix + " | File prefix: " + (trimStr(filePrefixRaw) ? trimStr(filePrefixRaw) : "(none)") + " | Cookies: " + useCookies + " | Overwrite: " + allowOverwrite + " | Update check: " + doUpdate + " | Keep PS: " + keepPsOpen + " | Impersonate Chrome: " + useImpersonate + " | No cookies: " + noCookies + " | UI: " + (skipUi ? "skipped (Ctrl)" : "dialog"));
 
     var psCmd = keepPsOpen
         ? 'powershell -NoExit -ExecutionPolicy Bypass -File "' + tempPs1 + '"'

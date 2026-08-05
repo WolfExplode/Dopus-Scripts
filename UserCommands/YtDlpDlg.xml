@@ -1,6 +1,6 @@
 <resources>
   <resource name="YtDlpDlg" type="dialog">
-    <dialog fontsize="9" height="260" lang="english" title="yt-dlp Downloader" width="430">
+    <dialog fontsize="9" height="296" lang="english" title="yt-dlp Downloader" width="430">
 
       <!-- URL -->
       <control halign="left" height="10" name="url_label" title="URL:" type="static" width="30" x="12" y="12"/>
@@ -27,18 +27,24 @@
       <!-- Cookies -->
       <control height="12" name="cookies_check" title="Use Firefox cookies (--cookies-from-browser firefox)" type="check" width="390" x="12" y="148"/>
 
+      <!-- No cookies -->
+      <control height="12" name="nocookies_check" title="Disable cookies (--no-cookies; overrides any configured cookies)" type="check" width="406" x="12" y="166"/>
+
       <!-- Overwrite -->
-      <control height="12" name="overwrite_check" title="Overwrite if file already exists (--force-overwrites)" type="check" width="406" x="12" y="166"/>
+      <control height="12" name="overwrite_check" title="Overwrite if file already exists (--force-overwrites)" type="check" width="406" x="12" y="184"/>
 
       <!-- Update -->
-      <control height="12" name="update_check" title="Update yt-dlp if not latest (pip install --upgrade yt-dlp)" type="check" width="406" x="12" y="184"/>
+      <control height="12" name="update_check" title="Update yt-dlp if not latest (pip install --upgrade yt-dlp)" type="check" width="406" x="12" y="202"/>
 
       <!-- PowerShell -->
-      <control height="12" name="keepps_check" title="Keep PowerShell window open when finished (-NoExit)" type="check" width="406" x="12" y="202"/>
+      <control height="12" name="keepps_check" title="Keep PowerShell window open when finished (-NoExit)" type="check" width="406" x="12" y="220"/>
+
+      <!-- Impersonate -->
+      <control height="12" name="impersonate_check" title="Impersonate Chrome (--impersonate chrome; helps bypass bot detection)" type="check" width="406" x="12" y="238"/>
 
       <!-- Buttons -->
-      <control close="1" default="yes" height="18" name="ok_btn" title="Download" type="button" width="80" x="258" y="222"/>
-      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="352" y="222"/>
+      <control close="1" default="yes" height="18" name="ok_btn" title="Download" type="button" width="80" x="258" y="258"/>
+      <control close="2" height="18" name="cancel_btn" title="Cancel" type="button" width="66" x="352" y="258"/>
 
     </dialog>
   </resource>

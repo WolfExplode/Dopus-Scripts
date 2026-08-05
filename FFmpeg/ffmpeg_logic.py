@@ -59,6 +59,7 @@ LAST_ACTIONS = (
 DEFAULT_LAST_ACTION = "convert"
 
 MERGE_CONTAINERS: tuple[str, ...] = ("auto", ".mp4", ".mkv")
+MONO_CHANNELS: tuple[str, ...] = ("auto", "1", "2", "3", "4", "5", "6", "7", "8")
 
 GUI_SECTION_DEFAULTS: dict[str, bool] = {
     "files": True,
@@ -125,6 +126,7 @@ class Settings:
     files_text: str = ""
     merge_fix_outliers: bool = True
     merge_container: str = "auto"
+    mono_channel: str = "auto"
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
 
@@ -296,6 +298,9 @@ def config_load_settings() -> Settings:
     merge_container = str(data.get("merge_container") or "auto")
     if merge_container not in MERGE_CONTAINERS:
         merge_container = "auto"
+    mono_channel = str(data.get("mono_channel") or "auto")
+    if mono_channel not in MONO_CHANNELS:
+        mono_channel = "auto"
     return Settings(
         mode=int(data.get("mode", 0) or 0),
         format_name=str(data.get("format_name") or ""),
@@ -306,6 +311,7 @@ def config_load_settings() -> Settings:
         files_text=str(data.get("files_text") or ""),
         merge_fix_outliers=bool(data.get("merge_fix_outliers", True)),
         merge_container=merge_container,
+        mono_channel=mono_channel,
         gui_sections=gui_sections,
     )
 
@@ -324,6 +330,7 @@ def config_save_settings(
     data["files_text"] = settings.files_text
     data["merge_fix_outliers"] = settings.merge_fix_outliers
     data["merge_container"] = settings.merge_container
+    data["mono_channel"] = settings.mono_channel
     data["gui_sections"] = settings.gui_sections
     if last_action:
         if last_action in LAST_ACTIONS:
@@ -1553,20 +1560,20 @@ def split_cover_from_media(media_path: Path, log: list[str]) -> str:
     return "ok"
 
 
-def mono_audio_encode_args(ext: str) -> str:
+def mono_audio_codec_args(ext: str) -> str:
     if ext == ".webm":
-        return "libopus -ac 1 -b:a 128k"
+        return "libopus -b:a 128k"
     if ext == ".avi":
-        return "libmp3lame -ac 1 -b:a 192k"
+        return "libmp3lame -b:a 192k"
     if ext == ".wmv":
-        return "wmav2 -ac 1 -b:a 128k"
+        return "wmav2 -b:a 128k"
     if ext in (".ogv", ".ogm"):
-        return "libvorbis -ac 1 -b:a 192k"
+        return "libvorbis -b:a 192k"
     if ext in (".flv", ".f4v"):
-        return "aac -ac 1 -b:a 192k"
+        return "aac -b:a 192k"
     if ext in (".mpg", ".mpeg", ".mpe", ".m1v", ".vob"):
-        return "mp2 -ac 1 -b:a 192k"
-    return "aac -ac 1 -b:a 192k"
+        return "mp2 -b:a 192k"
+    return "aac -b:a 192k"
 
 
 def video_encode_for_transform(ext: str) -> str:
@@ -2095,7 +2102,7 @@ def run_discard_audio(paths: list[Path]) -> ActionResult:
     return ActionResult(fail == 0 or ok > 0, summary, log)
 
 
-def run_audio_to_mono(paths: list[Path]) -> ActionResult:
+def run_audio_to_mono(paths: list[Path], channel: str = "auto") -> ActionResult:
     log = _job_log()
     videos = [p for p in paths if is_thumb_video(p.name)]
     if not videos:
@@ -2104,18 +2111,43 @@ def run_audio_to_mono(paths: list[Path]) -> ActionResult:
         bad = [p.name for p in paths if not is_thumb_video(p.name)]
         return ActionResult(False, f"Not supported video file(s): {', '.join(bad)}", log)
 
+    want_ch = -1
+    if channel and channel != "auto":
+        try:
+            want_ch = int(channel)
+        except ValueError:
+            want_ch = -1
+
     ok = fail = 0
     for vid in videos:
         ext = file_ext_lower(vid.name)
         tmp = vid.parent / f"{vid.stem}.__opus_mono_tmp{ext}"
         bak = vid.parent / f"{vid.stem}.__opus_mono_orig{ext}"
-        a_enc = mono_audio_encode_args(ext)
+        a_enc = mono_audio_codec_args(ext)
         _safe_delete(tmp)
         _safe_delete(bak)
-        cmd = (
-            f"ffmpeg.exe -y -i {_quote(vid)} -map_metadata 0 -map_chapters 0 -map 0 "
-            f"-c copy -c:a {a_enc} {_quote(tmp)}"
-        )
+
+        src_ch = -1
+        if want_ch > 0:
+            src_ch = probe_audio_channel_count(vid)
+
+        if want_ch > 0 and src_ch >= want_ch:
+            cmd = (
+                f"ffmpeg.exe -y -i {_quote(vid)} -map_metadata 0 -map_chapters 0 "
+                f"-map 0:v -map 0:s? -filter_complex \"[0:a:0]pan=mono|c0=c{want_ch - 1}[aout]\" "
+                f"-map \"[aout]\" -c copy -c:a {a_enc} {_quote(tmp)}"
+            )
+        else:
+            if want_ch > 0:
+                log.append(
+                    f"Audio to mono: {vid.name} has {src_ch if src_ch > 0 else '?'} "
+                    f"channel(s), channel {want_ch} unavailable, downmixing instead."
+                )
+            cmd = (
+                f"ffmpeg.exe -y -i {_quote(vid)} -map_metadata 0 -map_chapters 0 -map 0 "
+                f"-c copy -c:a {a_enc} -ac 1 {_quote(tmp)}"
+            )
+
         if _run_cmd(cmd, log) != 0 or not tmp.is_file():
             fail += 1
             continue
@@ -2517,7 +2549,7 @@ def _run_action_impl(
     if action == "discardaud":
         return run_discard_audio(paths)
     if action == "mono":
-        return run_audio_to_mono(paths)
+        return run_audio_to_mono(paths, settings.mono_channel)
     if action == "splitav":
         return run_split_av_copy(paths)
     if action == "splitch":
