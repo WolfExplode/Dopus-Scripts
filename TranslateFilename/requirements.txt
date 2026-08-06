@@ -1,0 +1,3 @@
+dearpygui
+DearPyGui-DragAndDrop
+requests
