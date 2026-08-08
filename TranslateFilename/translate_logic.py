@@ -1,4 +1,4 @@
-"""Translate file names to English via the DeepSeek API, with batch rename support."""
+"""Translate file names to English via the DeepSeek or Kimi API, with batch rename support."""
 
 from __future__ import annotations
 
@@ -9,7 +9,28 @@ from pathlib import Path
 from typing import Optional
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-DEFAULT_MODEL = "deepseek-chat"
+KIMI_API_URL = "https://api.moonshot.ai/v1/chat/completions"
+
+PROVIDERS = {
+    "deepseek": {
+        "label": "DeepSeek",
+        "url": DEEPSEEK_API_URL,
+        "default_model": "deepseek-chat",  # deepseek-reasoner is the smarter/slower alternative
+        "env_key": "DEEPSEEK_API_KEY",
+    },
+    "kimi": {
+        "label": "Kimi",
+        "url": KIMI_API_URL,
+        "default_model": "kimi-k3",
+        "env_key": "KIMI_API_KEY",
+    },
+}
+DEFAULT_PROVIDER = "kimi" #deepseek #kimi
+DEFAULT_MODEL = PROVIDERS[DEFAULT_PROVIDER]["default_model"]
+
+
+def default_model_for(provider: str) -> str:
+    return PROVIDERS.get(provider, PROVIDERS[DEFAULT_PROVIDER])["default_model"]
 
 MAX_NAME_LEN = 255  # Windows NTFS filename-component limit.
 
@@ -48,11 +69,16 @@ INVALID_FILENAME_CHARS = '<>:"/\\|?*'
 
 @dataclass
 class Settings:
-    api_key: str = ""
+    provider: str = DEFAULT_PROVIDER
+    api_key: str = ""  # DeepSeek key
+    kimi_api_key: str = ""
     model: str = DEFAULT_MODEL
     auto_rename: bool = False
     append_mode: bool = False
     inputs_text: str = ""
+
+    def active_api_key(self) -> str:
+        return self.kimi_api_key if self.provider == "kimi" else self.api_key
 
 
 @dataclass
@@ -98,10 +124,16 @@ def config_write(data: dict) -> None:
 
 def config_load_settings() -> Settings:
     data = config_read()
+    provider = str(data.get("provider") or DEFAULT_PROVIDER)
+    if provider not in PROVIDERS:
+        provider = DEFAULT_PROVIDER
     api_key = str(data.get("api_key") or os.environ.get("DEEPSEEK_API_KEY") or "")
-    model = str(data.get("model") or DEFAULT_MODEL) or DEFAULT_MODEL
+    kimi_api_key = str(data.get("kimi_api_key") or os.environ.get("KIMI_API_KEY") or "")
+    model = str(data.get("model") or default_model_for(provider)) or default_model_for(provider)
     return Settings(
+        provider=provider,
         api_key=api_key,
+        kimi_api_key=kimi_api_key,
         model=model,
         auto_rename=bool(data.get("auto_rename")),
         append_mode=bool(data.get("append_mode")),
@@ -111,7 +143,9 @@ def config_load_settings() -> Settings:
 
 def config_save_settings(settings: Settings) -> None:
     data = config_read()
+    data["provider"] = settings.provider
     data["api_key"] = settings.api_key
+    data["kimi_api_key"] = settings.kimi_api_key
     data["model"] = settings.model
     data["auto_rename"] = settings.auto_rename
     data["append_mode"] = settings.append_mode
@@ -211,7 +245,7 @@ def build_output_filename(
 
 
 # ---------------------------------------------------------------------------
-# DeepSeek API
+# LLM API (DeepSeek / Kimi — both OpenAI-compatible chat/completions)
 # ---------------------------------------------------------------------------
 
 def _clean_json_content(text: str) -> str:
@@ -223,25 +257,31 @@ def _clean_json_content(text: str) -> str:
     return s.strip()
 
 
-def call_deepseek_translate(
-    name: str, api_key: str, model: str
+def call_llm_translate(
+    name: str, provider: str, api_key: str, model: str
 ) -> tuple[Optional[dict], Optional[str]]:
+    info = PROVIDERS.get(provider, PROVIDERS[DEFAULT_PROVIDER])
+    label = info["label"]
     if not api_key.strip():
-        return None, "DeepSeek API key is not set."
+        return None, f"{label} API key is not set."
     if not name.strip():
         return None, "Nothing to translate."
 
     import requests
 
+    resolved_model = model or info["default_model"]
+    # kimi-k3 is a reasoning model that only accepts temperature=1.
+    temperature = 1 if resolved_model.startswith("kimi-k3") else 0.3
+
     payload = {
-        "model": model or DEFAULT_MODEL,
+        "model": resolved_model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": FEWSHOT_USER},
             {"role": "assistant", "content": FEWSHOT_ASSISTANT},
             {"role": "user", "content": name},
         ],
-        "temperature": 0.3,
+        "temperature": temperature,
         "stream": False,
         "response_format": {"type": "json_object"},
     }
@@ -251,9 +291,9 @@ def call_deepseek_translate(
     }
 
     try:
-        resp = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=30)
+        resp = requests.post(info["url"], json=payload, headers=headers, timeout=30)
     except requests.RequestException as exc:
-        return None, f"Network error contacting DeepSeek: {exc}"
+        return None, f"Network error contacting {label}: {exc}"
 
     if resp.status_code != 200:
         detail = ""
@@ -261,28 +301,28 @@ def call_deepseek_translate(
             detail = resp.json().get("error", {}).get("message", "")
         except (ValueError, AttributeError):
             detail = resp.text[:200]
-        return None, f"DeepSeek API error {resp.status_code}: {detail}".strip()
+        return None, f"{label} API error {resp.status_code}: {detail}".strip()
 
     try:
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError):
-        return None, "Unexpected response from DeepSeek API."
+        return None, f"Unexpected response from {label} API."
 
     try:
         parsed = json.loads(_clean_json_content(content))
     except (ValueError, TypeError):
-        return None, "DeepSeek returned malformed JSON."
+        return None, f"{label} returned malformed JSON."
 
     translation = str(parsed.get("translation") or "").strip()
     text_only = str(parsed.get("text_only") or "").strip()
     if not translation:
-        return None, "DeepSeek returned an empty translation."
+        return None, f"{label} returned an empty translation."
     return {"translation": translation, "text_only": text_only}, None
 
 
 def translate_name(name: str, settings: Settings) -> TranslateResult:
-    data, err = call_deepseek_translate(name, settings.api_key, settings.model)
+    data, err = call_llm_translate(name, settings.provider, settings.active_api_key(), settings.model)
     if err:
         return TranslateResult(ok=False, original=name, error=err)
     return TranslateResult(
@@ -297,6 +337,14 @@ def translate_name(name: str, settings: Settings) -> TranslateResult:
 # Rename / untranslate operations
 # ---------------------------------------------------------------------------
 
+def _long_path(path: Path) -> str:
+    """Prefix with \\\\?\\ so Windows accepts paths beyond MAX_PATH (260 chars)."""
+    s = os.fspath(path.resolve())
+    if os.name == "nt" and not s.startswith("\\\\?\\"):
+        s = "\\\\?\\" + s
+    return s
+
+
 def rename_file_apply(path: Path, new_name: str) -> tuple[Optional[Path], Optional[str]]:
     if not path.exists():
         return None, "File or folder not found."
@@ -306,7 +354,7 @@ def rename_file_apply(path: Path, new_name: str) -> tuple[Optional[Path], Option
     if new_path.exists():
         return None, f"Target already exists: {new_name}"
     try:
-        path.rename(new_path)
+        os.rename(_long_path(path), _long_path(new_path))
     except OSError as exc:
         return None, f"Rename failed: {exc}"
     record_rename(path, new_path)
@@ -329,7 +377,7 @@ def untranslate_file(path: Path) -> tuple[Optional[Path], Optional[str]]:
     if new_path.exists():
         return None, f"Cannot revert — target already exists: {original_name}"
     try:
-        path.rename(new_path)
+        os.rename(_long_path(path), _long_path(new_path))
     except OSError as exc:
         return None, f"Revert failed: {exc}"
     record_untranslate(path)
@@ -411,7 +459,7 @@ def build_initial_inputs_text(
 def run_cli(argv: list[str]) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Translate file names to English via DeepSeek.")
+    parser = argparse.ArgumentParser(description="Translate file names to English via DeepSeek or Kimi.")
     parser.add_argument("--gui", action="store_true", help="Open Dear PyGui GUI.")
     parser.add_argument("--only-list", metavar="FILE", help="UTF-8 file, one path per line.")
     parser.add_argument("--only-file", action="append", default=[], metavar="PATH")

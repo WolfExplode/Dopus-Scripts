@@ -217,7 +217,18 @@ function OnClick(clickData) {
         } catch (eRf) {}
 
         if (rc !== 0) {
-            shell.Popup(trimStr(output) || "Some files failed to translate.", 0, "Translate Filename — failures", 48);
+            var failureLines = [];
+            var lines = trimStr(output).split(/\r?\n/);
+            var li;
+            for (li = 0; li < lines.length; li++) {
+                if (lines[li].indexOf(": ERROR - ") >= 0) {
+                    failureLines.push(lines[li]);
+                }
+            }
+            var failureMsg = failureLines.length > 0
+                ? failureLines.join("\n")
+                : (trimStr(output) || "Some files failed to translate.");
+            shell.Popup(failureMsg, 0, "Translate Filename — failures", 48);
         }
         return;
     }

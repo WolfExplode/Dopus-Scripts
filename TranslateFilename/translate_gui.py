@@ -10,17 +10,27 @@ from pathlib import Path
 from typing import Optional
 
 from translate_logic import (
+    DEFAULT_PROVIDER,
+    PROVIDERS,
     Settings,
     build_initial_inputs_text,
     build_output_filename,
     config_load_settings,
     config_save_settings,
+    default_model_for,
     dedupe_lines,
     forget_all_history,
     rename_file_apply,
     translate_name,
     untranslate_file,
 )
+
+_PROVIDER_LABELS = [info["label"] for info in PROVIDERS.values()]
+_LABEL_TO_PROVIDER = {info["label"]: key for key, info in PROVIDERS.items()}
+
+
+def _provider_label(provider: str) -> str:
+    return PROVIDERS.get(provider, PROVIDERS[DEFAULT_PROVIDER])["label"]
 
 
 def _windows_fonts_dir() -> Path:
@@ -174,7 +184,9 @@ def run_gui(
     class App:
         TAG_INPUTS = "inputs_text"
         TAG_ENTRIES_PANEL = "entries_panel"
+        TAG_PROVIDER = "provider_input"
         TAG_API_KEY = "api_key_input"
+        TAG_KIMI_API_KEY = "kimi_api_key_input"
         TAG_MODEL = "model_input"
         TAG_AUTO_RENAME = "auto_rename_check"
         TAG_APPEND_MODE = "append_mode_check"
@@ -345,7 +357,7 @@ def run_gui(
 
         def _build_layout(self, inputs_default: str) -> None:
             dpg.add_text("Translate Filename", tag="title_main", color=(120, 200, 220))
-            dpg.add_text("Batch translate file names to English via DeepSeek", color=(130, 138, 155))
+            dpg.add_text("Batch translate file names to English via DeepSeek or Kimi", color=(130, 138, 155))
             dpg.add_spacer(height=8)
 
             dpg.add_text("Inputs", color=(150, 158, 175))
@@ -377,16 +389,31 @@ def run_gui(
                 dpg.bind_item_theme(btn_t, "theme_apply")
                 btn_a = dpg.add_button(label="Rename", tag=self.TAG_APPLY_BTN, callback=self._on_apply, width=140)
                 btn_u = dpg.add_button(label="Rename to Original", tag=self.TAG_UNTRANSLATE_BTN, callback=self._on_untranslate, width=140)
-            self._hover_tip(btn_t, "Translate every new/changed entry via DeepSeek.")
+            self._hover_tip(btn_t, "Translate every new/changed entry via the selected provider.")
             self._hover_tip(btn_a, "Rename every entry's file on disk using its current translation.")
             self._hover_tip(btn_u, "Revert every entry's file back to its original name.")
             dpg.add_spacer(height=8)
 
-            with dpg.collapsing_header(label="Settings", default_open=not self.settings.api_key):
+            with dpg.collapsing_header(label="Settings", default_open=not self.settings.active_api_key()):
+                dpg.add_text("Provider", color=(150, 158, 175))
+                dpg.add_combo(
+                    tag=self.TAG_PROVIDER,
+                    items=_PROVIDER_LABELS,
+                    default_value=_provider_label(self.settings.provider),
+                    callback=self._on_provider_changed,
+                    width=-1,
+                )
                 dpg.add_text("DeepSeek API key", color=(150, 158, 175))
                 dpg.add_input_text(
                     tag=self.TAG_API_KEY,
                     default_value=self.settings.api_key,
+                    password=True,
+                    width=-1,
+                )
+                dpg.add_text("Kimi API key", color=(150, 158, 175))
+                dpg.add_input_text(
+                    tag=self.TAG_KIMI_API_KEY,
+                    default_value=self.settings.kimi_api_key,
                     password=True,
                     width=-1,
                 )
@@ -565,10 +592,7 @@ def run_gui(
                 self._set_status("Nothing to translate — every entry is already up to date.")
                 return
 
-            settings = Settings(
-                api_key=str(dpg.get_value(self.TAG_API_KEY)).strip() if dpg.does_item_exist(self.TAG_API_KEY) else self.settings.api_key,
-                model=str(dpg.get_value(self.TAG_MODEL)).strip() if dpg.does_item_exist(self.TAG_MODEL) else self.settings.model,
-            )
+            settings = self._collect_settings() if dpg.does_item_exist(self.TAG_API_KEY) else self.settings
             auto_rename = self.settings.auto_rename
             if dpg.does_item_exist(self.TAG_AUTO_RENAME):
                 auto_rename = bool(dpg.get_value(self.TAG_AUTO_RENAME))
@@ -675,14 +699,29 @@ def run_gui(
 
         # -- settings --------------------------------------------------------
 
+        def _selected_provider(self) -> str:
+            label = str(dpg.get_value(self.TAG_PROVIDER)) if dpg.does_item_exist(self.TAG_PROVIDER) else _provider_label(self.settings.provider)
+            return _LABEL_TO_PROVIDER.get(label, DEFAULT_PROVIDER)
+
         def _collect_settings(self) -> Settings:
+            provider = self._selected_provider()
             return Settings(
+                provider=provider,
                 api_key=str(dpg.get_value(self.TAG_API_KEY)).strip(),
-                model=str(dpg.get_value(self.TAG_MODEL)).strip() or "deepseek-chat",
+                kimi_api_key=str(dpg.get_value(self.TAG_KIMI_API_KEY)).strip(),
+                model=str(dpg.get_value(self.TAG_MODEL)).strip() or default_model_for(provider),
                 auto_rename=bool(dpg.get_value(self.TAG_AUTO_RENAME)),
                 append_mode=bool(dpg.get_value(self.TAG_APPEND_MODE)),
                 inputs_text=str(dpg.get_value(self.TAG_INPUTS)),
             )
+
+        def _on_provider_changed(self) -> None:
+            provider = self._selected_provider()
+            current_model = str(dpg.get_value(self.TAG_MODEL)).strip()
+            known_defaults = {info["default_model"] for info in PROVIDERS.values()}
+            if not current_model or current_model in known_defaults:
+                dpg.set_value(self.TAG_MODEL, default_model_for(provider))
+            self._on_toggle_setting()
 
         def _on_save_settings(self) -> None:
             self.settings = self._collect_settings()
