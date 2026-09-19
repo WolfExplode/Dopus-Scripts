@@ -143,6 +143,9 @@ def run_gui(
         TAG_JXL_EFFORT = "jxl_effort_input"
         TAG_ICO_GROUP = "ico_group"
         TAG_ICO_SIZES = "ico_sizes_combo"
+        TAG_SKYRIM_GROUP = "skyrim_group"
+        TAG_SKYRIM_PRESET = "skyrim_preset_combo"
+        TAG_TEXCONV_DIR = "texconv_dir_input"
         TAG_RESIZE_WIDTH = "resize_width_input"
         TAG_REPLACE_SOURCE = "replace_source_check"
         TAG_MAX_DIMENSION = "max_dimension_combo"
@@ -407,6 +410,38 @@ def run_gui(
                             self._hover_tip(ico_label, tip_ico)
                             self._hover_tip(ico_combo, tip_ico)
 
+                        with dpg.group(tag=self.TAG_SKYRIM_GROUP):
+                            sky_label = dpg.add_text("Texture type", color=(150, 158, 175))
+                            sky_combo = dpg.add_combo(
+                                tag=self.TAG_SKYRIM_PRESET,
+                                items=SKYRIM_PRESET_LABELS,
+                                default_value=skyrim_preset_label(self.settings.skyrim_preset),
+                                width=-1,
+                            )
+                            tip_sky = (
+                                "Skyrim SE DDS via texconv, full mip chain.\n\n"
+                                "Auto: files ending _n or _msn are normal maps, everything\n"
+                                "else is diffuse. Both use BC7.\n\n"
+                                "Normal maps: BC7 keeps the alpha channel, which Skyrim reads\n"
+                                "as the specular mask. BC5 is not offered because Skyrim does\n"
+                                "not reconstruct the Z channel. Normal presets filter alpha\n"
+                                "separately and use uniform BC1 weighting.\n\n"
+                                "BC1: half the size of BC7; alpha is removed.\n"
+                                "BC3/DXT5: legacy format with alpha."
+                            )
+                            self._hover_tip(sky_label, tip_sky)
+                            self._hover_tip(sky_combo, tip_sky)
+                            dpg.add_text("texconv folder", color=(150, 158, 175))
+                            dpg.add_input_text(
+                                tag=self.TAG_TEXCONV_DIR,
+                                default_value=self.settings.texconv_bin_dir,
+                                width=-1,
+                            )
+                            self._hover_tip(
+                                self.TAG_TEXCONV_DIR,
+                                "Folder containing Texconvx64.exe or texconv.exe (DirectXTex).",
+                            )
+
                         replace_src = dpg.add_checkbox(
                             tag=self.TAG_REPLACE_SOURCE,
                             label="Replace source file",
@@ -490,12 +525,15 @@ def run_gui(
                         ),
                     )
 
-        def _current_format_key(self) -> str:
-            label = dpg.get_value(self.TAG_FORMAT)
+        @staticmethod
+        def _format_key_from_label(label: str) -> str:
             for k, v in OUTPUT_FORMATS.items():
                 if v["label"] == label:
                     return k
             return "jpeg"
+
+        def _current_format_key(self) -> str:
+            return self._format_key_from_label(dpg.get_value(self.TAG_FORMAT))
 
         def _on_format_change(self) -> None:
             self._sync_encode_fields()
@@ -506,6 +544,7 @@ def run_gui(
             dpg.configure_item(self.TAG_QUALITY_GROUP, show=(encode == "quality"))
             dpg.configure_item(self.TAG_JXL_GROUP, show=(encode == "jxl"))
             dpg.configure_item(self.TAG_ICO_GROUP, show=(encode == "ico"))
+            dpg.configure_item(self.TAG_SKYRIM_GROUP, show=(encode == "skyrim"))
 
         def _collect_settings(self) -> Settings:
             sections: dict[str, bool] = {}
@@ -520,6 +559,8 @@ def run_gui(
                 replace_source=bool(dpg.get_value(self.TAG_REPLACE_SOURCE)),
                 magick_bin_dir=str(dpg.get_value(self.TAG_MAGICK_DIR)).strip() or DEFAULT_MAGICK_BIN_DIR,
                 cjxl_bin_dir=str(dpg.get_value(self.TAG_CJXL_DIR)).strip() or DEFAULT_CJXL_BIN_DIR,
+                texconv_bin_dir=str(dpg.get_value(self.TAG_TEXCONV_DIR)).strip() or DEFAULT_TEXCONV_BIN_DIR,
+                skyrim_preset=skyrim_preset_key_from_label(str(dpg.get_value(self.TAG_SKYRIM_PRESET))),
                 max_dimension=max_dimension_key_from_label(str(dpg.get_value(self.TAG_MAX_DIMENSION))),
                 ico_sizes=ico_sizes_key_from_label(str(dpg.get_value(self.TAG_ICO_SIZES))),
                 resize_width=str(dpg.get_value(self.TAG_RESIZE_WIDTH)),

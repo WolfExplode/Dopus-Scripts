@@ -125,7 +125,10 @@ def run_gui(
         TAG_MODE = "mode_combo"
         TAG_FORMAT = "format_combo"
         TAG_QUALITY = "quality_input"
-        TAG_TRIM = "trim_frames_input"
+        TAG_CUT_UNIT = "cut_unit_combo"
+        TAG_CUT_START = "cut_start_input"
+        TAG_CUT_END = "cut_end_input"
+        TAG_CUT_DURATION = "cut_duration_text"
         TAG_REPLACE = "replace_video_check"
         TAG_MERGE_CONTAINER = "merge_container_combo"
         TAG_MONO_CHANNEL = "mono_channel_combo"
@@ -140,6 +143,7 @@ def run_gui(
             self._log_queue: queue.Queue[tuple[str, bool]] = queue.Queue()
             self._output_lines: list[str] = []
             self._auto_scroll_output: bool = False
+            self._cut_preview_fps: float | None = None
             self._splitter = PanelSplitter("panel_actions", left_width=400, min_left=340, min_right=240, config_dir=CONFIG_DIR)
             self.settings = config_load_settings()
             files_default = build_initial_files_text(
@@ -268,6 +272,7 @@ def run_gui(
                             width=-1,
                             height=120,
                             tab_input=False,
+                            callback=self._on_files_change,
                         )
                         self._hover_tip(files_input, "Media files to process.")
                         with dpg.group(horizontal=True):
@@ -328,22 +333,43 @@ def run_gui(
                                 dpg.bind_item_theme(btn, self._theme_apply)
 
                     hdr_trim = self._section(
-                        "Trim start (in place)",
-                        "Re-encode after skipping the first N frames. Replaces the original file.",
+                        "Cutter (in place)",
+                        "Keep a video or audio range selected by timestamps; video also supports frames. "
+                        "End fills from the first selected media file. Replaces each original file.",
                         "trim",
                     )
                     with dpg.group(parent=hdr_trim):
                         with dpg.group(horizontal=True):
-                            dpg.add_text("Skip frames:", color=(150, 158, 175))
-                            dpg.add_input_text(
-                                tag=self.TAG_TRIM,
-                                default_value=self.settings.trim_frames,
-                                width=60,
+                            dpg.add_text("Range:", color=(150, 158, 175))
+                            dpg.add_combo(
+                                tag=self.TAG_CUT_UNIT,
+                                items=["Seconds", "Frames"],
+                                default_value=self.settings.cut_unit,
+                                width=90,
+                                callback=self._on_cut_range_change,
                             )
+                            dpg.add_input_text(
+                                tag=self.TAG_CUT_START,
+                                default_value=self.settings.cut_start,
+                                hint="0" if self.settings.cut_unit == "Frames" else "00:00:00",
+                                width=90,
+                                callback=self._on_cut_range_change,
+                            )
+                            dpg.add_text("–", color=(150, 158, 175))
+                            dpg.add_input_text(
+                                tag=self.TAG_CUT_END,
+                                default_value=self.settings.cut_end,
+                                hint="0" if self.settings.cut_unit == "Frames" else "00:00:00",
+                                width=90,
+                                callback=self._on_cut_range_change,
+                            )
+                        dpg.add_text("Duration: to end", tag=self.TAG_CUT_DURATION, color=(150, 158, 175))
                         self._action_button(
-                            hdr_trim, "Trim & replace", "trimstart",
-                            "Skip leading frames and replace original.",
+                            hdr_trim, "Cut & replace", "trimstart",
+                            "Keep the selected range and replace each original media file.",
                         )
+                        self._autofill_cut_end()
+                        self._update_cut_duration()
 
                     hdr_cover = self._section(
                         "Cover (split/combine)",
@@ -482,6 +508,92 @@ def run_gui(
         def _on_format_change(self) -> None:
             self._sync_quality_enabled()
 
+        def _on_files_change(self, sender=None, app_data=None, user_data=None) -> None:
+            self._cut_preview_fps = None
+            if dpg.does_item_exist(self.TAG_CUT_END):
+                self._autofill_cut_end()
+                self._update_cut_duration()
+
+        @staticmethod
+        def _format_duration(seconds: float) -> str:
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            secs = seconds % 60
+            if abs(secs - round(secs)) < 0.000001:
+                return f"{hours:02d}:{minutes:02d}:{int(round(secs)):02d}"
+            return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+
+        def _on_cut_range_change(self, sender=None, app_data=None, user_data=None) -> None:
+            if sender == self.TAG_CUT_UNIT:
+                unit = dpg.get_value(self.TAG_CUT_UNIT)
+                hint = "0" if unit == "Frames" else "00:00:00"
+                dpg.configure_item(self.TAG_CUT_START, hint=hint)
+                dpg.configure_item(self.TAG_CUT_END, hint=hint)
+                dpg.set_value(
+                    self.TAG_CUT_START, "0" if unit == "Frames" else "00:00:00"
+                )
+                dpg.set_value(self.TAG_CUT_END, "")
+                self._cut_preview_fps = None
+                self._autofill_cut_end()
+            self._update_cut_duration()
+
+        def _autofill_cut_end(self) -> None:
+            media = [p for p in self._file_paths() if is_thumb_media(p.name)]
+            if not media:
+                dpg.set_value(self.TAG_CUT_END, "")
+                return
+            unit = str(dpg.get_value(self.TAG_CUT_UNIT))
+            if unit == "Frames" and any(is_thumb_audio(p.name) for p in media):
+                unit = "Seconds"
+                dpg.set_value(self.TAG_CUT_UNIT, unit)
+                dpg.configure_item(self.TAG_CUT_START, hint="00:00:00")
+                dpg.configure_item(self.TAG_CUT_END, hint="00:00:00")
+                dpg.set_value(self.TAG_CUT_START, "00:00:00")
+            duration = probe_media_duration_sec(media[0])
+            if duration <= 0:
+                dpg.set_value(self.TAG_CUT_END, "")
+                return
+            if unit == "Frames":
+                fps = probe_video_avg_frame_rate(media[0])
+                self._cut_preview_fps = fps
+                dpg.set_value(
+                    self.TAG_CUT_END,
+                    str(max(1, int(round(duration * fps)))) if fps > 0 else "",
+                )
+            else:
+                dpg.set_value(self.TAG_CUT_END, self._format_duration(duration))
+
+        def _update_cut_duration(self) -> None:
+            unit = str(dpg.get_value(self.TAG_CUT_UNIT))
+            start_text = str(dpg.get_value(self.TAG_CUT_START)).strip()
+            end_text = str(dpg.get_value(self.TAG_CUT_END)).strip()
+            if not end_text:
+                duration = "to end"
+            elif unit == "Frames":
+                start = parse_cut_frame(start_text)
+                end = parse_cut_frame(end_text)
+                if start >= 0 and end > start:
+                    frame_count = end - start
+                    if self._cut_preview_fps is None:
+                        videos = [p for p in self._file_paths() if is_thumb_video(p.name)]
+                        self._cut_preview_fps = (
+                            probe_video_avg_frame_rate(videos[0]) if videos else -1.0
+                        )
+                    if self._cut_preview_fps > 0:
+                        duration = (
+                            f"{self._format_duration(frame_count / self._cut_preview_fps)} "
+                            f"({frame_count} frames @ {self._cut_preview_fps:g} fps)"
+                        )
+                    else:
+                        duration = f"{frame_count} frames"
+                else:
+                    duration = "invalid range"
+            else:
+                start = parse_cut_seconds(start_text)
+                end = parse_cut_seconds(end_text)
+                duration = self._format_duration(end - start) if start >= 0 and end > start else "invalid range"
+            dpg.set_value(self.TAG_CUT_DURATION, f"Duration: {duration}")
+
         def _file_paths(self) -> list[Path]:
             return parse_file_paths(str(dpg.get_value(self.TAG_FILES)))
 
@@ -500,7 +612,10 @@ def run_gui(
                 replace_video_with_image=bool(dpg.get_value(self.TAG_REPLACE)),
                 merge_container=str(dpg.get_value(self.TAG_MERGE_CONTAINER)) or "auto",
                 mono_channel=str(dpg.get_value(self.TAG_MONO_CHANNEL)) or "auto",
-                trim_frames=str(dpg.get_value(self.TAG_TRIM)).strip() or "1",
+                trim_frames=self.settings.trim_frames,
+                cut_unit=str(dpg.get_value(self.TAG_CUT_UNIT)) or "Seconds",
+                cut_start=str(dpg.get_value(self.TAG_CUT_START)).strip(),
+                cut_end=str(dpg.get_value(self.TAG_CUT_END)).strip(),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
                 gui_sections=sections,
             )
@@ -639,9 +754,11 @@ def run_gui(
                 if s:
                     existing.append(s)
             dpg.set_value(self.TAG_FILES, "\n".join(dedupe_path_lines(existing)))
+            self._on_files_change()
 
         def _clear_files(self) -> None:
             dpg.set_value(self.TAG_FILES, "")
+            self._on_files_change()
 
         def _copy_youtube_chapters(self) -> None:
             paths = self._file_paths()

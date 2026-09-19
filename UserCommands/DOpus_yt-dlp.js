@@ -31,13 +31,70 @@ function escapeYtdlpOutputPrefix(s) {
     return t;
 }
 
+// Split a command line into tokens, honouring double-quoted runs
+function tokenizeCommandLine(s) {
+    var out = [];
+    var cur = "";
+    var inQuote = false;
+    var started = false;
+    for (var i = 0; i < s.length; i++) {
+        var c = s.charAt(i);
+        if (c === '"') {
+            inQuote = !inQuote;
+            started = true;
+        } else if (!inQuote && (c === " " || c === "\t" || c === "\r" || c === "\n")) {
+            if (started) { out.push(cur); cur = ""; started = false; }
+        } else {
+            cur += c;
+            started = true;
+        }
+    }
+    if (started) out.push(cur);
+    return out;
+}
+
+// Quote one token for the PowerShell command line; bare flags are left alone
+function psQuoteArg(tok) {
+    if (/^--?[A-Za-z][A-Za-z0-9-]*$/.test(tok)) return tok;
+    return "'" + escapePsSingleQuoted(tok) + "'";
+}
+
+// Accepts a full "yt-dlp ... URL" command line (e.g. copied from the YouTube Clipper browser
+// extension) and splits it into the URL plus the remaining arguments. Returns null when the
+// text is not such a command, so a bare URL still works exactly as before.
+// -o/--output is deliberately dropped: this script builds its own template, and a template
+// copied from a cmd.exe-targeted command has its % signs doubled, which would be wrong here.
+function parseYtdlpCommand(text) {
+    var t = trimStr(text);
+    if (!/^yt-dlp(\.exe)?[ \t]/i.test(t)) return null;
+
+    var toks = tokenizeCommandLine(t);
+    var url = "";
+    var extras = [];
+
+    for (var i = 1; i < toks.length; i++) {
+        var tok = toks[i];
+        if (tok === "-o" || tok === "--output") {
+            i++;
+            continue;
+        }
+        if (/^https?:\/\//i.test(tok)) {
+            url = tok;
+            continue;
+        }
+        extras.push(psQuoteArg(tok));
+    }
+
+    return { url: url, args: extras.join(" ") };
+}
+
 // PowerShell: compare yt-dlp --version to GitHub latest; pip upgrade only if needed
 function writeYtDlpUpdateBlock(ps1) {
     var lines = [
         "$ErrorActionPreference = \"Continue\"",
         "try {",
         "    $localVer = $null",
-        "    $yv = & yt-dlp --version 2>&1",
+        "    $yv = & $_yt --version 2>&1",
         "    if ($LASTEXITCODE -eq 0 -and $yv) {",
         "        $localVer = ($yv | Select-Object -First 1).ToString().Trim()",
         "    }",
@@ -58,9 +115,16 @@ function writeYtDlpUpdateBlock(ps1) {
         "        Write-Host (\"yt-dlp update: local \" + $localVer + \" -> latest \" + $latestVer)",
         "    }",
         "    if ($doPip) {",
-        "        python -m pip install --upgrade yt-dlp",
-        "        if ($LASTEXITCODE -ne 0) { py -m pip install --upgrade yt-dlp }",
+        "        if ($_ytpy) {",
+        "            Write-Host (\"Upgrading yt-dlp for \" + $_ytpy)",
+        "            & $_ytpy -m pip install --upgrade yt-dlp",
+        "        } else {",
+        "            python -m pip install --upgrade yt-dlp",
+        "            if ($LASTEXITCODE -ne 0) { py -m pip install --upgrade yt-dlp }",
+        "        }",
         "        if ($LASTEXITCODE -ne 0) { Write-Host \"pip upgrade failed; install Python/pip or update yt-dlp manually (e.g. yt-dlp -U).\" }",
+        "        $yv2 = & $_yt --version 2>&1",
+        "        if ($LASTEXITCODE -eq 0 -and $yv2) { Write-Host (\"yt-dlp now at \" + ($yv2 | Select-Object -First 1).ToString().Trim()) }",
         "    } elseif ($latestVer) {",
         "        Write-Host (\"yt-dlp is up to date (\" + $localVer + \").\")",
         "    } else {",
@@ -82,9 +146,20 @@ function writeYtdlpFinder(ps1) {
     var lines = [
         "$_yt = 'yt-dlp'",
         "try {",
-        "    if ((Get-Command yt-dlp -ErrorAction SilentlyContinue).Source -like '*.bat') {",
-        "        $_ytp = ((pyenv which yt-dlp 2>$null) -join '').Trim()",
-        "        if ($_ytp -and (Test-Path $_ytp)) { $_yt = $_ytp }",
+        "    $_ytp = ((pyenv which yt-dlp 2>$null) -join '').Trim()",
+        "    if ($_ytp -and (Test-Path $_ytp)) {",
+        "        $_yt = $_ytp",
+        "    } else {",
+        "        $_cmd = Get-Command yt-dlp -ErrorAction SilentlyContinue",
+        "        if ($_cmd -and $_cmd.Source -and (Test-Path $_cmd.Source)) { $_yt = $_cmd.Source }",
+        "    }",
+        "} catch { }",
+        "",
+        "$_ytpy = $null",
+        "try {",
+        "    if ($_yt -ne 'yt-dlp' -and $_yt -like '*.exe') {",
+        "        $_p = Join-Path (Split-Path (Split-Path $_yt -Parent) -Parent) 'python.exe'",
+        "        if (Test-Path $_p) { $_ytpy = $_p }",
         "    }",
         "} catch { }",
         ""
@@ -211,6 +286,14 @@ function OnClick(clickData) {
         url = "";
     }
 
+    // The clipboard may hold a whole yt-dlp command rather than a bare URL
+    var clipCmd = parseYtdlpCommand(url);
+    var clipArgs = "";
+    if (clipCmd) {
+        url = clipCmd.url;
+        clipArgs = clipCmd.args;
+    }
+
     var qualStr = "";
     try {
         qualStr = String(clickData.func.qualifiers + "");
@@ -231,6 +314,7 @@ function OnClick(clickData) {
     var mp4Container;
     var useImpersonate;
     var noCookies;
+    var extraArgs;
 
     if (skipUi) {
         var savedQuick = loadSettings(shell, fso);
@@ -246,9 +330,10 @@ function OnClick(clickData) {
         mp4Container = (savedQuick.mp4container === 1);
         useImpersonate = (savedQuick.impersonate === 1);
         noCookies = (savedQuick.nocookies === 1);
+        extraArgs = clipArgs;
 
         if (!finalUrl) {
-            shell.Popup("No URL in clipboard. Ctrl+click uses saved settings and the clipboard URL.", 0, "yt-dlp", 48);
+            shell.Popup("No URL in clipboard. Ctrl+click uses saved settings and the clipboard URL or yt-dlp command.", 0, "yt-dlp", 48);
             return;
         }
         DOpus.Output("yt-dlp: Ctrl+click — saved settings, no dialog");
@@ -277,6 +362,7 @@ function OnClick(clickData) {
         dlg.control("mp4_check").value = (saved.mp4container === 1);
         dlg.control("impersonate_check").value = (saved.impersonate === 1);
         dlg.control("nocookies_check").value = (saved.nocookies === 1);
+        dlg.control("args_edit").value = clipArgs;
 
         dlg.Show();
 
@@ -306,6 +392,7 @@ function OnClick(clickData) {
         mp4Container = dlg.control("mp4_check").value;
         useImpersonate = dlg.control("impersonate_check").value;
         noCookies = dlg.control("nocookies_check").value;
+        extraArgs = String(dlg.control("args_edit").value);
 
         if (!finalUrl) {
             shell.Popup("No URL provided.", 0, "yt-dlp", 48);
@@ -317,6 +404,14 @@ function OnClick(clickData) {
 
     var filePrefixEsc = escapeYtdlpOutputPrefix(filePrefixRaw);
 
+    // Extra yt-dlp arguments, typed in the dialog or parsed out of a clipboard yt-dlp command.
+    // Inserted verbatim into the PowerShell command line, after the flags built above, so they
+    // win where yt-dlp lets a later option override an earlier one.
+    var extraArgsClean = oneLine(trimStr(extraArgs || ""));
+    var extraArgsPart = extraArgsClean ? (" " + extraArgsClean) : "";
+    // One video can yield several clips, so keep the range in the name or they overwrite.
+    var hasSections = /--download-sections/i.test(extraArgsClean);
+
     var cookiesFromBrowser = " --cookies-from-browser firefox";
     var overwriteArg = allowOverwrite ? " --force-overwrites" : " --no-overwrites";
     // Lets yt-dlp download EJS solver scripts (needed for YouTube + Deno / JS challenges; see yt-dlp wiki EJS)
@@ -325,12 +420,22 @@ function OnClick(clickData) {
     var impersonateArg = useImpersonate ? " --impersonate chrome" : "";
     // Explicitly disables cookie use, overriding any cookies configured in yt-dlp's own config file
     var noCookiesArg = noCookies ? " --no-cookies" : "";
-    var metaAudio = " --extract-audio --audio-format best --add-metadata --embed-thumbnail --embed-subs --parse-metadata \":(?P<chapters>)\"";
-    var metaVideo = " --add-metadata --embed-thumbnail --write-auto-subs --embed-subs";
+    // Subtitles are always fetched for the whole video, even when only a section is kept.
+    // Embedding that full-length track stretches the Matroska container duration to the source
+    // length, and its timestamps are absolute so they no longer line up with the clip.
+    // Section downloads are forced onto ffmpeg's single-stream downloader, so a 4K source costs
+    // far more wall time than a clip is worth. Cap at 1080p when cutting; full downloads are
+    // left alone. Placed before extraArgsPart so a -S/-f in the extra args still wins.
+    var sectionResArg = hasSections ? " -S 'res:1080'" : "";
+    var subsAudio = hasSections ? "" : " --embed-subs";
+    var subsVideo = hasSections ? "" : " --write-auto-subs --embed-subs";
+    var metaAudio = " --extract-audio --audio-format best --add-metadata --embed-thumbnail" + subsAudio + " --parse-metadata \":(?P<chapters>)\"";
+    var metaVideo = " --add-metadata --embed-thumbnail" + subsVideo;
     var videoMp4Args = (mp4Container && !isAudio) ? " --merge-output-format mp4 --remux-video mp4" : "";
+    var sectionSuffix = hasSections ? " %(section_start)s-%(section_end)s" : "";
     var innerCore = datePrefix
-        ? "[%(upload_date>%m-%d-%Y)s] %(title)s.%(ext)s"
-        : "%(title)s.%(ext)s";
+        ? "[%(upload_date>%m-%d-%Y)s] %(title)s" + sectionSuffix + ".%(ext)s"
+        : "%(title)s" + sectionSuffix + ".%(ext)s";
     var inner = filePrefixEsc ? (filePrefixEsc + innerCore) : innerCore;
     var outTemplate = '"' + inner + '"';
 
@@ -346,7 +451,8 @@ function OnClick(clickData) {
                + ejsArg
                + impersonateArg
                + noCookiesArg
-               + (includeMetadata ? metaAudio : "");
+               + (includeMetadata ? metaAudio : "")
+               + extraArgsPart;
     } else {
         ytArgsBody = "-o " + outTemplate
                + overwriteArg
@@ -354,7 +460,9 @@ function OnClick(clickData) {
                + impersonateArg
                + noCookiesArg
                + videoMp4Args
-               + (includeMetadata ? metaVideo : "");
+               + sectionResArg
+               + (includeMetadata ? metaVideo : "")
+               + extraArgsPart;
     }
 
     var ytArgsFirst = ytArgsBody + ((useCookies && !noCookies) ? cookiesFromBrowser : "");
@@ -410,7 +518,8 @@ function OnClick(clickData) {
 
     DOpus.Output("yt-dlp | URL: " + finalUrl);
     DOpus.Output("yt-dlp | Dest: " + destPath);
-    DOpus.Output("yt-dlp | Mode: " + (isAudio ? "Audio" : "Video") + (isAudio ? "" : (" | MP4 container: " + mp4Container)) + " | Metadata: " + includeMetadata + " | Date prefix: " + datePrefix + " | File prefix: " + (trimStr(filePrefixRaw) ? trimStr(filePrefixRaw) : "(none)") + " | Cookies: " + useCookies + " | Overwrite: " + allowOverwrite + " | Update check: " + doUpdate + " | Keep PS: " + keepPsOpen + " | Impersonate Chrome: " + useImpersonate + " | No cookies: " + noCookies + " | UI: " + (skipUi ? "skipped (Ctrl)" : "dialog"));
+    DOpus.Output("yt-dlp | Mode: " + (isAudio ? "Audio" : "Video") + (isAudio ? "" : (" | MP4 container: " + mp4Container)) + " | Metadata: " + includeMetadata + " | Date prefix: " + datePrefix + " | File prefix: " + (trimStr(filePrefixRaw) ? trimStr(filePrefixRaw) : "(none)") + " | Cookies: " + useCookies + " | Overwrite: " + allowOverwrite + " | Update check: " + doUpdate + " | Keep PS: " + keepPsOpen + " | Impersonate Chrome: " + useImpersonate + " | No cookies: " + noCookies + " | UI: " + (skipUi ? "skipped (Ctrl)" : "dialog") + (hasSections ? " | Section: 1080p cap, no subs" : ""));
+    if (extraArgsClean) DOpus.Output("yt-dlp | Extra args: " + extraArgsClean);
 
     var psCmd = keepPsOpen
         ? 'powershell -NoExit -ExecutionPolicy Bypass -File "' + tempPs1 + '"'

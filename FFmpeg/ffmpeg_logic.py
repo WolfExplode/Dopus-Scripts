@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -123,6 +124,9 @@ class Settings:
     last_action: str = DEFAULT_LAST_ACTION
     replace_video_with_image: bool = False
     trim_frames: str = "1"
+    cut_unit: str = "Seconds"
+    cut_start: str = "00:00:00"
+    cut_end: str = ""
     files_text: str = ""
     merge_fix_outliers: bool = True
     merge_container: str = "auto"
@@ -301,13 +305,29 @@ def config_load_settings() -> Settings:
     mono_channel = str(data.get("mono_channel") or "auto")
     if mono_channel not in MONO_CHANNELS:
         mono_channel = "auto"
+    has_cut_settings = any(k in data for k in ("cut_unit", "cut_start", "cut_end"))
+    has_legacy_trim = "trim_frames" in data
+    legacy_trim_frames = str(data.get("trim_frames") or "1") or "1"
+    cut_unit = str(
+        data.get("cut_unit")
+        or ("Frames" if has_legacy_trim and not has_cut_settings else "Seconds")
+    )
+    if cut_unit not in ("Seconds", "Frames"):
+        cut_unit = "Seconds"
+    default_cut_start = legacy_trim_frames if has_legacy_trim else "00:00:00"
+    cut_start = str(data.get("cut_start") if has_cut_settings else default_cut_start).strip()
+    if not cut_start:
+        cut_start = "0" if cut_unit == "Frames" else "00:00:00"
     return Settings(
         mode=int(data.get("mode", 0) or 0),
         format_name=str(data.get("format_name") or ""),
         quality=str(data.get("quality") or "23") or "23",
         last_action=action,
         replace_video_with_image=bool(data.get("replace_video_with_image")),
-        trim_frames=str(data.get("trim_frames") or "1") or "1",
+        trim_frames=legacy_trim_frames,
+        cut_unit=cut_unit,
+        cut_start=cut_start,
+        cut_end=str(data.get("cut_end") or "").strip(),
         files_text=str(data.get("files_text") or ""),
         merge_fix_outliers=bool(data.get("merge_fix_outliers", True)),
         merge_container=merge_container,
@@ -327,6 +347,9 @@ def config_save_settings(
     data["quality"] = settings.quality
     data["replace_video_with_image"] = settings.replace_video_with_image
     data["trim_frames"] = settings.trim_frames
+    data["cut_unit"] = settings.cut_unit
+    data["cut_start"] = settings.cut_start
+    data["cut_end"] = settings.cut_end
     data["files_text"] = settings.files_text
     data["merge_fix_outliers"] = settings.merge_fix_outliers
     data["merge_container"] = settings.merge_container
@@ -1814,16 +1837,130 @@ def parse_trim_frame_count(s: str) -> int:
     return n if n >= 1 else -1
 
 
+def parse_cut_seconds(value: str) -> float:
+    """Parse SS, MM:SS, or HH:MM:SS (fractional seconds are allowed)."""
+    text = (value or "").strip()
+    if not text:
+        return -1.0
+    parts = text.split(":")
+    if len(parts) > 3 or any(not part.strip() for part in parts):
+        return -1.0
+    try:
+        numbers = [float(part) for part in parts]
+    except ValueError:
+        return -1.0
+    if any(not math.isfinite(number) or number < 0 for number in numbers):
+        return -1.0
+    if len(numbers) >= 2 and numbers[-1] >= 60:
+        return -1.0
+    if len(numbers) == 3 and numbers[-2] >= 60:
+        return -1.0
+    if len(numbers) == 1:
+        return numbers[0]
+    if len(numbers) == 2:
+        return numbers[0] * 60 + numbers[1]
+    return numbers[0] * 3600 + numbers[1] * 60 + numbers[2]
+
+
+def parse_cut_frame(value: str) -> int:
+    text = (value or "").strip()
+    if not text or not text.isdigit():
+        return -1
+    return int(text)
+
+
+def cut_range_seconds(
+    unit: str, start_text: str, end_text: str, fps: float = -1.0
+) -> tuple[float, Optional[float], Optional[str]]:
+    """Return start and optional end in seconds, or a user-facing validation error."""
+    if unit == "Frames":
+        start_frame = parse_cut_frame(start_text)
+        end_frame = parse_cut_frame(end_text) if (end_text or "").strip() else None
+        if start_frame < 0:
+            return 0.0, None, "Enter a whole-number start frame (0 or more)."
+        if end_frame is not None and end_frame <= start_frame:
+            return 0.0, None, "End frame must be greater than start frame."
+        if fps <= 0:
+            return 0.0, None, "Could not read the video's frame rate."
+        start_sec = start_frame / fps
+        end_sec = end_frame / fps if end_frame is not None else None
+    elif unit == "Seconds":
+        start_sec = parse_cut_seconds(start_text)
+        end_sec = parse_cut_seconds(end_text) if (end_text or "").strip() else None
+        if start_sec < 0:
+            return 0.0, None, "Enter start as seconds or HH:MM:SS."
+        if end_sec is not None and end_sec <= start_sec:
+            return 0.0, None, "End time must be greater than start time."
+    else:
+        return 0.0, None, "Range must use Seconds or Frames."
+    if start_sec == 0 and end_sec is None:
+        return 0.0, None, "Enter a start after zero or an end point."
+    return start_sec, end_sec, None
+
+
+def _ffmpeg_decimal(value: float) -> str:
+    return f"{value:.9f}".rstrip("0").rstrip(".") or "0"
+
+
+def ffmpeg_cut_range_exec(
+    vid_path: Path, tmp_path: Path, start_sec: float, end_sec: Optional[float], ext: str
+) -> str:
+    v_enc = video_encode_for_transform(ext)
+    duration_arg = ""
+    if end_sec is not None:
+        duration_arg = f" -t {_ffmpeg_decimal(end_sec - start_sec)}"
+    return (
+        f"ffmpeg.exe -y -i {_quote(vid_path)} -ss {_ffmpeg_decimal(start_sec)}{duration_arg} "
+        f"-map_metadata 0 -map_chapters 0 "
+        f'-map 0:v:0 -map "0:a?" -c:v {v_enc} -c:a copy {_quote(tmp_path)}'
+    )
+
+
+def ffmpeg_cut_audio_range_exec(
+    media_path: Path,
+    tmp_path: Path,
+    start_sec: float,
+    end_sec: Optional[float],
+) -> str:
+    """Cut audio precisely and retain metadata plus optional cover art."""
+    audio_end = f":end={_ffmpeg_decimal(end_sec)}" if end_sec is not None else ""
+    audio_filter = (
+        f"atrim=start={_ffmpeg_decimal(start_sec)}{audio_end},asetpts=PTS-STARTPTS"
+    )
+    return (
+        f"ffmpeg.exe -y -i {_quote(media_path)} -map_metadata 0 -map_chapters 0 "
+        f'-map 0:a -map "0:v?" -af "{audio_filter}" -c:v copy {_quote(tmp_path)}'
+    )
+
+
+def ffmpeg_cut_frame_range_exec(
+    vid_path: Path,
+    tmp_path: Path,
+    start_frame: int,
+    end_frame: Optional[int],
+    start_sec: float,
+    end_sec: Optional[float],
+    ext: str,
+) -> str:
+    """Build an exact video-frame trim and a matching timestamp-based audio trim."""
+    video_end = f":end_frame={end_frame}" if end_frame is not None else ""
+    audio_end = f":end={_ffmpeg_decimal(end_sec)}" if end_sec is not None else ""
+    video_filter = f"trim=start_frame={start_frame}{video_end},setpts=PTS-STARTPTS"
+    audio_filter = f"atrim=start={_ffmpeg_decimal(start_sec)}{audio_end},asetpts=PTS-STARTPTS"
+    v_enc = video_encode_for_transform(ext)
+    a_enc = mono_audio_codec_args(ext)
+    return (
+        f"ffmpeg.exe -y -i {_quote(vid_path)} -map_metadata 0 -map_chapters 0 "
+        f'-map 0:v:0 -map "0:a?" -vf "{video_filter}" -af "{audio_filter}" '
+        f"-c:v {v_enc} -c:a {a_enc} {_quote(tmp_path)}"
+    )
+
+
 def ffmpeg_trim_leading_frames_exec(
     vid_path: Path, tmp_path: Path, frame_count: int, fps: float, ext: str
 ) -> str:
     start_sec = frame_count / fps
-    ss = str(round(start_sec * 1_000_000) / 1_000_000)
-    v_enc = video_encode_for_transform(ext)
-    return (
-        f"ffmpeg.exe -y -i {_quote(vid_path)} -ss {ss} -map_metadata 0 -map_chapters 0 "
-        f'-map 0:v:0 -map "0:a?" -c:v {v_enc} -c:a copy {_quote(tmp_path)}'
-    )
+    return ffmpeg_cut_range_exec(vid_path, tmp_path, start_sec, None, ext)
 
 
 def format_preset_by_name(formats: tuple[FormatPreset, ...], name: str) -> int:
@@ -2479,33 +2616,86 @@ def run_video_transform(paths: list[Path], vf_filter: str, log_title: str) -> Ac
 
 
 def run_trim_leading_frames(paths: list[Path], frame_count_str: str) -> ActionResult:
-    log = _job_log()
-    title = "Trim leading frames"
-    frame_count = parse_trim_frame_count(frame_count_str)
-    if frame_count < 1:
-        return ActionResult(False, "Enter a whole number of frames to skip (1 or more).", log)
+    """Backward-compatible entry point for the former start-only trimmer."""
+    return run_cut_range(paths, "Frames", frame_count_str, "")
 
-    videos = [p for p in paths if is_thumb_video(p.name)]
-    if not videos:
-        return ActionResult(False, "Select one or more video files.", log)
-    if len(videos) != len(paths):
-        bad = [p.name for p in paths if not is_thumb_video(p.name)]
-        return ActionResult(False, f"Not video: {', '.join(bad)}", log)
+
+def run_cut_range(
+    paths: list[Path], unit: str, start_text: str, end_text: str
+) -> ActionResult:
+    log = _job_log()
+    title = "Cut range"
+
+    # Validate input syntax before probing any selected files. Frame ranges are
+    # converted per file because selected videos can have different frame rates.
+    validation_fps = 1.0 if unit == "Frames" else -1.0
+    _, _, range_error = cut_range_seconds(unit, start_text, end_text, validation_fps)
+    if range_error and "frame rate" not in range_error:
+        return ActionResult(False, range_error, log)
+
+    media = [p for p in paths if is_thumb_media(p.name)]
+    if not media:
+        return ActionResult(False, "Select one or more video or audio files.", log)
+    if len(media) != len(paths):
+        bad = [p.name for p in paths if not is_thumb_media(p.name)]
+        return ActionResult(False, f"Not video or audio: {', '.join(bad)}", log)
+    audio_only = [p for p in media if is_thumb_audio(p.name)]
+    if unit == "Frames" and audio_only:
+        return ActionResult(
+            False,
+            "Frames can only be used with video. Select Seconds when cutting audio.",
+            log,
+        )
 
     ok = fail = 0
-    for vid in videos:
-        fps = probe_video_avg_frame_rate(vid)
-        if fps <= 0:
-            log.append(f"{title}: could not read frame rate: {vid.name}")
+    for vid in media:
+        fps = probe_video_avg_frame_rate(vid) if unit == "Frames" else -1.0
+        start_sec, end_sec, range_error = cut_range_seconds(
+            unit, start_text, end_text, fps
+        )
+        if range_error:
+            log.append(f"{title}: {range_error} ({vid.name})")
+            fail += 1
+            continue
+        media_duration = probe_media_duration_sec(vid)
+        if media_duration > 0 and start_sec >= media_duration:
+            log.append(
+                f"{title}: start {_ffmpeg_decimal(start_sec)}s is beyond "
+                f"the {media_duration:.3f}s duration ({vid.name})"
+            )
+            fail += 1
+            continue
+        end_tolerance = (1.0 / fps) if unit == "Frames" and fps > 0 else 0.001
+        if (
+            media_duration > 0
+            and end_sec is not None
+            and end_sec > media_duration + end_tolerance
+        ):
+            log.append(
+                f"{title}: end {_ffmpeg_decimal(end_sec)}s is beyond "
+                f"the {media_duration:.3f}s duration ({vid.name})"
+            )
             fail += 1
             continue
         ext = file_ext_lower(vid.name)
-        tmp = vid.parent / f"{vid.stem}.__opus_trim_tmp{ext}"
-        bak = vid.parent / f"{vid.stem}.__opus_trim_orig{ext}"
+        tmp = vid.parent / f"{vid.stem}.__opus_cut_tmp{ext}"
+        bak = vid.parent / f"{vid.stem}.__opus_cut_orig{ext}"
         _safe_delete(tmp)
         _safe_delete(bak)
-        cmd = ffmpeg_trim_leading_frames_exec(vid, tmp, frame_count, fps, ext)
-        log.append(f"{title} (skip {frame_count} @ {fps} fps): {cmd}")
+        if is_thumb_audio(vid.name):
+            cmd = ffmpeg_cut_audio_range_exec(vid, tmp, start_sec, end_sec)
+        elif unit == "Frames":
+            start_frame = parse_cut_frame(start_text)
+            end_frame = parse_cut_frame(end_text) if end_text.strip() else None
+            cmd = ffmpeg_cut_frame_range_exec(
+                vid, tmp, start_frame, end_frame, start_sec, end_sec, ext
+            )
+        else:
+            cmd = ffmpeg_cut_range_exec(vid, tmp, start_sec, end_sec, ext)
+        entered_range = f"{start_text or '0'} to {end_text or 'end'} {unit.lower()}"
+        if unit == "Frames":
+            entered_range += f" @ {fps:g} fps"
+        log.append(f"{title} ({entered_range}): {cmd}")
         if _run_cmd(cmd, log) != 0 or not tmp.is_file():
             fail += 1
             continue
@@ -2514,7 +2704,7 @@ def run_trim_leading_frames(paths: list[Path], frame_count_str: str) -> ActionRe
         else:
             fail += 1
 
-    summary = f"{title} finished (skipped first {frame_count} frame(s)). OK: {ok}"
+    summary = f"{title} finished ({start_text or '0'} to {end_text or 'end'} {unit.lower()}). OK: {ok}"
     if fail:
         summary += f", Failed: {fail}"
     return ActionResult(ok > 0, summary, log)
@@ -2570,7 +2760,7 @@ def _run_action_impl(
     if action == "flipv":
         return run_video_transform(paths, "vflip", "Flip vertical")
     if action == "trimstart":
-        return run_trim_leading_frames(paths, settings.trim_frames)
+        return run_cut_range(paths, settings.cut_unit, settings.cut_start, settings.cut_end)
     return ActionResult(False, f"Unknown action: {action}", [])
 
 

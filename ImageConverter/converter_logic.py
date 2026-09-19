@@ -7,11 +7,12 @@ import json
 import math
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -24,6 +25,7 @@ DEFAULT_MAGICK_BIN_DIR = (
     r"C:\Users\WXP\Desktop\Tools\ImageMagick-7.1.2-25-portable-Q16-HDRI-x64"
 )
 DEFAULT_CJXL_BIN_DIR = r"C:\Users\WXP\Desktop\Tools\jxl-x64-windows-static\bin"
+DEFAULT_TEXCONV_BIN_DIR = str(Path(__file__).resolve().parent / "Texconv")
 
 MAGICK_EXIT_CONTROL_C = -1073741510
 
@@ -85,7 +87,7 @@ IMAGE_EXTS = {
     ".avif", ".psd", ".jp2", ".j2k", ".tga",
     ".pcx", ".wbmp", ".ppm", ".pgm", ".pbm",
     ".pnm", ".pfm", ".pam", ".pgx", ".exr",
-    ".jxl",
+    ".jxl", ".dds",
 }
 
 OUTPUT_FORMATS: dict[str, dict] = {
@@ -98,7 +100,32 @@ OUTPUT_FORMATS: dict[str, dict] = {
     "avif": {"label": "AVIF", "ext": ".avif", "encode": "quality"},
     "jxl":  {"label": "JXL",  "ext": ".jxl",  "encode": "jxl"},
     "ico":  {"label": "ICO",  "ext": ".ico",  "encode": "ico"},
+    "dds":  {"label": "DDS",  "ext": ".dds",  "encode": "dds"},
+    "skyrim_dds": {"label": "Skyrim DDS", "ext": ".dds", "encode": "skyrim"},
 }
+
+# Skyrim SE texture presets, encoded by texconv (ImageMagick cannot write BC7).
+# Skyrim samples every texture as plain UNORM (no gamma-correct sampling), so
+# nothing uses an _SRGB format. Normal maps stay BC7/BC1 rather than BC5: the
+# game reads Z straight from the texture instead of reconstructing it, and a
+# _n.dds alpha channel carries the specular mask. Normal presets filter alpha
+# separately (it is specular, not coverage) and use uniform BC1-3 weighting
+# (perceptual weighting favours green, which distorts vector data).
+SKYRIM_PRESETS: dict[str, dict] = {
+    "auto":         {"label": "Auto (_n / _msn → normal)", "format": None, "normal": None},
+    "diffuse_bc7":  {"label": "Diffuse / color — BC7",     "format": "BC7_UNORM", "normal": False},
+    "diffuse_bc1":  {"label": "Diffuse, no alpha — BC1",   "format": "BC1_UNORM", "normal": False},
+    "diffuse_bc3":  {"label": "Diffuse — BC3 / DXT5",      "format": "BC3_UNORM", "normal": False},
+    "normal_bc7":   {"label": "Normal + specular alpha — BC7", "format": "BC7_UNORM", "normal": True},
+    "normal_bc1":   {"label": "Normal, no specular — BC1",     "format": "BC1_UNORM", "normal": True},
+    "uncompressed": {"label": "Uncompressed — B8G8R8A8",   "format": "B8G8R8A8_UNORM", "normal": False},
+}
+
+SKYRIM_PRESET_KEYS = tuple(SKYRIM_PRESETS.keys())
+SKYRIM_PRESET_LABELS = [SKYRIM_PRESETS[k]["label"] for k in SKYRIM_PRESET_KEYS]
+
+# Skyrim normal-map filename suffixes (tangent-space, model-space).
+SKYRIM_NORMAL_SUFFIXES = ("_n", "_msn")
 
 OUTPUT_FORMAT_KEYS = tuple(OUTPUT_FORMATS.keys())
 OUTPUT_FORMAT_LABELS = [OUTPUT_FORMATS[k]["label"] for k in OUTPUT_FORMAT_KEYS]
@@ -124,6 +151,8 @@ class Settings:
     replace_source: bool = False
     magick_bin_dir: str = DEFAULT_MAGICK_BIN_DIR
     cjxl_bin_dir: str = DEFAULT_CJXL_BIN_DIR
+    texconv_bin_dir: str = DEFAULT_TEXCONV_BIN_DIR
+    skyrim_preset: str = "auto"
     max_dimension: str = "none"
     ico_sizes: str = "256"
     resize_width: str = ""
@@ -298,6 +327,9 @@ def config_load_settings() -> Settings:
     if ico_sizes not in ICO_SIZE_PRESETS:
         ico_sizes = "256"
     resize_width = str(data.get("resize_width") or "")
+    skyrim_preset = str(data.get("skyrim_preset") or "auto")
+    if skyrim_preset not in SKYRIM_PRESETS:
+        skyrim_preset = "auto"
     return Settings(
         output_format=output_format,
         quality=str(data.get("quality") or "90") or "90",
@@ -306,6 +338,8 @@ def config_load_settings() -> Settings:
         replace_source=bool(data.get("replace_source")),
         magick_bin_dir=str(data.get("magick_bin_dir") or DEFAULT_MAGICK_BIN_DIR) or DEFAULT_MAGICK_BIN_DIR,
         cjxl_bin_dir=str(data.get("cjxl_bin_dir") or DEFAULT_CJXL_BIN_DIR) or DEFAULT_CJXL_BIN_DIR,
+        texconv_bin_dir=str(data.get("texconv_bin_dir") or DEFAULT_TEXCONV_BIN_DIR) or DEFAULT_TEXCONV_BIN_DIR,
+        skyrim_preset=skyrim_preset,
         max_dimension=max_dim,
         ico_sizes=ico_sizes,
         resize_width=resize_width,
@@ -323,6 +357,8 @@ def config_save_settings(settings: Settings) -> None:
     data["replace_source"] = settings.replace_source
     data["magick_bin_dir"] = settings.magick_bin_dir
     data["cjxl_bin_dir"] = settings.cjxl_bin_dir
+    data["texconv_bin_dir"] = settings.texconv_bin_dir
+    data["skyrim_preset"] = settings.skyrim_preset
     data["max_dimension"] = settings.max_dimension
     data["ico_sizes"] = settings.ico_sizes
     data["resize_width"] = settings.resize_width
@@ -387,6 +423,9 @@ def validate_settings(settings: Settings) -> Optional[str]:
     if fmt["encode"] == "ico":
         if settings.ico_sizes not in ICO_SIZE_PRESETS:
             return f"Unknown ICO size preset: {settings.ico_sizes}"
+    if fmt["encode"] == "skyrim":
+        if settings.skyrim_preset not in SKYRIM_PRESETS:
+            return f"Unknown Skyrim texture preset: {settings.skyrim_preset}"
     return None
 
 
@@ -428,6 +467,8 @@ def build_magick_encode_args(settings: Settings) -> str:
         parts.append(f"-quality {quality}")
         effort, _ = parse_jxl_effort(settings.jxl_effort)
         parts.append(f"-define jxl:effort={effort or '7'}")
+    elif fmt["encode"] == "dds":
+        parts.append("-define dds:compression=dxt5")
     elif fmt["encode"] == "ico":
         sizes = ico_sizes_list(settings.ico_sizes)
         parts.append(f"-define icon:auto-resize={','.join(str(s) for s in sizes)}")
@@ -469,6 +510,34 @@ def ico_sizes_key_from_label(label: str) -> str:
     return "256"
 
 
+def skyrim_preset_label(key: str) -> str:
+    return SKYRIM_PRESETS.get(key, SKYRIM_PRESETS["auto"])["label"]
+
+
+def skyrim_preset_key_from_label(label: str) -> str:
+    for key, preset in SKYRIM_PRESETS.items():
+        if preset["label"] == label:
+            return key
+    return "auto"
+
+
+def skyrim_preset_for_input(input_path: Path, preset_key: str) -> dict:
+    """Resolve "auto" to a concrete preset from the Skyrim filename suffix."""
+    if preset_key != "auto":
+        return SKYRIM_PRESETS[preset_key]
+    stem = input_path.stem.lower()
+    if stem.endswith(SKYRIM_NORMAL_SUFFIXES):
+        return SKYRIM_PRESETS["normal_bc7"]
+    return SKYRIM_PRESETS["diffuse_bc7"]
+
+
+def build_texconv_args(preset: dict) -> list[str]:
+    args = ["-nologo", "-y", "-f", preset["format"], "-m", "0"]
+    if preset["normal"]:
+        args += ["-sepalpha", "-bcuniform"]
+    return args
+
+
 def resolve_magick_exe(settings: Settings) -> Optional[Path]:
     bin_dir = Path(os.path.expandvars(settings.magick_bin_dir.strip()))
     exe = bin_dir / "magick.exe"
@@ -479,6 +548,15 @@ def resolve_cjxl_exe(settings: Settings) -> Optional[Path]:
     bin_dir = Path(os.path.expandvars(settings.cjxl_bin_dir.strip()))
     exe = bin_dir / "cjxl.exe"
     return exe if exe.is_file() else None
+
+
+def resolve_texconv_exe(settings: Settings) -> Optional[Path]:
+    bin_dir = Path(os.path.expandvars(settings.texconv_bin_dir.strip()))
+    for name in ("texconvx64.exe", "texconv.exe"):
+        exe = bin_dir / name
+        if exe.is_file():
+            return exe
+    return None
 
 
 def build_cjxl_args(settings: Settings, thread_limit: int = 1) -> str:
@@ -570,14 +648,106 @@ def _convert_to_jxl(
                 pass
 
 
+def _run_texconv(
+    exe: Path,
+    texconv_args: list[str],
+    input_path: Path,
+    output_dir: Path,
+    emit: OutputSink,
+) -> int:
+    # texconv reports progress on stdout, not stderr.
+    cmd = [os.fspath(exe)] + texconv_args + [
+        "-o", os.fspath(output_dir),
+        os.fspath(input_path),
+    ]
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=os.fspath(exe.parent),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            creationflags=_win_subprocess_flags(),
+        )
+        reader = threading.Thread(
+            target=_stream_process_output, args=(proc, emit, proc.stdout), daemon=True
+        )
+        reader.start()
+        try:
+            rc = proc.wait()
+        finally:
+            reader.join(timeout=2.0)
+            if proc.stdout is not None:
+                try:
+                    proc.stdout.close()
+                except OSError:
+                    pass
+        return int(rc)
+    except OSError as ex:
+        emit(f"Error: {ex}", False)
+        return -1
+
+
+# BC formats need multiple-of-4 dimensions; this rounds up and is an exact
+# no-op when the image already fits.
+SNAP_TO_BLOCK_ARG = '-resize "%[fx:ceil(w/4)*4]x%[fx:ceil(h/4)*4]!"'
+
+
+def _convert_to_skyrim_dds(
+    texconv_exe: Path,
+    magick_exe: Path,
+    input_path: Path,
+    output_path: Path,
+    preset_key: str,
+    resize_arg: str,
+    thread_limit: int,
+    emit: OutputSink,
+) -> int:
+    preset = skyrim_preset_for_input(input_path, preset_key)
+    emit(f"  {input_path.name}: {preset['label']}", False)
+    work_dir = Path(tempfile.mkdtemp(prefix="imgconv_dds_"))
+    try:
+        # ImageMagick decodes any input to a plain 8-bit TGA: first frame only
+        # (PSD composite, first GIF frame), EXIF-oriented, block-aligned. TGA
+        # carries no gamma metadata, so texconv cannot apply an sRGB conversion.
+        # -type forces truecolour: ImageMagick otherwise writes flat or grey
+        # images as palette/greyscale TGAs, which texconv rejects.
+        staged = work_dir / "tex.tga"
+        no_alpha = preset["format"] == "BC1_UNORM"
+        prep = " ".join(filter(None, [
+            "-auto-orient",
+            resize_arg,
+            SNAP_TO_BLOCK_ARG,
+            "-alpha off -type TrueColor" if no_alpha else "-type TrueColorAlpha",
+            "-depth 8",
+        ]))
+        rc = _run_magick(
+            magick_exe, f"{os.fspath(input_path)}[0]", prep, "", staged, emit, thread_limit
+        )
+        if rc != 0:
+            return rc
+        rc = _run_texconv(texconv_exe, build_texconv_args(preset), staged, work_dir, emit)
+        if rc != 0:
+            return rc
+        produced = work_dir / "tex.dds"
+        if not produced.is_file():
+            emit(f"Error: texconv did not produce {produced.name}", False)
+            return -1
+        shutil.move(os.fspath(produced), os.fspath(output_path))
+        return 0
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
 def _win_subprocess_flags() -> int:
     if sys.platform != "win32":
         return 0
     return subprocess.CREATE_NO_WINDOW
 
 
-def _stream_process_output(proc: subprocess.Popen, emit: OutputSink) -> None:
-    stream = proc.stderr
+def _stream_process_output(
+    proc: subprocess.Popen, emit: OutputSink, stream=None
+) -> None:
+    stream = stream if stream is not None else proc.stderr
     if stream is None:
         return
     carry = ""
@@ -628,6 +798,10 @@ def _run_magick(
     if encode_args:
         cmd += shlex.split(encode_args)
     cmd.append(os.fspath(output_path))
+    return _run_magick_cmd(exe, cmd, emit)
+
+
+def _run_magick_cmd(exe: Path, cmd: list[str], emit: OutputSink) -> int:
     try:
         proc = subprocess.Popen(
             cmd,
@@ -683,6 +857,10 @@ def run_convert(
     use_cjxl = cjxl is not None
     magick = resolve_magick_exe(settings)
 
+    fmt = OUTPUT_FORMATS[settings.output_format]
+    use_texconv = fmt["encode"] == "skyrim"
+    texconv = resolve_texconv_exe(settings) if use_texconv else None
+
     if not use_cjxl and not magick:
         msg = (
             f"magick.exe not found at:\n{settings.magick_bin_dir}\\magick.exe\n\n"
@@ -690,7 +868,13 @@ def run_convert(
         )
         return ConvertResult(False, msg, log)
 
-    fmt = OUTPUT_FORMATS[settings.output_format]
+    if use_texconv and not texconv:
+        msg = (
+            f"texconv.exe not found in:\n{settings.texconv_bin_dir}\n\n"
+            "Skyrim DDS output needs DirectXTex texconv (Texconvx64.exe or texconv.exe)."
+        )
+        return ConvertResult(False, msg, log)
+
     output_ext = fmt["ext"]
     inputs = collect_image_inputs(paths_text, output_ext, tab_folder)
     if not inputs:
@@ -712,7 +896,12 @@ def run_convert(
     thread_limit = max(1, cpu_count // workers_count)
     cjxl_args = build_cjxl_args(settings, thread_limit) if use_cjxl else ""
 
-    encoder_label = f"cjxl {cjxl_args}" if use_cjxl else (encode_args or "default")
+    if use_cjxl:
+        encoder_label = f"cjxl {cjxl_args}"
+    elif use_texconv:
+        encoder_label = f"texconv, {skyrim_preset_label(settings.skyrim_preset)}"
+    else:
+        encoder_label = encode_args or "default"
     emit(f"convert: {total} file(s) → {fmt['label']} ({encoder_label}) — {workers_count} worker(s), {thread_limit} thread(s)/worker")
 
     ok = 0
@@ -727,6 +916,8 @@ def run_convert(
         worker_emit: OutputSink = (lambda t, r: emit(t, False)) if workers_count > 1 else emit
         if use_cjxl:
             rc = _convert_to_jxl(cjxl, magick, input_path, output_path, cjxl_args, resize_arg, thread_limit, worker_emit, i)
+        elif use_texconv:
+            rc = _convert_to_skyrim_dds(texconv, magick, input_path, output_path, settings.skyrim_preset, resize_arg, thread_limit, worker_emit)
         else:
             rc = _run_magick(magick, input_path, resize_arg, encode_args, output_path, worker_emit, thread_limit)
         return i, input_path, output_path, rc
