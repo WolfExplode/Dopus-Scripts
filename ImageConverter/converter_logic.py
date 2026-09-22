@@ -156,6 +156,8 @@ class Settings:
     max_dimension: str = "none"
     ico_sizes: str = "256"
     resize_width: str = ""
+    resize_height: str = ""
+    resize_preserve_aspect: bool = True
     files_text: str = ""
     gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
@@ -327,6 +329,7 @@ def config_load_settings() -> Settings:
     if ico_sizes not in ICO_SIZE_PRESETS:
         ico_sizes = "256"
     resize_width = str(data.get("resize_width") or "")
+    resize_height = str(data.get("resize_height") or "")
     skyrim_preset = str(data.get("skyrim_preset") or "auto")
     if skyrim_preset not in SKYRIM_PRESETS:
         skyrim_preset = "auto"
@@ -343,6 +346,8 @@ def config_load_settings() -> Settings:
         max_dimension=max_dim,
         ico_sizes=ico_sizes,
         resize_width=resize_width,
+        resize_height=resize_height,
+        resize_preserve_aspect=bool(data.get("resize_preserve_aspect", True)),
         files_text=str(data.get("files_text") or ""),
         gui_sections=gui_sections,
     )
@@ -362,6 +367,8 @@ def config_save_settings(settings: Settings) -> None:
     data["max_dimension"] = settings.max_dimension
     data["ico_sizes"] = settings.ico_sizes
     data["resize_width"] = settings.resize_width
+    data["resize_height"] = settings.resize_height
+    data["resize_preserve_aspect"] = settings.resize_preserve_aspect
     data["files_text"] = settings.files_text
     data["gui_sections"] = settings.gui_sections
     try:
@@ -430,17 +437,37 @@ def validate_settings(settings: Settings) -> Optional[str]:
 
 
 def validate_resize_settings(settings: Settings) -> Optional[str]:
-    rw = settings.resize_width.strip()
-    if not rw:
-        return "Resize width is required for resizing."
-    try:
-        w = int(rw)
-        if w < 1:
-            return "Resize width must be at least 1."
-    except ValueError:
-        return "Resize width must be a positive integer."
+    dimensions = (
+        ("width", settings.resize_width.strip()),
+        ("height", settings.resize_height.strip()),
+    )
+    has_dimension = False
+    for name, raw in dimensions:
+        if not raw or raw == "0":
+            continue
+        try:
+            value = int(raw)
+        except ValueError:
+            return f"Resize {name} must be a positive integer."
+        if value < 1:
+            return f"Resize {name} must be at least 1."
+        has_dimension = True
+    if not has_dimension:
+        return "Enter a resize width, height, or both."
     return None
 
+
+def build_resize_geometry(settings: Settings) -> tuple[str, str]:
+    """Return ImageMagick geometry and a human-readable target description."""
+    width = int(settings.resize_width.strip() or "0")
+    height = int(settings.resize_height.strip() or "0")
+    if width and height:
+        if settings.resize_preserve_aspect:
+            return f"{width}x{height}", f"within {width}×{height}px (aspect ratio preserved)"
+        return f"{width}x{height}!", f"exactly {width}×{height}px"
+    if width:
+        return f"{width}x", f"width {width}px"
+    return f"x{height}", f"height {height}px"
 
 
 def _jxl_distance_to_quality(distance: float) -> int:
@@ -1009,16 +1036,15 @@ def run_resize(
             log,
         )
 
-    rw = settings.resize_width.strip()
-    width = int(rw)
-    resize_arg = f"-resize {width}x"
+    geometry, target_description = build_resize_geometry(settings)
+    resize_arg = f'-filter Lanczos -resize "{geometry}"'
 
     cpu_count = os.cpu_count() or 4
     total = len(inputs)
     workers_count = min(total, cpu_count)
     thread_limit = max(1, cpu_count // workers_count)
 
-    emit(f"resize: {total} file(s) → width {width}px — {workers_count} worker(s), {thread_limit} thread(s)/worker")
+    emit(f"resize: {total} file(s) → {target_description} — {workers_count} worker(s), {thread_limit} thread(s)/worker")
 
     ok = 0
     fail = 0
@@ -1075,7 +1101,7 @@ def run_resize(
     if error_result is not None:
         return error_result
 
-    summary = f"Resized {ok} file(s) to width {width}px."
+    summary = f"Resized {ok} file(s) to {target_description}."
     emit(f"resize: done. {summary}")
     return ConvertResult(True, summary, log, ok, fail)
 

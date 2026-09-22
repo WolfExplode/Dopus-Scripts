@@ -147,6 +147,8 @@ def run_gui(
         TAG_SKYRIM_PRESET = "skyrim_preset_combo"
         TAG_TEXCONV_DIR = "texconv_dir_input"
         TAG_RESIZE_WIDTH = "resize_width_input"
+        TAG_RESIZE_HEIGHT = "resize_height_input"
+        TAG_RESIZE_PRESERVE_ASPECT = "resize_preserve_aspect_check"
         TAG_REPLACE_SOURCE = "replace_source_check"
         TAG_MAX_DIMENSION = "max_dimension_combo"
         TAG_MAGICK_DIR = "magick_dir_input"
@@ -483,28 +485,57 @@ def run_gui(
 
                     hdr_resize = self._section(
                         "Resize",
-                        "Resize images to a specific width. "
-                        "Height is calculated automatically to maintain aspect ratio.",
+                        "Resize images to a custom width, height, or both.",
                         "resize",
                     )
                     with dpg.group(parent=hdr_resize):
-                        rw_label = dpg.add_text("Width", color=(150, 158, 175))
-                        rw = dpg.add_input_int(
-                            tag=self.TAG_RESIZE_WIDTH,
-                            default_value=_bounded_int(self.settings.resize_width, 0, 0, 16384),
-                            min_value=1,
-                            max_value=16384,
-                            min_clamped=True,
-                            max_clamped=True,
-                            step=1,
-                            width=80,
+                        with dpg.group(horizontal=True):
+                            with dpg.group():
+                                rw_label = dpg.add_text("Width", color=(150, 158, 175))
+                                rw = dpg.add_input_int(
+                                    tag=self.TAG_RESIZE_WIDTH,
+                                    default_value=_bounded_int(self.settings.resize_width, 0, 0, 16384),
+                                    min_value=0,
+                                    max_value=16384,
+                                    min_clamped=True,
+                                    max_clamped=True,
+                                    step=1,
+                                    width=100,
+                                )
+                            with dpg.group():
+                                rh_label = dpg.add_text("Height", color=(150, 158, 175))
+                                rh = dpg.add_input_int(
+                                    tag=self.TAG_RESIZE_HEIGHT,
+                                    default_value=_bounded_int(self.settings.resize_height, 0, 0, 16384),
+                                    min_value=0,
+                                    max_value=16384,
+                                    min_clamped=True,
+                                    max_clamped=True,
+                                    step=1,
+                                    width=100,
+                                )
+                        dimension_tip = (
+                            "Target size in pixels. Set either value to 0 to calculate it "
+                            "automatically from the source aspect ratio."
                         )
-                        self._hover_tip(rw_label, "Target width in pixels.")
-                        self._hover_tip(rw, "Target width in pixels.")
+                        self._hover_tip(rw_label, dimension_tip)
+                        self._hover_tip(rw, dimension_tip)
+                        self._hover_tip(rh_label, dimension_tip)
+                        self._hover_tip(rh, dimension_tip)
+                        preserve = dpg.add_checkbox(
+                            tag=self.TAG_RESIZE_PRESERVE_ASPECT,
+                            label="Preserve aspect ratio",
+                            default_value=self.settings.resize_preserve_aspect,
+                        )
+                        self._hover_tip(
+                            preserve,
+                            "When both dimensions are set, fit inside that box without distortion.\n"
+                            "Turn this off to force the exact width and height.",
+                        )
                         dpg.add_spacer(height=6)
                         resize_btn = dpg.add_button(label="Resize", callback=self._on_resize, width=-1)
                         dpg.bind_item_theme(resize_btn, self._theme_apply)
-                        self._hover_tip(resize_btn, "Resize all listed images to the specified width.")
+                        self._hover_tip(resize_btn, "Resize all listed images to the custom size.")
 
                 self._splitter.add_handle()
 
@@ -564,6 +595,8 @@ def run_gui(
                 max_dimension=max_dimension_key_from_label(str(dpg.get_value(self.TAG_MAX_DIMENSION))),
                 ico_sizes=ico_sizes_key_from_label(str(dpg.get_value(self.TAG_ICO_SIZES))),
                 resize_width=str(dpg.get_value(self.TAG_RESIZE_WIDTH)),
+                resize_height=str(dpg.get_value(self.TAG_RESIZE_HEIGHT)),
+                resize_preserve_aspect=bool(dpg.get_value(self.TAG_RESIZE_PRESERVE_ASPECT)),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
                 gui_sections=sections,
             )
