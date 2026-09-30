@@ -52,6 +52,7 @@ class Settings:
     small_file_framerate: str = ""
     frame_range_start: str = ""
     frame_range_end: str = ""
+    frame_range_unit: str = "frames"
     output_format: str = ""
     replace_original: bool = False
     files_text: str = ""
@@ -127,6 +128,7 @@ def config_load_settings() -> Settings:
         small_file_framerate=str(data.get("small_file_framerate") or ""),
         frame_range_start=str(data.get("frame_range_start") or ""),
         frame_range_end=str(data.get("frame_range_end") or ""),
+        frame_range_unit=str(data.get("frame_range_unit") or "frames"),
         output_format=str(data.get("output_format") or ""),
         replace_original=bool(data.get("replace_original")),
         files_text=str(data.get("files_text") or ""),
@@ -144,6 +146,7 @@ def config_save_settings(settings: Settings) -> None:
         "small_file_framerate": settings.small_file_framerate,
         "frame_range_start": settings.frame_range_start,
         "frame_range_end": settings.frame_range_end,
+        "frame_range_unit": settings.frame_range_unit,
         "output_format": settings.output_format,
         "replace_original": settings.replace_original,
         "files_text": settings.files_text,
@@ -496,17 +499,71 @@ def parse_small_file_rule(
     return SmallFileRule(cutoff_mb=cutoff_mb, quality=quality, framerate=framerate)
 
 
+RANGE_UNIT_FRAMES = "frames"
+RANGE_UNIT_SECONDS = "seconds"
+RANGE_UNITS = (RANGE_UNIT_FRAMES, RANGE_UNIT_SECONDS)
+PTS_PER_SECOND = 90000
+
+
 @dataclass
 class FrameRange:
     start_frame: int
     use_start_at: bool
     stop_duration: Optional[int]
+    unit: str = RANGE_UNIT_FRAMES  # seconds mode stores start/duration as 90 kHz pts ticks
 
 
-def parse_frame_range(start_raw: str, end_raw: str) -> Optional[FrameRange]:
+def parse_range_unit(raw: str) -> str:
+    return raw if raw in RANGE_UNITS else RANGE_UNIT_FRAMES
+
+
+def _parse_seconds(s: str) -> Optional[float]:
+    """Accept 90, 90.5, 1:30, or 0:01:30.5. Returns None if invalid."""
+    parts = s.split(":")
+    if len(parts) > 3:
+        return None
+    total = 0.0
+    for i, part in enumerate(parts):
+        try:
+            v = float(part)
+        except ValueError:
+            return None
+        if v < 0 or (i > 0 and v >= 60):
+            return None
+        total = total * 60 + v
+    return total
+
+
+def _parse_seconds_range(start_s: str, end_s: str) -> FrameRange:
+    has_start, has_end = start_s != "", end_s != ""
+    start_sec = 0.0
+    if has_start:
+        v = _parse_seconds(start_s)
+        if v is None:
+            raise ValidationError("Range start must be seconds (e.g. 12.5) or a timecode (e.g. 1:30).")
+        start_sec = v
+    stop_duration = None
+    if has_end:
+        end_sec = _parse_seconds(end_s)
+        if end_sec is None:
+            raise ValidationError("Range end must be seconds (e.g. 12.5) or a timecode (e.g. 1:30).")
+        if end_sec <= start_sec:
+            raise ValidationError("Range end must be greater than start.")
+        stop_duration = round((end_sec - start_sec) * PTS_PER_SECOND)
+    return FrameRange(
+        start_frame=round(start_sec * PTS_PER_SECOND),
+        use_start_at=has_start,
+        stop_duration=stop_duration,
+        unit=RANGE_UNIT_SECONDS,
+    )
+
+
+def parse_frame_range(start_raw: str, end_raw: str, unit: str = RANGE_UNIT_FRAMES) -> Optional[FrameRange]:
     start_s, end_s = start_raw.strip(), end_raw.strip()
     if start_s == "" and end_s == "":
         return None
+    if parse_range_unit(unit) == RANGE_UNIT_SECONDS:
+        return _parse_seconds_range(start_s, end_s)
     has_start, has_end = start_s != "", end_s != ""
     start_frame = 0
     if has_start:
@@ -537,11 +594,13 @@ def parse_frame_range(start_raw: str, end_raw: str) -> Optional[FrameRange]:
 def frame_range_cli_args(frame_range: Optional[FrameRange]) -> list[str]:
     if not frame_range:
         return []
+    # Seconds are sent as pts (90 kHz ticks) so fractional values stay exact.
+    kind = "pts" if frame_range.unit == RANGE_UNIT_SECONDS else "frames"
     args: list[str] = []
     if frame_range.use_start_at:
-        args += ["--start-at", f"frames:{frame_range.start_frame}"]
+        args += ["--start-at", f"{kind}:{frame_range.start_frame}"]
     if frame_range.stop_duration is not None:
-        args += ["--stop-at", f"frames:{frame_range.stop_duration}"]
+        args += ["--stop-at", f"{kind}:{frame_range.stop_duration}"]
     return args
 
 
@@ -581,7 +640,9 @@ def build_encode_options(settings: Settings, preset_path: Path) -> EncodeOptions
         small_file_rule=parse_small_file_rule(
             settings.small_file_cutoff_mb, settings.small_file_quality, settings.small_file_framerate
         ),
-        frame_range=parse_frame_range(settings.frame_range_start, settings.frame_range_end),
+        frame_range=parse_frame_range(
+            settings.frame_range_start, settings.frame_range_end, settings.frame_range_unit
+        ),
         output_format=parse_output_format(settings.output_format),
         replace_original=settings.replace_original,
     )

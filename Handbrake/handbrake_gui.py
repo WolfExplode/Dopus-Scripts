@@ -20,7 +20,9 @@ from handbrake_logic import (
     dedupe_path_lines,
     list_preset_json_files,
     parse_input_paths,
+    parse_range_unit,
     resolve_preset_path,
+    RANGE_UNITS,
     run_encode,
     ValidationError,
     _delete_only_list_file,
@@ -114,6 +116,7 @@ def run_gui(
         TAG_SMALL_FRAMERATE = "small_framerate_input"
         TAG_FRAME_START = "frame_start_input"
         TAG_FRAME_END = "frame_end_input"
+        TAG_RANGE_UNIT = "range_unit_combo"
         TAG_FORMAT = "format_combo"
         TAG_REPLACE = "replace_check"
         TAG_OUTPUT = "output_text"
@@ -322,7 +325,7 @@ def run_gui(
                             )
 
                         dpg.add_spacer(height=4)
-                        dpg.add_text("Frame range (optional)", color=(150, 158, 175))
+                        dpg.add_text("Range (optional)", color=(150, 158, 175))
                         with dpg.group(horizontal=True):
                             frame_start = dpg.add_input_text(
                                 tag=self.TAG_FRAME_START,
@@ -332,7 +335,8 @@ def run_gui(
                             )
                             self._hover_tip(
                                 frame_start,
-                                "Optional first frame to encode (zero-based). Blank starts at the beginning.",
+                                "Optional start point. Frames: first frame to encode (zero-based). "
+                                "Seconds: time such as 12.5 or 1:30. Blank starts at the beginning.",
                             )
                             frame_end = dpg.add_input_text(
                                 tag=self.TAG_FRAME_END,
@@ -342,8 +346,16 @@ def run_gui(
                             )
                             self._hover_tip(
                                 frame_end,
-                                "Optional last frame to encode (inclusive). Blank continues to the end.",
+                                "Optional end point. Frames: last frame to encode (inclusive). "
+                                "Seconds: time such as 42 or 0:01:05.5. Blank continues to the end.",
                             )
+                            range_unit = dpg.add_combo(
+                                tag=self.TAG_RANGE_UNIT,
+                                items=list(RANGE_UNITS),
+                                default_value=parse_range_unit(self.settings.frame_range_unit),
+                                width=90,
+                            )
+                            self._hover_tip(range_unit, "Whether start/end are frame numbers or times in seconds.")
 
                         dpg.add_spacer(height=4)
                         dpg.add_text("Output container", color=(150, 158, 175))
@@ -390,6 +402,7 @@ def run_gui(
                 small_file_framerate=str(dpg.get_value(self.TAG_SMALL_FRAMERATE)).strip(),
                 frame_range_start=str(dpg.get_value(self.TAG_FRAME_START)).strip(),
                 frame_range_end=str(dpg.get_value(self.TAG_FRAME_END)).strip(),
+                frame_range_unit=parse_range_unit(str(dpg.get_value(self.TAG_RANGE_UNIT) or "")),
                 output_format=self._label_to_format(str(dpg.get_value(self.TAG_FORMAT) or "")),
                 replace_original=bool(dpg.get_value(self.TAG_REPLACE)),
                 files_text=str(dpg.get_value(self.TAG_FILES)),
