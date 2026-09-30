@@ -460,7 +460,7 @@ def run_cli(argv: list[str]) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Translate file names to English via DeepSeek or Kimi.")
-    parser.add_argument("--gui", action="store_true", help="Open Dear PyGui GUI.")
+    parser.add_argument("--gui", action="store_true", help="Open the GUI.")
     parser.add_argument("--only-list", metavar="FILE", help="UTF-8 file, one path per line.")
     parser.add_argument("--only-file", action="append", default=[], metavar="PATH")
     args = parser.parse_args(argv)

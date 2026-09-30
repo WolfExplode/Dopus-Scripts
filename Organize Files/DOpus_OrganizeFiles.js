@@ -1,4 +1,4 @@
-// Organize Files — launches OrganizeFiles.py (Python / Dear PyGui) from this repo.
+// Organize Files — launches OrganizeFiles.py (Python / PySide6) from this repo.
 //
 // Click: open GUI. Target field = source tab folder; selected items fill Source paths.
 // Files/folders selected in the source pane: only those paths fill the GUI source field.

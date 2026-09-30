@@ -1,4 +1,4 @@
-// FFmpeg Tool — launches FFmpegTool.py (Python / Dear PyGui) from this repo.
+// FFmpeg Tool — launches FFmpegTool.py (Python / PySide6) from this repo.
 //
 // Click: open GUI. Selected files and folders fill the file list (folders → all media inside).
 // Ctrl+click: run the last GUI action on the selection (no dialog).
