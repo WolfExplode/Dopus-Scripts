@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import threading
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -128,7 +128,6 @@ SKYRIM_PRESET_LABELS = [SKYRIM_PRESETS[k]["label"] for k in SKYRIM_PRESET_KEYS]
 SKYRIM_NORMAL_SUFFIXES = ("_n", "_msn")
 
 OUTPUT_FORMAT_KEYS = tuple(OUTPUT_FORMATS.keys())
-OUTPUT_FORMAT_LABELS = [OUTPUT_FORMATS[k]["label"] for k in OUTPUT_FORMAT_KEYS]
 
 CONFIG_DIR = Path(os.environ.get("APPDATA", "")) / "ImageConverter"
 CONFIG_PATH = CONFIG_DIR / "settings.json"

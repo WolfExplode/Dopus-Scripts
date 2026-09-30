@@ -42,7 +42,6 @@ IMAGE_EXT = {
     ".jpg", ".jpeg", ".jfif", ".png", ".apng", ".webp", ".bmp", ".gif", ".tif", ".tiff", ".heic",
     ".heif", ".avif", ".jxl", ".ico", ".psd", ".tga", ".dds", ".exr",
 }
-TEXT_EXT = {".txt", ".md", ".csv", ".json", ".log", ".srt", ".ass", ".vtt"}
 
 ROLE_PATH = Qt.UserRole + 1
 
