@@ -1,4 +1,4 @@
-// Image Converter — launches ImageConverterTool.py (Python / Dear PyGui) from this repo.
+// Image Converter — launches ImageConverterTool.py (Python / PySide6) from this repo.
 //
 // Click: open GUI. Selected files and folders fill the input list.
 // No selection: current tab folder is passed as the default input.

@@ -1,2 +1,1 @@
-dearpygui
-DearPyGui-DragAndDrop
+PySide6-Essentials>=6.7

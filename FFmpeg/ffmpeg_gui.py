@@ -1,859 +1,451 @@
-"""Dear PyGui front-end for FFmpeg tool."""
+"""PySide6 front-end for the FFmpeg tool."""
 
 from __future__ import annotations
 
-import os
-import queue
-import sys
-import textwrap
-import threading
 from pathlib import Path
 from typing import Optional
 
-from ffmpeg_logic import *
-from dpg_splitter import PanelSplitter
+from ffmpeg_logic import (
+    AUDIO_FORMATS,
+    CONFIG_DIR,
+    MERGE_CONTAINERS,
+    MONO_CHANNELS,
+    VIDEO_FORMATS,
+    Settings,
+    build_initial_files_text,
+    cancel_running_jobs,
+    chapters_to_youtube_text,
+    config_load_settings,
+    config_save_settings,
+    copy_text_to_clipboard,
+    cover_combine_preflight,
+    format_preset_by_name,
+    is_thumb_audio,
+    is_thumb_media,
+    is_thumb_video,
+    merge_preflight_mismatch,
+    parse_cut_frame,
+    parse_cut_seconds,
+    parse_file_paths,
+    probe_media_duration_sec,
+    probe_video_avg_frame_rate,
+    quality_applicable,
+    run_action,
+    shutdown_ffmpeg_tool,
+)
 
-OUTPUT_WRAP_WIDTH = 100
+import uikit as ui
+from uikit import icons
 
+ACCENT = "#2EC5EA"
 
-def _wrap_output_line(line: str) -> str:
-    if not line:
-        return line
-    return textwrap.fill(
-        line,
-        width=OUTPUT_WRAP_WIDTH,
-        break_long_words=True,
-        replace_whitespace=False,
-    )
+ACTION_TITLES = {
+    "convert": "Convert",
+    "rotatecw": "Rotate 90° clockwise",
+    "rotateccw": "Rotate 90° counter-clockwise",
+    "fliph": "Flip horizontal",
+    "flipv": "Flip vertical",
+    "trimstart": "Cut & replace",
+    "cover": "Split / combine cover",
+    "discardvid": "Discard video",
+    "discardaud": "Discard audio",
+    "mono": "Audio to mono",
+    "splitav": "Split / combine audio & video",
+    "splitch": "Audio channels to WAV",
+    "mergevid": "Merge with chapters",
+    "framesample": "Timelapse sample",
+}
 
-
-def _shutdown_gui_app(app) -> None:
-    shutdown_ffmpeg_tool(paths=app._file_paths(), only_list=app._only_list_path)
-
-
-def _windows_fonts_dir() -> Path:
-    return Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
-
-
-def _pick_unicode_ui_font() -> Optional[Path]:
-    for name in (
-        "NotoSansSC-VF.ttf", "msyh.ttc", "msyhbd.ttc", "simsun.ttc",
-        "mingliu.ttc", "msjh.ttc", "segoeui.ttf",
-    ):
-        path = _windows_fonts_dir() / name
-        if path.is_file():
-            return path
-    return None
-
-
-def _browse_initial_dir(hint: str) -> str:
-    hint = hint.strip()
-    if not hint:
-        return ""
-    p = Path(hint)
-    if p.is_dir():
-        return str(p)
-    if p.is_file():
-        return str(p.parent)
-    parent = p.parent
-    return str(parent) if parent.is_dir() else ""
-
-
-def _pick_native_folder(title: str, initial: str = "") -> str:
-    import tkinter as tk
-    from tkinter import filedialog
-
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    kwargs: dict = {"title": title, "parent": root}
-    init = _browse_initial_dir(initial)
-    if init:
-        kwargs["initialdir"] = init
-    path = filedialog.askdirectory(**kwargs)
-    root.destroy()
-    return path if path else ""
+PAGE_FOR_ACTION = {
+    "convert": "convert", "rotatecw": "rotate", "rotateccw": "rotate", "fliph": "rotate",
+    "flipv": "rotate", "trimstart": "cut", "cover": "cover", "discardvid": "cover",
+    "discardaud": "audio", "mono": "audio", "splitav": "audio", "splitch": "audio",
+    "mergevid": "merge", "framesample": "timelapse",
+}
 
 
-def _pick_native_files(title: str, initial: str = "") -> list[str]:
-    import tkinter as tk
-    from tkinter import filedialog
-
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    kwargs: dict = {"title": title, "parent": root}
-    init = _browse_initial_dir(initial)
-    if init:
-        kwargs["initialdir"] = init
-    paths = filedialog.askopenfilenames(**kwargs)
-    root.destroy()
-    return list(paths) if paths else []
+def _format_duration(seconds: float) -> str:
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = seconds % 60
+    if abs(secs - round(secs)) < 0.000001:
+        return f"{hours:02d}:{minutes:02d}:{int(round(secs)):02d}"
+    return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
 
 
-def _ask_yes_no_cancel(title: str, message: str) -> Optional[bool]:
-    import tkinter as tk
-    from tkinter import messagebox
+class FFmpegWindow(ui.ToolWindow):
+    def __init__(self, settings: Settings, files_text: str, only_list: Optional[str]):
+        self.settings = settings
+        self._only_list = only_list
+        self._cut_fps: Optional[float] = None
 
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    result = messagebox.askyesnocancel(title, message, parent=root)
-    root.destroy()
-    return result if result is None else bool(result)
+        self.files = ui.PathList(
+            empty_text="Drop media files or folders here\nFolders include every media file inside",
+            files_title="Select media files",
+            noun="path",
+        )
+        self.files.set_text(files_text)
+        files_card = ui.Card("Files", "Launch from Directory Opus, drop from Explorer, or add below.", icons.OPEN_FILE)
+        files_card.add(self.files, 1)
 
+        console = ui.ConsolePanel(placeholder="Pick an action. FFmpeg output streams here while a job runs.")
+        super().__init__(
+            title="FFmpeg Tool",
+            tagline="Convert · cut · merge",
+            glyph=icons.MOVIE,
+            config_dir=CONFIG_DIR,
+            inputs=files_card,
+            console=console,
+        )
+        self.jobs = ui.JobHost(self, console)
+        self.last_note = ui.RailNote("Ctrl+click in Opus", "")
+        self.add_rail_note(self.last_note)
+        self._update_last_note()
 
-def _show_error(title: str, message: str) -> None:
-    import tkinter as tk
-    from tkinter import messagebox
+        self.add_page("convert", "Convert", icons.VIDEO, self._build_convert(),
+                      overline="Transcode", on_run=lambda: self.run("convert"))
+        self.add_page("cut", "Cut", icons.CUT, self._build_cut(),
+                      overline="Trim in place", on_run=lambda: self.run("trimstart"))
+        self.add_page("rotate", "Rotate & flip", icons.ROTATE, self._build_rotate(), overline="Transform in place")
+        self.add_page("cover", "Cover art", icons.IMAGE, self._build_cover(),
+                      overline="Embed · extract", on_run=lambda: self.run("cover"))
+        self.add_page("audio", "Audio", icons.MUSIC, self._build_audio(), overline="Streams & channels")
+        self.add_page("merge", "Merge", icons.MERGE, self._build_merge(),
+                      overline="Join videos", on_run=lambda: self.run("mergevid"))
+        self.add_page("timelapse", "Timelapse", icons.TIMELAPSE, self._build_timelapse(),
+                      overline="Frame sampling", on_run=lambda: self.run("framesample"))
 
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    messagebox.showerror(title, message, parent=root)
-    root.destroy()
+        self.files.changed.connect(self._on_files_changed)
+        self.on_close = self._shutdown
+        self._sync_formats()
+        self._autofill_cut_end()
+        self._update_cut_duration()
+
+    # ── pages ──────────────────────────────────────────────────────────────
+    def _action(self, action: str, text: str = "", kind: str = "primary", glyph: str = icons.PLAY, tip: str = ""):
+        btn = ui.button(text or ACTION_TITLES[action], kind, glyph, tip, lambda: self.run(action))
+        self.jobs.lock_while_running(btn)
+        return btn
+
+    def _build_convert(self):
+        s = self.settings
+        self.mode = ui.Segmented([("video", "Video"), ("audio", "Audio")], "video" if s.mode == 0 else "audio")
+        self.mode.changed.connect(lambda _: self._sync_formats())
+        self.format = ui.combo([], tip="Encoder preset for the output file.")
+        self.format.currentTextChanged.connect(lambda _: self._sync_quality())
+        self.quality = ui.line_edit(s.quality, "23", "Constant rate factor. 18–28 is typical; lower is better quality.")
+        self.quality.setMaximumWidth(120)
+        card = ui.Card("Convert to a new format",
+                       "Output is written next to each source. Existing files are never overwritten.", icons.VIDEO)
+        card.add(ui.field("Media type", self.mode))
+        card.add(ui.grid_fields(
+            ui.field("Format", self.format),
+            ui.field("Quality (CRF)", self.quality, "Only for presets that use CRF."),
+        ))
+        card.add_actions(self._action("convert", tip="Convert every listed file."))
+        return ui.page(card)
+
+    def _build_cut(self):
+        s = self.settings
+        self.cut_unit = ui.Segmented([("Seconds", "Timestamps"), ("Frames", "Frames")], s.cut_unit)
+        self.cut_unit.changed.connect(self._on_cut_unit)
+        hint_text = "0" if s.cut_unit == "Frames" else "00:00:00"
+        self.cut_start = ui.line_edit(s.cut_start, hint_text, "Where the kept range starts.")
+        self.cut_end = ui.line_edit(s.cut_end, hint_text, "Where the kept range ends. Blank keeps everything to the end.")
+        self.cut_start.textChanged.connect(lambda _: self._update_cut_duration())
+        self.cut_end.textChanged.connect(lambda _: self._update_cut_duration())
+        self.cut_duration = ui.Pill("Duration: to end", "idle")
+        card = ui.Card("Keep a range",
+                       "Replaces each original with the selected range. Frames work for video only. "
+                       "End is filled from the first media file.", icons.CUT)
+        card.add(ui.field("Range unit", self.cut_unit))
+        card.add(ui.grid_fields(ui.field("Start", self.cut_start), ui.field("End", self.cut_end)))
+        card.add(ui.row(self.cut_duration, None))
+        card.add_actions(self._action("trimstart", glyph=icons.CUT, tip="Keep the range and replace each original."))
+        return ui.page(card)
+
+    def _build_rotate(self):
+        card = ui.Card("Rotate or flip video",
+                       "Re-encodes the video stream in place; audio and subtitles are copied. Video files only.",
+                       icons.ROTATE)
+        tiles = []
+        for action, text, glyph in (
+            ("rotatecw", "90° clockwise", icons.ROTATE),
+            ("rotateccw", "90° counter-clockwise", icons.UNDO),
+            ("fliph", "Flip horizontal", icons.FLIP_H),
+            ("flipv", "Flip vertical", icons.FLIP_V),
+        ):
+            b = ui.button(text, "tile", glyph, ACTION_TITLES[action], lambda a=action: self.run(a))
+            self.jobs.lock_while_running(b)
+            tiles.append(b)
+        card.add(ui.row(tiles[0], tiles[1]))
+        card.add(ui.row(tiles[2], tiles[3]))
+        return ui.page(card)
+
+    def _build_cover(self):
+        s = self.settings
+        self.replace_video = ui.OptionRow(
+            "Replace video with the image",
+            "Builds a still-image video with the audio copied, instead of embedding the cover.",
+            s.replace_video_with_image,
+        )
+        pair = ui.Card("Split or combine cover",
+                       "Image + media pair up when one file name contains the other (song.wav + song_cover.jpg). "
+                       "Media alone: the cover is extracted to .jpg and stripped.", icons.IMAGE)
+        pair.add(self.replace_video)
+        pair.add_actions(self._action("cover", glyph=icons.IMAGE))
+        still = ui.Card("Discard motion video",
+                        "Grabs one frame and replaces the video with a still slideshow; audio is copied.",
+                        icons.SLIDESHOW)
+        still.add_actions(self._action("discardvid", kind="secondary", glyph=icons.SLIDESHOW))
+        return ui.page(pair, still)
+
+    def _build_audio(self):
+        s = self.settings
+        self.mono_channel = ui.combo(MONO_CHANNELS, s.mono_channel,
+                                     "auto downmixes every channel. 1–8 keeps only that source channel "
+                                     "(1 = L, 2 = R); falls back to downmix if the file has fewer channels.")
+        self.mono_channel.setMinimumWidth(96)
+        card = ui.Card("Audio tools", "Stream-level edits. Video is copied without re-encoding.", icons.MUSIC)
+        card.add(ui.ActionRow("Discard audio", "Remove every audio stream; video copied in place (lossless).",
+                              self._action("discardaud", "Discard", "secondary", icons.DELETE)))
+        card.add(ui.Divider())
+        mono_btn = self._action("mono", "To mono", "secondary", icons.AUDIO)
+        mono = ui.ActionRow("Audio to mono", "Re-encode audio to one channel, copy video.", mono_btn)
+        mono.layout().insertWidget(1, ui.label("Channel", "FieldLabel"))
+        mono.layout().insertWidget(2, self.mono_channel)
+        card.add(mono)
+        card.add(ui.Divider())
+        card.add(ui.ActionRow("Split / combine audio & video",
+                              "Split a video into video-only + .audio.mka, or combine 1 video + 1 audio.",
+                              self._action("splitav", "Split / combine", "secondary", icons.SHARE)))
+        card.add(ui.Divider())
+        card.add(ui.ActionRow("Every channel to WAV", "First audio stream: one mono WAV per channel (stem.ch01.wav …).",
+                              self._action("splitch", "Extract", "secondary", icons.DOWNLOAD)))
+        return ui.page(card)
+
+    def _build_merge(self):
+        s = self.settings
+        self.merge_container = ui.combo(MERGE_CONTAINERS, s.merge_container,
+                                        "auto matches the first file. .mp4 / .mkv force that container.")
+        card = ui.Card("Merge videos",
+                       "2+ videos, sorted by name, into one file with a chapter per input. Lossless when the "
+                       "streams match; otherwise you choose to fix the outliers or re-encode everything.",
+                       icons.MERGE)
+        card.add(ui.field("Output container", self.merge_container))
+        yt = ui.button("Copy YouTube chapters", "secondary", icons.COPY,
+                       "2+ files: chapters from file names + durations. 1 merged file: its embedded chapters.",
+                       self._copy_chapters)
+        self.jobs.lock_while_running(yt)
+        card.add_actions(yt, self._action("mergevid", glyph=icons.MERGE))
+        return ui.page(card)
+
+    def _build_timelapse(self):
+        s = self.settings
+        self.sample_start = ui.line_edit(s.sample_start, "3", "First sampled frame, in seconds from the start.")
+        self.sample_interval = ui.line_edit(s.sample_interval, "2", "Seconds between samples.")
+        self.sample_count = ui.line_edit(s.sample_count, "48", "How many frames the output holds.")
+        card = ui.Card("Timelapse sample",
+                       "Takes one frame every interval and writes <name>_frames.mp4 (H.264, no audio) "
+                       "next to each video.", icons.TIMELAPSE)
+        card.add(ui.grid_fields(
+            ui.field("Start offset (s)", self.sample_start),
+            ui.field("Interval (s)", self.sample_interval),
+            ui.field("Output frames", self.sample_count),
+            columns=3,
+        ))
+        card.add_actions(self._action("framesample", "Extract frames", glyph=icons.TIMELAPSE))
+        return ui.page(card)
+
+    # ── convert helpers ────────────────────────────────────────────────────
+    def _formats(self):
+        return VIDEO_FORMATS if self.mode.value() == "video" else AUDIO_FORMATS
+
+    def _sync_formats(self) -> None:
+        names = [f.name for f in self._formats()]
+        self.format.blockSignals(True)
+        self.format.clear()
+        self.format.addItems(names)
+        if self.settings.format_name in names:
+            self.format.setCurrentText(self.settings.format_name)
+        self.format.blockSignals(False)
+        self._sync_quality()
+
+    def _sync_quality(self) -> None:
+        formats = self._formats()
+        fmt = formats[format_preset_by_name(formats, self.format.currentText())]
+        self.quality.setEnabled(quality_applicable(self.mode.value() == "video", fmt))
+
+    # ── cut helpers ────────────────────────────────────────────────────────
+    def _on_files_changed(self) -> None:
+        self._cut_fps = None
+        self._autofill_cut_end()
+        self._update_cut_duration()
+
+    def _on_cut_unit(self, unit: str) -> None:
+        zero = "0" if unit == "Frames" else "00:00:00"
+        for e in (self.cut_start, self.cut_end):
+            e.setPlaceholderText(zero)
+        self.cut_start.setText(zero)
+        self.cut_end.setText("")
+        self._cut_fps = None
+        self._autofill_cut_end()
+        self._update_cut_duration()
+
+    def _autofill_cut_end(self) -> None:
+        media = [p for p in self._file_paths() if is_thumb_media(p.name)]
+        if not media:
+            return
+        unit = self.cut_unit.value()
+        if unit == "Frames" and any(is_thumb_audio(p.name) for p in media):
+            self.cut_unit.set_value("Seconds")
+            unit = "Seconds"
+            self.cut_start.setText("00:00:00")
+        duration = probe_media_duration_sec(media[0])
+        if duration <= 0:
+            return
+        if unit == "Frames":
+            fps = probe_video_avg_frame_rate(media[0])
+            self._cut_fps = fps
+            self.cut_end.setText(str(max(1, int(round(duration * fps)))) if fps > 0 else "")
+        else:
+            self.cut_end.setText(_format_duration(duration))
+
+    def _update_cut_duration(self) -> None:
+        start_text = self.cut_start.text().strip()
+        end_text = self.cut_end.text().strip()
+        tone = "busy"
+        if not end_text:
+            text = "to end"
+        elif self.cut_unit.value() == "Frames":
+            start, end = parse_cut_frame(start_text), parse_cut_frame(end_text)
+            if start >= 0 and end > start:
+                frames = end - start
+                if self._cut_fps is None:
+                    videos = [p for p in self._file_paths() if is_thumb_video(p.name)]
+                    self._cut_fps = probe_video_avg_frame_rate(videos[0]) if videos else -1.0
+                if self._cut_fps > 0:
+                    text = f"{_format_duration(frames / self._cut_fps)}  ·  {frames} frames @ {self._cut_fps:g} fps"
+                else:
+                    text = f"{frames} frames"
+            else:
+                text, tone = "invalid range", "error"
+        else:
+            start, end = parse_cut_seconds(start_text), parse_cut_seconds(end_text)
+            if start >= 0 and end > start:
+                text = _format_duration(end - start)
+            else:
+                text, tone = "invalid range", "error"
+        self.cut_duration.set_tone(tone, f"Duration  {text}")
+
+    # ── running ────────────────────────────────────────────────────────────
+    def _file_paths(self) -> list[Path]:
+        return parse_file_paths(self.files.text())
+
+    def _collect(self) -> Settings:
+        s = self.settings
+        return Settings(
+            mode=0 if self.mode.value() == "video" else 1,
+            format_name=self.format.currentText(),
+            quality=self.quality.text().strip() or "23",
+            last_action=s.last_action,
+            replace_video_with_image=self.replace_video.isChecked(),
+            merge_container=self.merge_container.currentText() or "auto",
+            mono_channel=self.mono_channel.currentText() or "auto",
+            trim_frames=s.trim_frames,
+            cut_unit=self.cut_unit.value(),
+            cut_start=self.cut_start.text().strip(),
+            cut_end=self.cut_end.text().strip(),
+            sample_start=self.sample_start.text().strip() or "3",
+            sample_interval=self.sample_interval.text().strip() or "2",
+            sample_count=self.sample_count.text().strip() or "48",
+            files_text=self.files.text(),
+        )
+
+    def _update_last_note(self) -> None:
+        title = ACTION_TITLES.get(self.settings.last_action, self.settings.last_action)
+        self.last_note.set_text(f"Repeats the last action on the selection:\n{title}")
+
+    def run(self, action: str) -> None:
+        if self.jobs.is_running():
+            self.toast("A job is already running")
+            return
+        paths = self._file_paths()
+        if not paths:
+            if self.files.paths():
+                ui.dialogs.error(self, "No media found",
+                                 "None of the listed paths are media or image files.\n\n"
+                                 "Folders must contain media or image files.")
+            else:
+                self.toast("Add files first")
+            return
+        settings = self._collect()
+        settings.last_action = action
+
+        if action == "mergevid":
+            mismatch = merge_preflight_mismatch(paths)
+            if mismatch:
+                message, eligible = mismatch
+                choice = ui.dialogs.ask_yes_no_cancel(self, "Streams do not match", message)
+                if choice is None:
+                    return
+                if eligible:
+                    settings.merge_fix_outliers = choice
+                elif not choice:
+                    return
+                else:
+                    settings.merge_fix_outliers = False
+        if action == "cover":
+            err = cover_combine_preflight(paths)
+            if err:
+                ui.dialogs.error(self, "Cover match error", err)
+                return
+
+        self.settings = settings
+        config_save_settings(settings, last_action=action)
+        self._update_last_note()
+        n = len(paths)
+        self.jobs.start(
+            f"{ACTION_TITLES.get(action, action)} · {n} file{'s' if n != 1 else ''}",
+            lambda emit: run_action(action, paths, settings, on_output=emit),
+            cancel=cancel_running_jobs,
+        )
+
+    def _copy_chapters(self) -> None:
+        paths = self._file_paths()
+        if not paths:
+            self.toast("Add files first")
+            return
+        text, err = chapters_to_youtube_text(paths)
+        if err:
+            self.console.set_text(err, tone="error")
+            return
+        if not copy_text_to_clipboard(text or ""):
+            self.toast("Could not copy to the clipboard")
+            return
+        n = len([ln for ln in (text or "").splitlines() if ln.strip()])
+        self.console.set_text(f"Copied {n} chapter(s) to the clipboard (YouTube format):\n\n{text}")
+        self.toast(f"Copied {n} chapters")
+
+    def _shutdown(self) -> None:
+        if self.jobs.is_running():
+            cancel_running_jobs()
+            self.jobs.runner.wait(3.0)
+        try:
+            config_save_settings(self._collect())
+        except OSError:
+            pass
+        shutdown_ffmpeg_tool(paths=self._file_paths(), only_list=self._only_list)
 
 
 def run_gui(
     initial_only_list: Optional[str] = None,
     initial_only_files: Optional[list[str]] = None,
+    initial_section: Optional[str] = None,
 ) -> None:
-    import dearpygui.dearpygui as dpg
-
-    class App:
-        TAG_FILES = "files_input"
-        TAG_MODE = "mode_combo"
-        TAG_FORMAT = "format_combo"
-        TAG_QUALITY = "quality_input"
-        TAG_CUT_UNIT = "cut_unit_combo"
-        TAG_CUT_START = "cut_start_input"
-        TAG_CUT_END = "cut_end_input"
-        TAG_CUT_DURATION = "cut_duration_text"
-        TAG_REPLACE = "replace_video_check"
-        TAG_MERGE_CONTAINER = "merge_container_combo"
-        TAG_MONO_CHANNEL = "mono_channel_combo"
-        TAG_OUTPUT = "output_text"
-
-        def __init__(self) -> None:
-            self._only_list_path = initial_only_list
-            self._shutdown_called = False
-            self._job_thread: threading.Thread | None = None
-            self._job_result_box: list = []
-            self._job_reported = False
-            self._log_queue: queue.Queue[tuple[str, bool]] = queue.Queue()
-            self._output_lines: list[str] = []
-            self._auto_scroll_output: bool = False
-            self._cut_preview_fps: float | None = None
-            self._splitter = PanelSplitter("panel_actions", left_width=400, min_left=340, min_right=240, config_dir=CONFIG_DIR)
-            self.settings = config_load_settings()
-            files_default = build_initial_files_text(
-                self.settings.files_text, initial_only_list, initial_only_files
-            )
-            self._theme_apply = "theme_btn_apply"
-            self._section_tags: dict[str, int | str] = {}
-
-            dpg.create_context()
-            self._init_os_drag_drop()
-            self._build_themes()
-
-            with dpg.window(tag="primary_window", label="FFmpeg Tool", no_title_bar=True):
-                self._build_layout(files_default)
-
-            self._build_fonts()
-            dpg.create_viewport(title="FFmpeg Tool", width=980, height=720, min_width=720, min_height=520)
-            self._register_os_drag_drop_handlers()
-            dpg.setup_dearpygui()
-            dpg.show_viewport()
-            dpg.set_primary_window("primary_window", True)
-            dpg.set_exit_callback(self.on_close)
-            self._sync_format_combo()
-            self._sync_quality_enabled()
-
-        def _build_themes(self) -> None:
-            accent = (72, 168, 190)
-            accent_h = (92, 198, 220)
-            apply_bg = (52, 128, 108)
-            apply_h = (68, 158, 132)
-
-            with dpg.theme(tag="app_theme"):
-                with dpg.theme_component(dpg.mvAll):
-                    dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (16, 18, 24))
-                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (22, 25, 32))
-                    dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (34, 38, 50))
-                    dpg.add_theme_color(dpg.mvThemeCol_Button, (48, 54, 70))
-                    dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (60, 68, 88))
-                    dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, accent)
-                    dpg.add_theme_color(dpg.mvThemeCol_Text, (228, 232, 240))
-                    dpg.add_theme_color(dpg.mvThemeCol_Border, (52, 58, 74))
-                    dpg.add_theme_color(dpg.mvThemeCol_CheckMark, accent_h)
-                    dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 10)
-                    dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 8)
-                    dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 6)
-                    dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 14, 14)
-                    dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 10, 8)
-
-            with dpg.theme(tag=self._theme_apply):
-                with dpg.theme_component(dpg.mvButton):
-                    dpg.add_theme_color(dpg.mvThemeCol_Button, apply_bg)
-                    dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, apply_h)
-                    dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (80, 178, 150))
-
-            with dpg.theme(tag="theme_output_panel"):
-                with dpg.theme_component(dpg.mvChildWindow):
-                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (12, 14, 20))
-                    dpg.add_theme_color(dpg.mvThemeCol_Border, (40, 72, 88))
-
-            with dpg.theme(tag="theme_actions_panel"):
-                with dpg.theme_component(dpg.mvChildWindow):
-                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (20, 23, 30))
-                    dpg.add_theme_color(dpg.mvThemeCol_Border, (44, 50, 66))
-
-            with dpg.theme(tag="theme_drop_hover"):
-                with dpg.theme_component(dpg.mvInputText):
-                    dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (40, 68, 82))
-                    dpg.add_theme_color(dpg.mvThemeCol_Border, (72, 168, 190))
-
-            self._splitter.build_theme()
-
-            dpg.bind_theme("app_theme")
-
-        def _build_fonts(self) -> None:
-            ui_font_path = _pick_unicode_ui_font()
-            with dpg.font_registry():
-                if ui_font_path:
-                    dpg.bind_font(dpg.add_font(str(ui_font_path), 14))
-                    title_font = dpg.add_font(str(ui_font_path), 18)
-                    dpg.bind_item_font("title_main", title_font)
-                else:
-                    segoe = _windows_fonts_dir() / "segoeui.ttf"
-                    if segoe.is_file():
-                        dpg.bind_font(dpg.add_font(str(segoe), 14))
-
-        def _hover_tip(self, parent: int | str, text: str) -> None:
-            with dpg.tooltip(parent, delay=0.4):
-                dpg.add_text(text, wrap=400, color=(200, 208, 220))
-
-        def _section(self, title: str, tip: str, key: str):
-            hdr = dpg.add_collapsing_header(
-                label=title,
-                default_open=self.settings.gui_sections.get(key, GUI_SECTION_DEFAULTS[key]),
-                tag=dpg.generate_uuid(),
-            )
-            self._section_tags[key] = hdr
-            self._hover_tip(hdr, tip)
-            return hdr
-
-        def _action_button(self, parent, label: str, action: str, tip: str) -> None:
-            btn = dpg.add_button(label=label, callback=lambda: self._run(action), parent=parent, width=-1)
-            dpg.bind_item_theme(btn, self._theme_apply)
-            self._hover_tip(btn, tip)
-
-        def _build_layout(self, files_default: str) -> None:
-            dpg.add_text("FFmpeg Tool", tag="title_main", color=(120, 200, 220))
-            dpg.add_text("Video / audio conversion and utilities", color=(130, 138, 155))
-            dpg.add_spacer(height=6)
-
-            with dpg.group(horizontal=True):
-                with dpg.child_window(width=self._splitter.left_width, height=-1, border=True, tag="panel_actions"):
-                    dpg.bind_item_theme("panel_actions", "theme_actions_panel")
-
-                    hdr_files = self._section(
-                        "Selected files",
-                        "One path per line (file or folder). A folder runs on all media/images inside it.\n"
-                        "Launch from Directory Opus to fill from your selection.\n"
-                        "Drag files or folders from Explorer onto this box to append paths.",
-                        "files",
-                    )
-                    with dpg.group(parent=hdr_files):
-                        files_input = dpg.add_input_text(
-                            tag=self.TAG_FILES,
-                            default_value=files_default,
-                            multiline=True,
-                            width=-1,
-                            height=120,
-                            tab_input=False,
-                            callback=self._on_files_change,
-                        )
-                        self._hover_tip(files_input, "Media files to process.")
-                        with dpg.group(horizontal=True):
-                            add_btn = dpg.add_button(label="Add files…", callback=self._browse_add_files)
-                            add_dir_btn = dpg.add_button(label="Add folder…", callback=self._browse_add_folder)
-                            clear_btn = dpg.add_button(label="Clear", callback=self._clear_files)
-                        self._hover_tip(add_btn, "Append files via file picker.")
-                        self._hover_tip(add_dir_btn, "Append a folder (all media/images inside are processed).")
-                        self._hover_tip(clear_btn, "Clear all paths.")
-
-                    hdr_convert = self._section(
-                        "Convert",
-                        "Convert selected files to a new format (output beside source, never overwrites).",
-                        "convert",
-                    )
-                    with dpg.group(parent=hdr_convert):
-                        dpg.add_text("Mode", color=(150, 158, 175))
-                        mode = dpg.add_combo(
-                            tag=self.TAG_MODE,
-                            items=["Video", "Audio"],
-                            default_value="Video" if self.settings.mode == 0 else "Audio",
-                            width=-1,
-                            callback=self._on_mode_change,
-                        )
-                        self._hover_tip(mode, "Video or audio conversion presets.")
-                        dpg.add_text("Format", color=(150, 158, 175))
-                        dpg.add_combo(tag=self.TAG_FORMAT, items=[], width=-1, callback=self._on_format_change)
-                        dpg.add_text("Quality (CRF)", color=(150, 158, 175))
-                        qual = dpg.add_input_text(
-                            tag=self.TAG_QUALITY,
-                            default_value=self.settings.quality,
-                            width=80,
-                        )
-                        self._hover_tip(qual, "18–28 typical for video CRF presets (lower = better quality).")
-                        dpg.add_spacer(height=4)
-                        self._action_button(
-                            hdr_convert, "Convert", "convert",
-                            "Run conversion on all listed files.",
-                        )
-
-                    hdr_rotate = self._section(
-                        "Rotate / flip (in place)",
-                        "Re-encodes video; audio/subtitles copied. Video files only.",
-                        "rotate",
-                    )
-                    with dpg.group(parent=hdr_rotate):
-                        with dpg.group(horizontal=True):
-                            for label, act in (
-                                ("90° CW", "rotatecw"), ("90° CCW", "rotateccw"),
-                                ("Flip H", "fliph"), ("Flip V", "flipv"),
-                            ):
-                                btn = dpg.add_button(
-                                    label=label,
-                                    callback=lambda s, a, u: self._run(u),
-                                    user_data=act,
-                                    width=88,
-                                )
-                                dpg.bind_item_theme(btn, self._theme_apply)
-
-                    hdr_trim = self._section(
-                        "Cutter (in place)",
-                        "Keep a video or audio range selected by timestamps; video also supports frames. "
-                        "End fills from the first selected media file. Replaces each original file.",
-                        "trim",
-                    )
-                    with dpg.group(parent=hdr_trim):
-                        with dpg.group(horizontal=True):
-                            dpg.add_text("Range:", color=(150, 158, 175))
-                            dpg.add_combo(
-                                tag=self.TAG_CUT_UNIT,
-                                items=["Seconds", "Frames"],
-                                default_value=self.settings.cut_unit,
-                                width=90,
-                                callback=self._on_cut_range_change,
-                            )
-                            dpg.add_input_text(
-                                tag=self.TAG_CUT_START,
-                                default_value=self.settings.cut_start,
-                                hint="0" if self.settings.cut_unit == "Frames" else "00:00:00",
-                                width=90,
-                                callback=self._on_cut_range_change,
-                            )
-                            dpg.add_text("–", color=(150, 158, 175))
-                            dpg.add_input_text(
-                                tag=self.TAG_CUT_END,
-                                default_value=self.settings.cut_end,
-                                hint="0" if self.settings.cut_unit == "Frames" else "00:00:00",
-                                width=90,
-                                callback=self._on_cut_range_change,
-                            )
-                        dpg.add_text("Duration: to end", tag=self.TAG_CUT_DURATION, color=(150, 158, 175))
-                        self._action_button(
-                            hdr_trim, "Cut & replace", "trimstart",
-                            "Keep the selected range and replace each original media file.",
-                        )
-                        self._autofill_cut_end()
-                        self._update_cut_duration()
-
-                    hdr_cover = self._section(
-                        "Cover (split/combine)",
-                        "Image + media: paired when one file name contains the other "
-                        "(e.g. song.wav + song_cover.jpg).\n"
-                        "Ambiguous or unmatched pairs show an error before running.\n"
-                        "Media only: extract .jpg and strip cover.",
-                        "cover",
-                    )
-                    with dpg.group(parent=hdr_cover):
-                        cb = dpg.add_checkbox(
-                            tag=self.TAG_REPLACE,
-                            label="Replace video with image",
-                            default_value=self.settings.replace_video_with_image,
-                        )
-                        self._hover_tip(cb, "Slideshow still + copied audio instead of embedding cover.")
-                        self._action_button(
-                            hdr_cover, "Split/combine cover", "cover",
-                            "Embed, extract, or replace cover.",
-                        )
-                        self._action_button(
-                            hdr_cover, "Discard video", "discardvid",
-                            "Extract one frame, replace motion video with still slideshow + copied audio.",
-                        )
-
-                    hdr_audio = self._section(
-                        "Audio tools",
-                        "Mono remux, split/combine A/V, or extract each channel to WAV.",
-                        "audio",
-                    )
-                    with dpg.group(parent=hdr_audio):
-                        self._action_button(
-                            hdr_audio, "Discard audio", "discardaud",
-                            "Remove audio streams; video copied in place (lossless).",
-                        )
-                        with dpg.group(horizontal=True, parent=hdr_audio):
-                            dpg.add_text("Channel", color=(150, 158, 175))
-                            mono_ch_combo = dpg.add_combo(
-                                tag=self.TAG_MONO_CHANNEL,
-                                items=list(MONO_CHANNELS),
-                                default_value=self.settings.mono_channel,
-                                width=100,
-                            )
-                        self._hover_tip(
-                            mono_ch_combo,
-                            "auto = downmix all channels to mono.\n"
-                            "1-8 = keep only that source channel (1=L, 2=R, ...); "
-                            "falls back to downmix if the file has fewer channels.",
-                        )
-                        self._action_button(hdr_audio, "Audio → mono", "mono", "Re-encode audio to mono, copy video.")
-                        self._action_button(
-                            hdr_audio, "Split/combine Audio/Video", "splitav",
-                            "Split video to video-only + .audio.mka, or combine 1 video + 1 audio.",
-                        )
-                        self._action_button(
-                            hdr_audio, "All audio ch → WAV", "splitch",
-                            "First audio stream: mono WAV per channel (stem.ch01.wav …).",
-                        )
-
-                    hdr_merge = self._section(
-                        "Merge videos",
-                        "2+ videos → output.ext (sorted by name) with chapter markers. Lossless when streams match.\n"
-                        "Copy chapters: 2+ files uses filenames + durations; 1 merged file reads embedded chapters.",
-                        "merge",
-                    )
-                    with dpg.group(parent=hdr_merge):
-                        dpg.add_text("Output container", color=(150, 158, 175))
-                        container_combo = dpg.add_combo(
-                            tag=self.TAG_MERGE_CONTAINER,
-                            items=["auto", ".mp4", ".mkv"],
-                            default_value=self.settings.merge_container,
-                            width=-1,
-                        )
-                        self._hover_tip(
-                            container_combo,
-                            "auto = match first file's extension.\n"
-                            ".mp4 / .mkv force that output container regardless of input.",
-                        )
-                        self._action_button(
-                            hdr_merge, "Merge with chapters", "mergevid",
-                            "Lossless when streams match. If not, asks whether to fix outliers or re-encode all.",
-                        )
-                        btn = dpg.add_button(
-                            label="Copy chapters (YouTube)",
-                            callback=self._copy_youtube_chapters,
-                            parent=hdr_merge,
-                            width=-1,
-                        )
-                        dpg.bind_item_theme(btn, self._theme_apply)
-                        self._hover_tip(
-                            btn,
-                            "Copy chapter list for YouTube video description.\n"
-                            "Paste into the description field when uploading.",
-                        )
-
-                self._splitter.add_handle()
-
-                with dpg.child_window(width=-1, height=-1, border=True, tag="panel_output"):
-                    dpg.bind_item_theme("panel_output", "theme_output_panel")
-                    dpg.add_text("Output", color=(120, 200, 220))
-                    dpg.add_spacer(height=4)
-                    dpg.add_input_text(
-                        tag=self.TAG_OUTPUT,
-                        multiline=True,
-                        readonly=True,
-                        width=-1,
-                        height=-1,
-                        tab_input=False,
-                        default_value="Pick an action on the left.\n\nFFmpeg output streams here while a job runs.",
-                    )
-
-        def _current_formats(self) -> tuple[FormatPreset, ...]:
-            return VIDEO_FORMATS if dpg.get_value(self.TAG_MODE) == "Video" else AUDIO_FORMATS
-
-        def _sync_format_combo(self) -> None:
-            formats = self._current_formats()
-            names = [f.name for f in formats]
-            dpg.configure_item(self.TAG_FORMAT, items=names)
-            saved = self.settings.format_name
-            if saved in names:
-                dpg.set_value(self.TAG_FORMAT, saved)
-            elif names:
-                dpg.set_value(self.TAG_FORMAT, names[0])
-
-        def _sync_quality_enabled(self) -> None:
-            formats = self._current_formats()
-            fmt_name = dpg.get_value(self.TAG_FORMAT)
-            fmt = formats[format_preset_by_name(formats, fmt_name)]
-            enabled = quality_applicable(dpg.get_value(self.TAG_MODE) == "Video", fmt)
-            dpg.configure_item(self.TAG_QUALITY, enabled=enabled)
-
-        def _on_mode_change(self) -> None:
-            self._sync_format_combo()
-            self._sync_quality_enabled()
-
-        def _on_format_change(self) -> None:
-            self._sync_quality_enabled()
-
-        def _on_files_change(self, sender=None, app_data=None, user_data=None) -> None:
-            self._cut_preview_fps = None
-            if dpg.does_item_exist(self.TAG_CUT_END):
-                self._autofill_cut_end()
-                self._update_cut_duration()
-
-        @staticmethod
-        def _format_duration(seconds: float) -> str:
-            hours = int(seconds // 3600)
-            minutes = int((seconds % 3600) // 60)
-            secs = seconds % 60
-            if abs(secs - round(secs)) < 0.000001:
-                return f"{hours:02d}:{minutes:02d}:{int(round(secs)):02d}"
-            return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
-
-        def _on_cut_range_change(self, sender=None, app_data=None, user_data=None) -> None:
-            if sender == self.TAG_CUT_UNIT:
-                unit = dpg.get_value(self.TAG_CUT_UNIT)
-                hint = "0" if unit == "Frames" else "00:00:00"
-                dpg.configure_item(self.TAG_CUT_START, hint=hint)
-                dpg.configure_item(self.TAG_CUT_END, hint=hint)
-                dpg.set_value(
-                    self.TAG_CUT_START, "0" if unit == "Frames" else "00:00:00"
-                )
-                dpg.set_value(self.TAG_CUT_END, "")
-                self._cut_preview_fps = None
-                self._autofill_cut_end()
-            self._update_cut_duration()
-
-        def _autofill_cut_end(self) -> None:
-            media = [p for p in self._file_paths() if is_thumb_media(p.name)]
-            if not media:
-                dpg.set_value(self.TAG_CUT_END, "")
-                return
-            unit = str(dpg.get_value(self.TAG_CUT_UNIT))
-            if unit == "Frames" and any(is_thumb_audio(p.name) for p in media):
-                unit = "Seconds"
-                dpg.set_value(self.TAG_CUT_UNIT, unit)
-                dpg.configure_item(self.TAG_CUT_START, hint="00:00:00")
-                dpg.configure_item(self.TAG_CUT_END, hint="00:00:00")
-                dpg.set_value(self.TAG_CUT_START, "00:00:00")
-            duration = probe_media_duration_sec(media[0])
-            if duration <= 0:
-                dpg.set_value(self.TAG_CUT_END, "")
-                return
-            if unit == "Frames":
-                fps = probe_video_avg_frame_rate(media[0])
-                self._cut_preview_fps = fps
-                dpg.set_value(
-                    self.TAG_CUT_END,
-                    str(max(1, int(round(duration * fps)))) if fps > 0 else "",
-                )
-            else:
-                dpg.set_value(self.TAG_CUT_END, self._format_duration(duration))
-
-        def _update_cut_duration(self) -> None:
-            unit = str(dpg.get_value(self.TAG_CUT_UNIT))
-            start_text = str(dpg.get_value(self.TAG_CUT_START)).strip()
-            end_text = str(dpg.get_value(self.TAG_CUT_END)).strip()
-            if not end_text:
-                duration = "to end"
-            elif unit == "Frames":
-                start = parse_cut_frame(start_text)
-                end = parse_cut_frame(end_text)
-                if start >= 0 and end > start:
-                    frame_count = end - start
-                    if self._cut_preview_fps is None:
-                        videos = [p for p in self._file_paths() if is_thumb_video(p.name)]
-                        self._cut_preview_fps = (
-                            probe_video_avg_frame_rate(videos[0]) if videos else -1.0
-                        )
-                    if self._cut_preview_fps > 0:
-                        duration = (
-                            f"{self._format_duration(frame_count / self._cut_preview_fps)} "
-                            f"({frame_count} frames @ {self._cut_preview_fps:g} fps)"
-                        )
-                    else:
-                        duration = f"{frame_count} frames"
-                else:
-                    duration = "invalid range"
-            else:
-                start = parse_cut_seconds(start_text)
-                end = parse_cut_seconds(end_text)
-                duration = self._format_duration(end - start) if start >= 0 and end > start else "invalid range"
-            dpg.set_value(self.TAG_CUT_DURATION, f"Duration: {duration}")
-
-        def _file_paths(self) -> list[Path]:
-            return parse_file_paths(str(dpg.get_value(self.TAG_FILES)))
-
-        def _collect_settings(self) -> Settings:
-            mode = 0 if dpg.get_value(self.TAG_MODE) == "Video" else 1
-            fmt_name = str(dpg.get_value(self.TAG_FORMAT))
-            sections: dict[str, bool] = {}
-            for key, tag in self._section_tags.items():
-                if dpg.does_item_exist(tag):
-                    sections[key] = bool(dpg.get_value(tag))
-            return Settings(
-                mode=mode,
-                format_name=fmt_name,
-                quality=str(dpg.get_value(self.TAG_QUALITY)).strip() or "23",
-                last_action=self.settings.last_action,
-                replace_video_with_image=bool(dpg.get_value(self.TAG_REPLACE)),
-                merge_container=str(dpg.get_value(self.TAG_MERGE_CONTAINER)) or "auto",
-                mono_channel=str(dpg.get_value(self.TAG_MONO_CHANNEL)) or "auto",
-                trim_frames=self.settings.trim_frames,
-                cut_unit=str(dpg.get_value(self.TAG_CUT_UNIT)) or "Seconds",
-                cut_start=str(dpg.get_value(self.TAG_CUT_START)).strip(),
-                cut_end=str(dpg.get_value(self.TAG_CUT_END)).strip(),
-                files_text=str(dpg.get_value(self.TAG_FILES)),
-                gui_sections=sections,
-            )
-
-        def _sync_output_display(self) -> None:
-            dpg.set_value(
-                self.TAG_OUTPUT,
-                "\n".join(_wrap_output_line(line) for line in self._output_lines),
-            )
-
-        def _set_output(self, text: str) -> None:
-            self._output_lines = text.splitlines()
-            self._sync_output_display()
-            if dpg.is_dearpygui_running():
-                dpg.render_dearpygui_frame()
-                dpg.run_callbacks(dpg.get_callback_queue())
-
-        def _append_stream_line(self, text: str, replace_last: bool) -> None:
-            if replace_last and self._output_lines:
-                self._output_lines[-1] = text
-            else:
-                self._output_lines.append(text)
-            if len(self._output_lines) > 200:
-                self._output_lines = self._output_lines[-200:]
-            self._sync_output_display()
-
-        def _drain_log_queue(self) -> None:
-            while True:
-                try:
-                    text, replace_last = self._log_queue.get_nowait()
-                except queue.Empty:
-                    break
-                self._append_stream_line(text, replace_last)
-
-        def _run(self, action: str) -> None:
-            if self._job_thread and self._job_thread.is_alive():
-                self._set_output("A job is already running — wait for it to finish or close the window to cancel.")
-                return
-            paths = self._file_paths()
-            if not paths:
-                raw = paths_from_text_lines(str(dpg.get_value(self.TAG_FILES)))
-                if raw:
-                    self._set_output(
-                        "No processable files.\n\n"
-                        "Folders must contain media or image files; check paths or add files directly."
-                    )
-                else:
-                    self._set_output("No files listed.\n\nAdd files or launch from Directory Opus with a selection.")
-                return
-            settings = self._collect_settings()
-            settings.last_action = action
-
-            if action == "mergevid":
-                mismatch = merge_preflight_mismatch(paths)
-                if mismatch:
-                    message, eligible = mismatch
-                    choice = _ask_yes_no_cancel("Streams do not match", message)
-                    if choice is None:
-                        return
-                    if eligible:
-                        settings.merge_fix_outliers = choice
-                    elif not choice:
-                        return
-                    else:
-                        settings.merge_fix_outliers = False
-
-            if action == "cover":
-                cover_err = cover_combine_preflight(paths)
-                if cover_err:
-                    _show_error("Cover match error", cover_err)
-                    return
-
-            self.settings = settings
-            config_save_settings(settings, last_action=action)
-            self._log_queue = queue.Queue()
-            self._set_output("Running…\n")
-            self._job_result_box = []
-            self._job_reported = False
-            self._auto_scroll_output = True
-
-            def worker() -> None:
-                def on_output(text: str, replace_last: bool) -> None:
-                    self._log_queue.put((text, replace_last))
-
-                self._job_result_box.append(
-                    run_action(action, paths, settings, on_output=on_output)
-                )
-
-            self._job_thread = threading.Thread(target=worker, daemon=True)
-            self._job_thread.start()
-
-        def _poll_job(self) -> None:
-            thread = self._job_thread
-            if not thread or thread.is_alive() or self._job_reported:
-                return
-            self._job_reported = True
-            if self._shutdown_called:
-                self._job_thread = None
-                return
-            self._drain_log_queue()
-            if self._job_result_box:
-                result = self._job_result_box[0]
-                self._append_stream_line("", False)
-                self._append_stream_line(result.summary, False)
-            self._job_thread = None
-            self._auto_scroll_output = False
-
-        def _browse_add_files(self) -> None:
-            if sys.platform != "win32":
-                self._set_output("File picker is only supported on Windows.")
-                return
-            hint = ""
-            for p in paths_from_text_lines(str(dpg.get_value(self.TAG_FILES))):
-                hint = os.fspath(p)
-                break
-            paths = _pick_native_files("Select media files", hint)
-            if paths:
-                self._merge_files(paths)
-
-        def _browse_add_folder(self) -> None:
-            if sys.platform != "win32":
-                self._set_output("Folder picker is only supported on Windows.")
-                return
-            hint = ""
-            for p in paths_from_text_lines(str(dpg.get_value(self.TAG_FILES))):
-                hint = os.fspath(p)
-                break
-            folder = _pick_native_folder("Select folder", hint)
-            if folder:
-                self._merge_files([folder])
-
-        def _merge_files(self, new_paths: list[str]) -> None:
-            existing = [ln.strip() for ln in str(dpg.get_value(self.TAG_FILES)).splitlines() if ln.strip()]
-            for p in new_paths:
-                s = str(p).strip()
-                if s:
-                    existing.append(s)
-            dpg.set_value(self.TAG_FILES, "\n".join(dedupe_path_lines(existing)))
-            self._on_files_change()
-
-        def _clear_files(self) -> None:
-            dpg.set_value(self.TAG_FILES, "")
-            self._on_files_change()
-
-        def _copy_youtube_chapters(self) -> None:
-            paths = self._file_paths()
-            if not paths:
-                self._set_output("No files listed.\n\nAdd files or launch from Directory Opus with a selection.")
-                return
-            text, err = chapters_to_youtube_text(paths)
-            if err:
-                self._set_output(err)
-                return
-            if not copy_text_to_clipboard(text or ""):
-                self._set_output("Could not copy to clipboard.")
-                return
-            n = len([ln for ln in (text or "").splitlines() if ln.strip()])
-            self._set_output(f"Copied {n} chapter(s) to clipboard (YouTube format):\n\n{text}")
-
-        def _init_os_drag_drop(self) -> None:
-            if sys.platform != "win32":
-                return
-            import DearPyGui_DragAndDrop as dpg_dnd
-            dpg_dnd.initialize()
-
-        def _register_os_drag_drop_handlers(self) -> None:
-            if sys.platform != "win32":
-                return
-            import DearPyGui_DragAndDrop as dpg_dnd
-            dpg_dnd.set_drop(self._on_os_drop)
-            dpg_dnd.set_drag_over(self._on_os_drag_over)
-            dpg_dnd.set_drag_leave(self._on_os_drag_leave)
-
-        def _on_os_drop(self, data, keys) -> None:
-            if data is None:
-                return
-            if isinstance(data, str):
-                paths = [ln.strip() for ln in data.splitlines() if ln.strip()] or ([data.strip()] if data.strip() else [])
-            elif isinstance(data, list):
-                paths = [str(p).strip() for p in data if str(p).strip()]
-            else:
-                s = str(data).strip()
-                paths = [s] if s else []
-            if paths:
-                self._merge_files(paths)
-            dpg.bind_item_theme(self.TAG_FILES, None)
-
-        def _on_os_drag_over(self, keys) -> None:
-            import DearPyGui_DragAndDrop as dpg_dnd
-            if dpg.is_item_hovered(self.TAG_FILES):
-                dpg.bind_item_theme(self.TAG_FILES, "theme_drop_hover")
-                dpg_dnd.set_drop_effect(dpg_dnd.DROPEFFECT.MOVE)
-            else:
-                dpg.bind_item_theme(self.TAG_FILES, None)
-                dpg_dnd.set_drop_effect()
-
-        def _on_os_drag_leave(self) -> None:
-            import DearPyGui_DragAndDrop as dpg_dnd
-            dpg.bind_item_theme(self.TAG_FILES, None)
-            dpg_dnd.set_drop_effect()
-
-        def on_close(self) -> None:
-            self._shutdown()
-
-        def _shutdown(self) -> None:
-            if self._shutdown_called:
-                return
-            self._shutdown_called = True
-            if self._job_thread and self._job_thread.is_alive():
-                cancel_running_jobs()
-                self._job_thread.join(timeout=3.0)
-            try:
-                config_save_settings(self._collect_settings())
-            except OSError:
-                pass
-            _shutdown_gui_app(self)
-            if sys.platform == "win32":
-                try:
-                    import DearPyGui_DragAndDrop as dpg_dnd
-                    dpg_dnd.destroy()
-                except Exception:
-                    pass
-
-        def run(self) -> None:
-            try:
-                while dpg.is_dearpygui_running():
-                    self._drain_log_queue()
-                    self._poll_job()
-                    self._splitter.update()
-                    dpg.render_dearpygui_frame()
-                    dpg.run_callbacks(dpg.get_callback_queue())
-                    if self._auto_scroll_output:
-                        try:
-                            dpg.set_y_scroll(self.TAG_OUTPUT, 1_000_000)
-                        except Exception:
-                            pass
-            finally:
-                self._shutdown()
-            dpg.destroy_context()
-
-    App().run()
+    ui.create_app("FFmpegTool", ACCENT)
+    settings = config_load_settings()
+    files_text = build_initial_files_text(settings.files_text, initial_only_list, initial_only_files)
+    win = FFmpegWindow(settings, files_text, initial_only_list)
+    win.restore_ui(initial_section or "", PAGE_FOR_ACTION.get(settings.last_action, ""))
+    win.run_app()

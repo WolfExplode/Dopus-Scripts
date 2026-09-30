@@ -1,4 +1,4 @@
-// HandBrake Tool — launches HandbrakeTool.py (Python / Dear PyGui) from this repo.
+// HandBrake Tool — launches HandbrakeTool.py (Python / PySide6) from this repo.
 //
 // Click: open GUI, prefilled with the selection. No selection: launch full HandBrake.exe.
 // Ctrl+click: re-run the last-used preset/settings on the selection (no dialog).

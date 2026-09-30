@@ -34,18 +34,6 @@ LAST_MODES = ("preview", "apply")
 DEFAULT_LAST_ACTION = "mark"
 DEFAULT_LAST_MODE = "preview"
 
-# GUI collapsing-section keys (saved under settings.json → gui_sections).
-GUI_SECTION_DEFAULTS: dict[str, bool] = {
-    "folders": True,
-    "mark": True,
-    "title": False,
-    "bracket": False,
-    "jpg": False,
-    "copy": False,
-    "compare": False,
-}
-GUI_SECTION_KEYS = tuple(GUI_SECTION_DEFAULTS)
-
 
 def normalize_strip_chars(strip_chars: str) -> str:
     """NFC-normalize so pasted CJK / fullwidth brackets match filenames on disk."""
@@ -175,24 +163,11 @@ def config_load_compare_romaji() -> bool:
         return True
 
 
-def config_load_gui_sections() -> dict[str, bool]:
-    """Which action panels were expanded last time the GUI closed."""
-    out = dict(GUI_SECTION_DEFAULTS)
-    raw = config_read().get("gui_sections")
-    if not isinstance(raw, dict):
-        return out
-    for key in GUI_SECTION_KEYS:
-        if key in raw:
-            out[key] = bool(raw[key])
-    return out
-
-
 def config_save(
     source: str,
     target: str,
     strip_title_chars: str = "",
     bracket_tag_text: str = "",
-    gui_sections: Optional[dict[str, bool]] = None,
     *,
     compare_threshold: Optional[int] = None,
     compare_debug: Optional[bool] = None,
@@ -218,10 +193,6 @@ def config_save(
         data["compare_strip_extensions"] = bool(compare_strip_extensions)
     if compare_romaji is not None:
         data["compare_romaji"] = bool(compare_romaji)
-    if gui_sections is not None:
-        data["gui_sections"] = {
-            k: bool(gui_sections[k]) for k in GUI_SECTION_KEYS if k in gui_sections
-        }
     config_write(data)
 
 
@@ -1391,7 +1362,7 @@ def run_cli(argv: list[str]) -> int:
     parser.add_argument(
         "--gui",
         action="store_true",
-        help="Open the Dear PyGui GUI (also used when no --action is given).",
+        help="Open the GUI (also used when no --action is given).",
     )
     parser.add_argument(
         "--action",

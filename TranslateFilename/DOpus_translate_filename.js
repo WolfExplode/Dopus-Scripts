@@ -1,4 +1,4 @@
-// Translate Filename — launches TranslateFilenameTool.py (Python / Dear PyGui) from this repo.
+// Translate Filename — launches TranslateFilenameTool.py (Python / PySide6) from this repo.
 //
 // Click: open GUI with the selected files/folders pre-loaded into Inputs.
 //        Translation starts automatically; renaming only happens if you

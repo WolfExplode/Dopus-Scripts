@@ -55,22 +55,12 @@ WINDOWS_MAX_FILENAME_LEN = 255
 
 LAST_ACTIONS = (
     "convert", "cover", "discardvid", "discardaud", "mono", "splitav", "splitch", "mergevid",
-    "rotatecw", "rotateccw", "fliph", "flipv", "trimstart",
+    "rotatecw", "rotateccw", "fliph", "flipv", "trimstart", "framesample",
 )
 DEFAULT_LAST_ACTION = "convert"
 
 MERGE_CONTAINERS: tuple[str, ...] = ("auto", ".mp4", ".mkv")
 MONO_CHANNELS: tuple[str, ...] = ("auto", "1", "2", "3", "4", "5", "6", "7", "8")
-
-GUI_SECTION_DEFAULTS: dict[str, bool] = {
-    "files": True,
-    "convert": True,
-    "rotate": False,
-    "trim": False,
-    "cover": False,
-    "audio": False,
-    "merge": False,
-}
 
 CONFIG_DIR = Path(os.environ.get("APPDATA", "")) / "FFmpegTool"
 CONFIG_PATH = CONFIG_DIR / "settings.json"
@@ -131,7 +121,9 @@ class Settings:
     merge_fix_outliers: bool = True
     merge_container: str = "auto"
     mono_channel: str = "auto"
-    gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
+    sample_start: str = "3"
+    sample_interval: str = "2"
+    sample_count: str = "48"
 
 
 def file_ext_lower(name: str) -> str:
@@ -290,12 +282,6 @@ def config_write(data: dict) -> None:
 
 def config_load_settings() -> Settings:
     data = config_read()
-    sections = data.get("gui_sections") or {}
-    gui_sections = dict(GUI_SECTION_DEFAULTS)
-    if isinstance(sections, dict):
-        for k in GUI_SECTION_DEFAULTS:
-            if k in sections:
-                gui_sections[k] = bool(sections[k])
     action = str(data.get("last_action") or DEFAULT_LAST_ACTION)
     if action not in LAST_ACTIONS:
         action = DEFAULT_LAST_ACTION
@@ -332,7 +318,9 @@ def config_load_settings() -> Settings:
         merge_fix_outliers=bool(data.get("merge_fix_outliers", True)),
         merge_container=merge_container,
         mono_channel=mono_channel,
-        gui_sections=gui_sections,
+        sample_start=str(data.get("sample_start") or "3"),
+        sample_interval=str(data.get("sample_interval") or "2"),
+        sample_count=str(data.get("sample_count") or "48"),
     )
 
 
@@ -354,7 +342,9 @@ def config_save_settings(
     data["merge_fix_outliers"] = settings.merge_fix_outliers
     data["merge_container"] = settings.merge_container
     data["mono_channel"] = settings.mono_channel
-    data["gui_sections"] = settings.gui_sections
+    data["sample_start"] = settings.sample_start
+    data["sample_interval"] = settings.sample_interval
+    data["sample_count"] = settings.sample_count
     if last_action:
         if last_action in LAST_ACTIONS:
             data["last_action"] = last_action
@@ -1076,6 +1066,17 @@ def _parse_fps_rational(line: str) -> float:
         return f if f > 0 else -1.0
     except ValueError:
         return -1.0
+
+
+def probe_video_frame_rate_text(media_path: Path) -> str:
+    """Rational frame rate (e.g. "30000/1001"): r_frame_rate, else avg_frame_rate."""
+    for entry in ("stream=r_frame_rate", "stream=avg_frame_rate"):
+        line = _ffprobe_line(
+            media_path, ["-select_streams", "v:0", "-show_entries", entry, "-of", "csv=p=0"]
+        )
+        if _parse_fps_rational(line) > 0:
+            return line.strip()
+    return ""
 
 
 def probe_video_avg_frame_rate(media_path: Path) -> float:
@@ -2710,6 +2711,86 @@ def run_cut_range(
     return ActionResult(ok > 0, summary, log)
 
 
+def frame_sample_output_path(vid: Path) -> Path:
+    out = vid.parent / f"{vid.stem}_frames.mp4"
+    if os.path.normcase(os.fspath(out)) == os.path.normcase(os.fspath(vid)):
+        out = vid.parent / f"{vid.stem}_timelapse.mp4"
+    return out
+
+
+def run_frame_sample(
+    paths: list[Path], start_text: str, interval_text: str, count_text: str
+) -> ActionResult:
+    """Timelapse-style sample: one frame every interval seconds, from start, count frames.
+    Writes <stem>_frames.mp4 (H.264, no audio) next to each source video."""
+    log = _job_log()
+    title = "Timelapse sample"
+    try:
+        start_sec = float(start_text.strip())
+    except ValueError:
+        start_sec = -1.0
+    try:
+        interval_sec = float(interval_text.strip())
+    except ValueError:
+        interval_sec = 0.0
+    count_s = count_text.strip()
+    if start_sec < 0 or not math.isfinite(start_sec):
+        return ActionResult(False, "Start offset must be a number of seconds, 0 or more.", log)
+    if interval_sec <= 0 or not math.isfinite(interval_sec):
+        return ActionResult(False, "Interval must be a number of seconds greater than 0.", log)
+    if not count_s.isdigit() or int(count_s) < 1:
+        return ActionResult(False, "Frame count must be a whole number, at least 1.", log)
+    count = int(count_s)
+
+    videos = [p for p in paths if is_thumb_video(p.name)]
+    if not videos:
+        return ActionResult(False, "Select one or more video files.", log)
+    skipped = [p.name for p in paths if not is_thumb_video(p.name)]
+    if skipped:
+        log.append(f"{title}: skipping non-video: {', '.join(skipped)}")
+
+    ok = fail = 0
+    for vid in videos:
+        if _cancelled():
+            break
+        fps_text = probe_video_frame_rate_text(vid)
+        fps = _parse_fps_rational(fps_text)
+        if fps <= 0:
+            log.append(f"{title}: could not read the frame rate ({vid.name})")
+            fail += 1
+            continue
+        start_frame = round(start_sec * fps)
+        step = round(interval_sec * fps)
+        if step <= 0:
+            log.append(f"{title}: interval is shorter than one frame at {fps:g} fps ({vid.name})")
+            fail += 1
+            continue
+        end_frame = start_frame + count * step
+        out = frame_sample_output_path(vid)
+        vf = (
+            f"select='gte(n,{start_frame})*lt(n,{end_frame})*not(mod(n-{start_frame},{step}))',"
+            "setpts=N/FRAME_RATE/TB"
+        )
+        cmd = (
+            f"ffmpeg.exe -hide_banner -y -i {_quote(vid)} -vf \"{vf}\" -frames:v {count} "
+            f"-c:v libx264 -crf 18 -preset medium -r {fps_text} -pix_fmt yuv420p -an "
+            f"-movflags +faststart {_quote(out)}"
+        )
+        log.append(
+            f"{title}: {vid.name} @ {fps:g} fps, start frame {start_frame}, every {step} frames"
+        )
+        if _run_cmd(cmd, log, job_output=out) == 0 and out.is_file():
+            log.append(f"  -> {out.name}")
+            ok += 1
+        else:
+            fail += 1
+
+    summary = f"{title} finished. OK: {ok}"
+    if fail:
+        summary += f", Failed: {fail}"
+    return ActionResult(ok > 0, summary, log)
+
+
 def run_action(
     action: str,
     paths: list[Path],
@@ -2761,6 +2842,10 @@ def _run_action_impl(
         return run_video_transform(paths, "vflip", "Flip vertical")
     if action == "trimstart":
         return run_cut_range(paths, settings.cut_unit, settings.cut_start, settings.cut_end)
+    if action == "framesample":
+        return run_frame_sample(
+            paths, settings.sample_start, settings.sample_interval, settings.sample_count
+        )
     return ActionResult(False, f"Unknown action: {action}", [])
 
 
@@ -2775,11 +2860,12 @@ def run_cli(argv: list[str]) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="FFmpeg tool (GUI and CLI).")
-    parser.add_argument("--gui", action="store_true", help="Open Dear PyGui GUI.")
+    parser.add_argument("--gui", action="store_true", help="Open the GUI.")
     parser.add_argument("--repeat", action="store_true", help="Run last saved action.")
     parser.add_argument("--action", choices=LAST_ACTIONS, help="Action to run.")
     parser.add_argument("--only-list", metavar="FILE", help="UTF-8 file, one path per line.")
     parser.add_argument("--only-file", action="append", default=[], metavar="PATH")
+    parser.add_argument("--section", metavar="NAME", help="GUI page to open (e.g. timelapse).")
     args = parser.parse_args(argv)
 
     settings = config_load_settings()
@@ -2805,5 +2891,6 @@ def run_cli(argv: list[str]) -> int:
     run_gui(
         initial_only_list=args.only_list,
         initial_only_files=args.only_file or None,
+        initial_section=args.section,
     )
     return 0

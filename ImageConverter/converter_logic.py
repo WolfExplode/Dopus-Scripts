@@ -133,12 +133,6 @@ OUTPUT_FORMAT_LABELS = [OUTPUT_FORMATS[k]["label"] for k in OUTPUT_FORMAT_KEYS]
 CONFIG_DIR = Path(os.environ.get("APPDATA", "")) / "ImageConverter"
 CONFIG_PATH = CONFIG_DIR / "settings.json"
 
-GUI_SECTION_DEFAULTS: dict[str, bool] = {
-    "files": True,
-    "encode": True,
-    "resize": True,
-}
-
 OutputSink = Callable[[str, bool], None]
 
 
@@ -159,7 +153,6 @@ class Settings:
     resize_height: str = ""
     resize_preserve_aspect: bool = True
     files_text: str = ""
-    gui_sections: dict[str, bool] = field(default_factory=lambda: dict(GUI_SECTION_DEFAULTS))
 
 
 @dataclass
@@ -313,12 +306,6 @@ def config_write(data: dict) -> None:
 
 def config_load_settings() -> Settings:
     data = config_read()
-    sections = data.get("gui_sections") or {}
-    gui_sections = dict(GUI_SECTION_DEFAULTS)
-    if isinstance(sections, dict):
-        for k in GUI_SECTION_DEFAULTS:
-            if k in sections:
-                gui_sections[k] = bool(sections[k])
     output_format = str(data.get("output_format") or "jpeg")
     if output_format not in OUTPUT_FORMATS:
         output_format = "jpeg"
@@ -349,7 +336,6 @@ def config_load_settings() -> Settings:
         resize_height=resize_height,
         resize_preserve_aspect=bool(data.get("resize_preserve_aspect", True)),
         files_text=str(data.get("files_text") or ""),
-        gui_sections=gui_sections,
     )
 
 
@@ -370,7 +356,6 @@ def config_save_settings(settings: Settings) -> None:
     data["resize_height"] = settings.resize_height
     data["resize_preserve_aspect"] = settings.resize_preserve_aspect
     data["files_text"] = settings.files_text
-    data["gui_sections"] = settings.gui_sections
     try:
         config_write(data)
     except OSError:
@@ -615,6 +600,7 @@ def _run_cjxl(
             stdout=subprocess.DEVNULL,
             creationflags=_win_subprocess_flags(),
         )
+        _track(proc)
         reader = threading.Thread(
             target=_stream_process_output, args=(proc, emit), daemon=True
         )
@@ -622,6 +608,7 @@ def _run_cjxl(
         try:
             rc = proc.wait()
         finally:
+            _untrack(proc)
             if proc.stderr is not None:
                 try:
                     proc.stderr.close()
@@ -695,6 +682,7 @@ def _run_texconv(
             stderr=subprocess.STDOUT,
             creationflags=_win_subprocess_flags(),
         )
+        _track(proc)
         reader = threading.Thread(
             target=_stream_process_output, args=(proc, emit, proc.stdout), daemon=True
         )
@@ -702,6 +690,7 @@ def _run_texconv(
         try:
             rc = proc.wait()
         finally:
+            _untrack(proc)
             reader.join(timeout=2.0)
             if proc.stdout is not None:
                 try:
@@ -763,6 +752,44 @@ def _convert_to_skyrim_dds(
         return 0
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+
+
+_cancel_requested = threading.Event()
+_active_procs: set[subprocess.Popen] = set()
+_active_procs_lock = threading.Lock()
+
+
+def _track(proc: subprocess.Popen) -> None:
+    with _active_procs_lock:
+        _active_procs.add(proc)
+    if _cancel_requested.is_set():
+        proc.kill()
+
+
+def _untrack(proc: subprocess.Popen) -> None:
+    with _active_procs_lock:
+        _active_procs.discard(proc)
+
+
+def cancel_running_jobs() -> None:
+    """Stop the running convert/resize: no new files start, running encoders are killed."""
+    _cancel_requested.set()
+    with _active_procs_lock:
+        procs = list(_active_procs)
+    for proc in procs:
+        try:
+            proc.kill()
+        except OSError:
+            pass
+
+
+def _discard_if_killed(rc: int, input_path: Path, output_path: Path) -> None:
+    """Remove the half-written output of an encoder killed by cancel_running_jobs()."""
+    if rc != 0 and _cancel_requested.is_set() and output_path != input_path and output_path.is_file():
+        try:
+            output_path.unlink()
+        except OSError:
+            pass
 
 
 def _win_subprocess_flags() -> int:
@@ -837,6 +864,7 @@ def _run_magick_cmd(exe: Path, cmd: list[str], emit: OutputSink) -> int:
             stdout=subprocess.DEVNULL,
             creationflags=_win_subprocess_flags(),
         )
+        _track(proc)
         reader = threading.Thread(
             target=_stream_process_output, args=(proc, emit), daemon=True
         )
@@ -844,6 +872,7 @@ def _run_magick_cmd(exe: Path, cmd: list[str], emit: OutputSink) -> int:
         try:
             rc = proc.wait()
         finally:
+            _untrack(proc)
             if proc.stderr is not None:
                 try:
                     proc.stderr.close()
@@ -934,9 +963,10 @@ def run_convert(
     ok = 0
     fail = 0
     cancel_event = threading.Event()
+    _cancel_requested.clear()
 
     def convert_one(i: int, input_path: Path) -> tuple[int, Path, Path, int]:
-        if cancel_event.is_set():
+        if cancel_event.is_set() or _cancel_requested.is_set():
             return i, input_path, output_path_for_input(input_path, settings), MAGICK_EXIT_CONTROL_C
         output_path = output_path_for_input(input_path, settings)
         emit(f"convert [{i + 1}/{total}]: {input_path.name} → {output_path.name}")
@@ -947,6 +977,7 @@ def run_convert(
             rc = _convert_to_skyrim_dds(texconv, magick, input_path, output_path, settings.skyrim_preset, resize_arg, thread_limit, worker_emit)
         else:
             rc = _run_magick(magick, input_path, resize_arg, encode_args, output_path, worker_emit, thread_limit)
+        _discard_if_killed(rc, input_path, output_path)
         return i, input_path, output_path, rc
 
     error_result: Optional[ConvertResult] = None
@@ -955,6 +986,8 @@ def run_convert(
         for future in concurrent.futures.as_completed(fs):
             _, input_path, output_path, rc = future.result()
 
+            if _cancel_requested.is_set() and rc != 0:
+                rc = MAGICK_EXIT_CONTROL_C
             if cancel_event.is_set() and rc == MAGICK_EXIT_CONTROL_C:
                 continue
 
@@ -1049,15 +1082,17 @@ def run_resize(
     ok = 0
     fail = 0
     cancel_event = threading.Event()
+    _cancel_requested.clear()
 
     def resize_one(i: int, input_path: Path) -> tuple[int, Path, Path, int]:
-        if cancel_event.is_set():
+        if cancel_event.is_set() or _cancel_requested.is_set():
             output_path = input_path.parent / (input_path.stem + "_resized" + input_path.suffix)
             return i, input_path, output_path, MAGICK_EXIT_CONTROL_C
         output_path = input_path.parent / (input_path.stem + "_resized" + input_path.suffix)
         emit(f"resize [{i + 1}/{total}]: {input_path.name} → {output_path.name}")
         worker_emit: OutputSink = (lambda t, r: emit(t, False)) if workers_count > 1 else emit
         rc = _run_magick(magick, input_path, resize_arg, "", output_path, worker_emit, thread_limit)
+        _discard_if_killed(rc, input_path, output_path)
         return i, input_path, output_path, rc
 
     error_result: Optional[ConvertResult] = None
@@ -1066,6 +1101,8 @@ def run_resize(
         for future in concurrent.futures.as_completed(fs):
             _, input_path, output_path, rc = future.result()
 
+            if _cancel_requested.is_set() and rc != 0:
+                rc = MAGICK_EXIT_CONTROL_C
             if cancel_event.is_set() and rc == MAGICK_EXIT_CONTROL_C:
                 continue
 
@@ -1117,7 +1154,7 @@ def run_cli(argv: list[str]) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Image converter (ImageMagick).")
-    parser.add_argument("--gui", action="store_true", help="Open Dear PyGui GUI.")
+    parser.add_argument("--gui", action="store_true", help="Open the GUI.")
     parser.add_argument("--repeat", action="store_true", help="Convert with last saved settings.")
     parser.add_argument("--only-list", metavar="FILE", help="UTF-8 file, one path per line.")
     parser.add_argument("--only-file", action="append", default=[], metavar="PATH")
