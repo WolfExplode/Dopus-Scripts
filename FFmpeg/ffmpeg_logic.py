@@ -743,14 +743,6 @@ def probe_image_dimensions(img_path: Path) -> Optional[tuple[int, int]]:
     return _parse_video_dimensions(line)
 
 
-def probe_video_dimensions(media_path: Path) -> Optional[tuple[int, int]]:
-    line = _ffprobe_line(
-        media_path,
-        ["-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x"],
-    )
-    return _parse_video_dimensions(line)
-
-
 @dataclass
 class MergeStreamInfo:
     duration: float
@@ -1830,14 +1822,6 @@ def copy_text_to_clipboard(text: str) -> bool:
         return False
 
 
-def parse_trim_frame_count(s: str) -> int:
-    s = (s or "").strip()
-    if not s or not s.isdigit():
-        return -1
-    n = int(s)
-    return n if n >= 1 else -1
-
-
 def parse_cut_seconds(value: str) -> float:
     """Parse SS, MM:SS, or HH:MM:SS (fractional seconds are allowed)."""
     text = (value or "").strip()
@@ -1955,13 +1939,6 @@ def ffmpeg_cut_frame_range_exec(
         f'-map 0:v:0 -map "0:a?" -vf "{video_filter}" -af "{audio_filter}" '
         f"-c:v {v_enc} -c:a {a_enc} {_quote(tmp_path)}"
     )
-
-
-def ffmpeg_trim_leading_frames_exec(
-    vid_path: Path, tmp_path: Path, frame_count: int, fps: float, ext: str
-) -> str:
-    start_sec = frame_count / fps
-    return ffmpeg_cut_range_exec(vid_path, tmp_path, start_sec, None, ext)
 
 
 def format_preset_by_name(formats: tuple[FormatPreset, ...], name: str) -> int:
@@ -2614,11 +2591,6 @@ def run_video_transform(paths: list[Path], vf_filter: str, log_title: str) -> Ac
     if fail:
         summary += f", Failed: {fail}"
     return ActionResult(ok > 0, summary, log)
-
-
-def run_trim_leading_frames(paths: list[Path], frame_count_str: str) -> ActionResult:
-    """Backward-compatible entry point for the former start-only trimmer."""
-    return run_cut_range(paths, "Frames", frame_count_str, "")
 
 
 def run_cut_range(

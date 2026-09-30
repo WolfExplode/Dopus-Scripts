@@ -237,15 +237,6 @@ def index_source(source_root: Path) -> dict[tuple[str, ...], set[str]]:
     return idx
 
 
-def trees_are_separate(source_root: Path, target_root: Path) -> bool:
-    """True when neither tree contains the other (typical two-library layout)."""
-    if source_root == target_root:
-        return False
-    return not is_resolved_subpath(source_root, target_root) and not is_resolved_subpath(
-        target_root, source_root
-    )
-
-
 def files_in_directory(dir_path: Path) -> set[Path]:
     return {p.resolve() for p in dir_path.rglob("*") if p.is_file()}
 
@@ -312,27 +303,6 @@ def _try_plan_rename(
     planned_dest_keys.add(key)
     planned.append((old_path, new_path))
     return True
-
-
-def collect_paths_from_lines(lines: list[str]) -> tuple[list[Path], set[Path], Optional[str]]:
-    """Parse lines: directories expand to all files inside; files are kept as-is."""
-    dirs: list[Path] = []
-    files: set[Path] = set()
-    for s in lines:
-        s = s.strip()
-        if not s:
-            continue
-        p = Path(s)
-        if p.is_dir():
-            dirs.append(p.resolve())
-        elif p.is_file():
-            files.add(p.resolve())
-        else:
-            return [], set(), f"Path not found:\n{p}"
-    scope = set(files)
-    for d in dirs:
-        scope.update(files_in_directory(d))
-    return dirs, scope, None
 
 
 def is_jpg_file(path: Path) -> bool:
@@ -440,43 +410,6 @@ def bracket_tag_remove_all_name(path: Path) -> Optional[str]:
     if stem_clean == path.stem:
         return None
     return stem_clean + suffix
-
-
-def _scan_target_renames(
-    source_root: Path,
-    target_root: Path,
-    new_name_for: Callable[[Path], Optional[str]],
-    only: Optional[set[Path]] = None,
-    source_library: Optional[Path] = None,
-) -> RenameScan:
-    planned: list[tuple[Path, Path]] = []
-    skipped_collision: list[tuple[Path, Path]] = []
-    skipped_no_change = 0
-    skipped_under_source = 0
-    planned_dest_keys: set[str] = set()
-
-    for path in iter_files_in_tree(target_root, only):
-        if path_in_source_library(source_library, path):
-            skipped_under_source += 1
-            continue
-        new_name = new_name_for(path)
-        if new_name is None:
-            skipped_no_change += 1
-            continue
-        new_path = path.with_name(new_name)
-        if not rename_stays_valid(
-            source_root, target_root, path, new_path, source_library=source_library
-        ):
-            skipped_under_source += 1
-            continue
-        _try_plan_rename(path, new_path, planned, skipped_collision, planned_dest_keys)
-
-    return RenameScan(
-        planned=planned,
-        skipped_no_change=skipped_no_change,
-        skipped_collision=skipped_collision,
-        skipped_under_source=skipped_under_source,
-    )
 
 
 def _scan_input_renames(
@@ -590,12 +523,6 @@ def scan_title_strip(
         lambda p: transform_title_filename(p.name, strip_chars),
         only=only,
     )
-
-
-def parse_only_path_lines(lines: list[str]) -> set[Path]:
-    """Resolved files from path strings (files or folders — folders expand to all files inside)."""
-    _, scope, err = collect_paths_from_lines(lines)
-    return scope if not err else set()
 
 
 def common_root_for_files(files: set[Path]) -> Optional[Path]:
@@ -820,17 +747,6 @@ def build_initial_source_text(
     if initial_source and str(initial_source).strip():
         lines.append(str(initial_source).strip())
     return "\n".join(dedupe_path_lines(lines))
-
-
-def read_only_paths(
-    list_path: Optional[str] = None, file_args: Optional[list[str]] = None
-) -> Optional[set[Path]]:
-    """Resolved file paths to limit scans; None means process the full tree."""
-    lines = _only_list_lines(list_path, file_args)
-    if not lines:
-        return None
-    out = parse_only_path_lines(lines)
-    return out if out else None
 
 
 def iter_files_in_tree(root: Path, only: Optional[set[Path]] = None):

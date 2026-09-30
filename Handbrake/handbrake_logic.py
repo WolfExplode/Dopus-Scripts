@@ -293,14 +293,6 @@ def resolve_handbrake_cli() -> Optional[Path]:
     return None
 
 
-def resolve_handbrake_gui() -> Optional[Path]:
-    for root in _program_files_roots():
-        std = root / "HandBrake" / "HandBrake.exe"
-        if std.is_file():
-            return std
-    return None
-
-
 def resolve_ffprobe() -> str:
     found = shutil.which("ffprobe") or shutil.which("ffprobe.exe")
     if found:
